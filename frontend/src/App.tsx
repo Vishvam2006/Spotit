@@ -5,6 +5,7 @@ import GuestRoute from './components/GuestRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
+import ParkingDetails from './pages/ParkingDetails';
 
 export default function App() {
   return (
@@ -32,6 +33,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parking"
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parking/:id"
+            element={
+              <ProtectedRoute>
+                <ParkingDetails />
               </ProtectedRoute>
             }
           />
