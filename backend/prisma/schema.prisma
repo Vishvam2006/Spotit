@@ -7,45 +7,49 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String       @id @default(uuid())
+  fullName     String
+  email        String       @unique
+  passwordHash String
+  phone        String?
+  profileImage String?
+  role         Role         @default(USER)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  ParkingLot   ParkingLot[]
+}
+
+model ParkingLot {
+  id              String           @id @default(cuid())
+  ownerId         String
+  name            String
+  description     String?
+  address         String
+  city            String
+  latitude        Float
+  longitude       Float
+  pricePerHour    Float
+  totalSpaces     Int
+  availableSpaces Int
+  status          ParkingLotStatus @default(ACTIVE)
+  imageUrl        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  User            User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([city])
+  @@index([status])
+}
+
 enum Role {
   USER
   OWNER
   ADMIN
 }
 
-model User {
-  id           String  @id @default(uuid())
-  fullName     String
-  email        String  @unique
-  passwordHash String
-  phone        String?
-  profileImage String?
-
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Parking {
-  id String @id @default(cuid())
-
-  ownerId String
-
-  name        String
-  description String?
-
-  address String
-
-  latitude  Float
-  longitude Float
-
-  totalSlots     Int
-  availableSlots Int
-
-  pricePerHour Float
-
-  isActive Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum ParkingLotStatus {
+  ACTIVE
+  INACTIVE
+  CLOSED
 }

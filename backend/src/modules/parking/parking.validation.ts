@@ -1,33 +1,37 @@
 import { z } from "zod";
 
+export const parkingLotStatusEnum = z.enum(["ACTIVE", "INACTIVE", "CLOSED"]);
+
 const parkingBaseSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
   address: z.string().min(2),
+  city: z.string().min(1),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
-  totalSlots: z.number().int().positive(),
-  availableSlots: z.number().int().min(0),
   pricePerHour: z.number().min(0),
-  isActive: z.boolean().optional(),
+  totalSpaces: z.number().int().min(0),
+  availableSpaces: z.number().int().min(0),
+  status: parkingLotStatusEnum.optional(),
+  imageUrl: z.string().optional(),
 });
 
 export const createParkingSchema = parkingBaseSchema.refine(
-  (data) => data.availableSlots <= data.totalSlots,
+  (data) => data.availableSpaces <= data.totalSpaces,
   {
-    message: "Available slots cannot exceed total slots",
-    path: ["availableSlots"],
+    message: "Available spaces cannot exceed total spaces",
+    path: ["availableSpaces"],
   },
 );
 
 export const updateParkingSchema = parkingBaseSchema.partial().refine(
   (data) =>
-    data.availableSlots === undefined ||
-    data.totalSlots === undefined ||
-    data.availableSlots <= data.totalSlots,
+    data.availableSpaces === undefined ||
+    data.totalSpaces === undefined ||
+    data.availableSpaces <= data.totalSpaces,
   {
-    message: "Available slots cannot exceed total slots",
-    path: ["availableSlots"],
+    message: "Available spaces cannot exceed total spaces",
+    path: ["availableSpaces"],
   },
 );
 

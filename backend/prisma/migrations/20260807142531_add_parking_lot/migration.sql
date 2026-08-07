@@ -8,7 +8,7 @@ CREATE TABLE "Parking" (
     "latitude" DOUBLE PRECISION NOT NULL,
     "longitude" DOUBLE PRECISION NOT NULL,
     "totalSlots" INTEGER NOT NULL,
-    "availableSlots" INTEGER NOT NULL,
+    "availableSpaces" INTEGER NOT NULL,
     "pricePerHour" DOUBLE PRECISION NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

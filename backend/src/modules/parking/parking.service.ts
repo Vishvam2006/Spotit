@@ -2,9 +2,9 @@ import { prisma } from "../../config/prisma";
 import type { CreateParkingInput, UpdateParkingInput } from "./parking.validation";
 
 export async function getActiveParking() {
-  return prisma.parking.findMany({
+  return prisma.parkingLot.findMany({
     where: {
-      isActive: true,
+      status: "ACTIVE",
     },
     orderBy: {
       createdAt: "desc",
@@ -13,13 +13,13 @@ export async function getActiveParking() {
 }
 
 export async function getParkingById(id: string) {
-  return prisma.parking.findUnique({
+  return prisma.parkingLot.findUnique({
     where: { id },
   });
 }
 
 export async function createParking(ownerId: string, data: CreateParkingInput) {
-  return prisma.parking.create({
+  return prisma.parkingLot.create({
     data: {
       ...data,
       ownerId,
@@ -32,7 +32,7 @@ export async function updateParking(
   ownerId: string,
   data: UpdateParkingInput,
 ) {
-  const parking = await prisma.parking.findUnique({
+  const parking = await prisma.parkingLot.findUnique({
     where: { id },
   });
 
@@ -44,14 +44,14 @@ export async function updateParking(
     throw new Error("Unauthorized");
   }
 
-  return prisma.parking.update({
+  return prisma.parkingLot.update({
     where: { id },
     data,
   });
 }
 
 export async function deleteParking(id: string, ownerId: string) {
-  const parking = await prisma.parking.findUnique({
+  const parking = await prisma.parkingLot.findUnique({
     where: { id },
   });
 
@@ -63,7 +63,7 @@ export async function deleteParking(id: string, ownerId: string) {
     throw new Error("Unauthorized");
   }
 
-  return prisma.parking.delete({
+  return prisma.parkingLot.delete({
     where: { id },
   });
 }

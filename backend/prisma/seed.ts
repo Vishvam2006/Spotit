@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient, ParkingLotStatus, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -28,12 +28,14 @@ async function main() {
       name: "Central Mall Parking",
       description: "Covered parking near the main entrance",
       address: "MG Road",
+      city: "Bengaluru",
       latitude: 12.9756,
       longitude: 77.6068,
-      totalSlots: 100,
-      availableSlots: 38,
+      totalSpaces: 100,
+      availableSpaces: 38,
       pricePerHour: 40,
-      isActive: true,
+      status: ParkingLotStatus.ACTIVE,
+      imageUrl: "https://example.com/central-mall-parking.jpg",
     },
     {
       id: "tech-park-parking",
@@ -41,12 +43,14 @@ async function main() {
       name: "Tech Park Visitor Parking",
       description: "Visitor parking near Gate 2",
       address: "Whitefield",
+      city: "Bengaluru",
       latitude: 12.9698,
       longitude: 77.7499,
-      totalSlots: 60,
-      availableSlots: 12,
+      totalSpaces: 60,
+      availableSpaces: 12,
       pricePerHour: 30,
-      isActive: true,
+      status: ParkingLotStatus.ACTIVE,
+      imageUrl: "https://example.com/tech-park-parking.jpg",
     },
     {
       id: "city-hospital-parking",
@@ -54,12 +58,14 @@ async function main() {
       name: "City Hospital Parking",
       description: "Parking for hospital visitors",
       address: "Koramangala",
+      city: "Bengaluru",
       latitude: 12.9352,
       longitude: 77.6245,
-      totalSlots: 40,
-      availableSlots: 25,
+      totalSpaces: 40,
+      availableSpaces: 25,
       pricePerHour: 25,
-      isActive: true,
+      status: ParkingLotStatus.ACTIVE,
+      imageUrl: "https://example.com/city-hospital-parking.jpg",
     },
     {
       id: "railway-station-parking",
@@ -67,12 +73,14 @@ async function main() {
       name: "Railway Station Parking",
       description: "Open parking near the station",
       address: "Majestic",
+      city: "Bengaluru",
       latitude: 12.9784,
       longitude: 77.5726,
-      totalSlots: 80,
-      availableSlots: 0,
+      totalSpaces: 80,
+      availableSpaces: 0,
       pricePerHour: 50,
-      isActive: true,
+      status: ParkingLotStatus.ACTIVE,
+      imageUrl: "https://example.com/railway-station-parking.jpg",
     },
     {
       id: "office-tower-parking",
@@ -80,17 +88,19 @@ async function main() {
       name: "Office Tower Parking",
       description: "Private office parking",
       address: "Electronic City",
+      city: "Bengaluru",
       latitude: 12.8452,
       longitude: 77.6602,
-      totalSlots: 70,
-      availableSlots: 70,
+      totalSpaces: 70,
+      availableSpaces: 70,
       pricePerHour: 35,
-      isActive: false,
+      status: ParkingLotStatus.INACTIVE,
+      imageUrl: "https://example.com/office-tower-parking.jpg",
     },
   ];
 
   for (const parking of parkingLots) {
-    await prisma.parking.upsert({
+    await prisma.parkingLot.upsert({
       where: {
         id: parking.id,
       },
