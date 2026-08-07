@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 import Logo from '../components/Logo';
+import AuthSidebar from '../components/AuthSidebar';
 
 export default function Register() {
   const { register } = useAuth();
@@ -52,54 +53,23 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-2">
-      {/* Brand panel */}
-      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-blue-800 via-blue-600 to-emerald-600 lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-emerald-300/20 blur-2xl" />
+    <div className="min-h-screen bg-[#F8FAFC] lg:grid lg:grid-cols-[1.05fr_0.95fr]">
+      <AuthSidebar />
 
-        <div className="relative flex items-center gap-3">
-          <Logo className="h-11 w-11" />
-          <span className="text-2xl font-bold tracking-tight text-white">
-            ParkMitra
-          </span>
-        </div>
-
-        <div className="relative max-w-md">
-          <h1 className="text-4xl font-bold leading-tight tracking-tight text-white xl:text-5xl">
-            Smart Parking Made Simple
-          </h1>
-          <p className="mt-5 text-lg leading-relaxed text-blue-100">
-            Reserve parking, navigate seamlessly and manage your parking
-            sessions in real time.
-          </p>
-        </div>
-
-        <p className="relative text-sm text-blue-200">
-          &copy; {new Date().getFullYear()} ParkMitra. All rights reserved.
-        </p>
-      </aside>
-
-      {/* Register card */}
       <main className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
         <div className="w-full max-w-md">
           <div className="mb-8 flex flex-col items-center gap-4 lg:hidden">
-            <Logo className="h-14 w-14" />
+            <img src="/assets/image.png" alt="ParkMitra" className="h-50 w-auto object-contain" />
             <div className="text-center">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                ParkMitra
-              </h1>
-              <p className="text-sm text-slate-500">
-                Smart Parking Made Simple
-              </p>
+              <p className="text-sm text-[#64748B]">Arrive. Park. Go.</p>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200 sm:p-10">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+          <div className="rounded-[24px] bg-white p-8 shadow-[0_18px_44px_rgb(15_23_42_/_0.10)] ring-1 ring-[#E2E8F0] sm:p-10">
+            <h2 className="text-3xl font-bold tracking-tight text-[#0F172A]">
               Create your account
             </h2>
-            <p className="mt-1.5 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-[#64748B]">
               Join ParkMitra and start managing your parking sessions.
             </p>
 
@@ -161,7 +131,7 @@ export default function Register() {
               Already have an account?{' '}
               <Link
                 to="/login"
-                className="font-semibold text-blue-600 hover:text-blue-700"
+                className="font-bold text-[#0E9F94] hover:text-[#19C7B2]"
               >
                 Login
               </Link>

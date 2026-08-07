@@ -21,7 +21,7 @@ export default function Input({
     <div className={className}>
       <label
         htmlFor={id}
-        className="block text-sm font-medium text-slate-700"
+        className="block text-sm font-semibold text-[#0F172A]"
       >
         {label}
       </label>
@@ -30,10 +30,10 @@ export default function Input({
           id={id}
           type={resolvedType}
           aria-invalid={Boolean(error)}
-          className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 ${
+          className={`min-h-12 w-full rounded-2xl border bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#64748B] focus:outline-none focus:ring-2 ${
             error
-              ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-              : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500'
+              ? 'border-red-300 focus:border-[#EF4444] focus:ring-red-100'
+              : 'border-[#E2E8F0] focus:border-[#19C7B2] focus:ring-teal-100'
           } ${isPassword ? 'pr-11' : ''}`}
           {...props}
         />
