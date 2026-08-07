@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-import { api } from '../services/api';
-import type { AuthResponse, MeResponse, User } from '../types';
-import { AuthContext } from './auth-context';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { api } from "../services/api";
+import type { AuthResponse, MeResponse, User } from "../types";
+import { AuthContext } from "./auth-context";
 
-const TOKEN_KEY = 'parkmitra_token';
-const USER_KEY = 'parkmitra_user';
+const TOKEN_KEY = "parkmitra_token";
+const USER_KEY = "parkmitra_user";
 
 function readStoredUser(): User | null {
   const raw = localStorage.getItem(USER_KEY);
@@ -19,7 +19,7 @@ function readStoredUser(): User | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem(TOKEN_KEY),
+    localStorage.getItem(TOKEN_KEY)
   );
   const [user, setUser] = useState<User | null>(() => readStoredUser());
   const [isInitializing, setIsInitializing] = useState(true);
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const { data } = await api.get<MeResponse>('/auth/me');
+        const { data } = await api.get<MeResponse>("/auth/me");
         if (!active) return;
         setUser(data.user);
         setToken(storedToken);
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const { data } = await api.post<AuthResponse>('/auth/login', {
+    const { data } = await api.post<AuthResponse>("/auth/login", {
       email,
       password,
     });
@@ -73,7 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (fullName: string, email: string, password: string) => {
-      const { data } = await api.post<AuthResponse>('/auth/register', {
+      console.log("Registering user with:", { fullName, email, password }); // Debugging log
+      const { data } = await api.post<AuthResponse>("/auth/register", {
         fullName,
         email,
         password,
@@ -84,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(data.token);
       setUser(data.user);
     },
-    [],
+    []
   );
 
   const logout = useCallback(() => {
@@ -104,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
     }),
-    [user, token, isInitializing, login, register, logout],
+    [user, token, isInitializing, login, register, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

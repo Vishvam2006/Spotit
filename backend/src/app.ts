@@ -3,6 +3,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import cors from 'cors';
 import { ZodError } from 'zod';
 import authRoutes from './routes/auth.routes';
+import parkingRoutes from './modules/parking/parking.routes';
 import { AuthError } from './services/auth.service';
 
 const app = express();
@@ -15,6 +16,7 @@ app.get('/', (_req: Request, res: Response) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/parking-lots', parkingRoutes);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ success: false, message: 'Route not found' });
