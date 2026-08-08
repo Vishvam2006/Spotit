@@ -9,7 +9,6 @@ export async function register(
   next: NextFunction
 ): Promise<void> {
   try {
-    console.log("Register request body:", req.body); // Log the request body for debugging
     const data = registerSchema.parse(req.body);
     const user = await registerUser(data);
     const token = generateToken({

@@ -11,6 +11,7 @@ import { AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import type { ParkingLot } from '../../types/parking';
 import {
   GOOGLE_MAPS_API_KEY,
+  GOOGLE_MAPS_MAP_ID,
   GOOGLE_MAPS_LIBRARIES,
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
@@ -74,6 +75,7 @@ export default function ParkingMap({
           className="h-full w-full"
           defaultCenter={DEFAULT_MAP_CENTER}
           defaultZoom={DEFAULT_MAP_ZOOM}
+          mapId={GOOGLE_MAPS_MAP_ID}
           onClick={handleMapClick}
         >
           {parkingLots.map((parking) => (
