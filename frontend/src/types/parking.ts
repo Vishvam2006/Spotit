@@ -22,3 +22,8 @@ export interface ParkingLotsResponse {
   success: boolean;
   data: ParkingLot[];
 }
+
+export interface ParkingLotResponse {
+  success: boolean;
+  data: ParkingLot;
+}

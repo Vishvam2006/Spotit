@@ -12,7 +12,7 @@ import { fetchParkingLots } from '../services/parking';
 import type { ParkingLot } from '../types/parking';
 
 export default function Home() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +24,8 @@ export default function Home() {
     null,
   );
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const canManageParking = user?.role === 'OWNER' || user?.role === 'ADMIN';
 
   const loadParking = useCallback(() => {
     let active = true;
@@ -66,6 +68,11 @@ export default function Home() {
     [handleSelectId],
   );
 
+  const handleViewDetails = useCallback(
+    (parking: ParkingLot) => navigate(`/parking/${parking.id}`),
+    [navigate],
+  );
+
   const startAddParking = useCallback(() => {
     setIsAddingParking(true);
     setSelectedLocation(null);
@@ -104,12 +111,21 @@ export default function Home() {
               ParkMitra
             </span>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/bookings')}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              My Bookings
+            </button>
+            <button
+              onClick={handleLogout}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </header>
 
@@ -135,7 +151,7 @@ export default function Home() {
                   Click a parking lot to see it on the map.
                 </p>
               </div>
-              {isAddingParking ? (
+              {canManageParking && (isAddingParking ? (
                 <button
                   onClick={cancelAddParking}
                   className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -149,7 +165,7 @@ export default function Home() {
                 >
                   + Add Parking
                 </button>
-              )}
+              ))}
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -159,14 +175,14 @@ export default function Home() {
                     parkingLots={parkingLots}
                     selectedParkingId={selectedParkingId}
                     onSelect={handleSelectId}
-                    onViewDetails={handleSelectParking}
+                    onViewDetails={handleViewDetails}
                     isAddingParking={isAddingParking}
                     selectedLocation={selectedLocation}
                     onLocationSelect={handleLocationSelect}
                   />
                 </div>
 
-                {isAddingParking && (
+                {canManageParking && isAddingParking && (
                   <AddParkingForm
                     selectedLocation={selectedLocation}
                     onCreated={handleParkingCreated}
@@ -198,6 +214,7 @@ export default function Home() {
                           parking={parking}
                           selected={parking.id === selectedParkingId}
                           onSelect={handleSelectParking}
+                          onViewDetails={handleViewDetails}
                         />
                       </div>
                     ))}

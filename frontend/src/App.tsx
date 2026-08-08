@@ -5,6 +5,9 @@ import GuestRoute from './components/GuestRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
+import ParkingDetails from './pages/ParkingDetails';
+import BookingConfirm from './pages/BookingConfirm';
+import Bookings from './pages/Bookings';
 
 export default function App() {
   return (
@@ -32,6 +35,30 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parking/:id"
+            element={
+              <ProtectedRoute>
+                <ParkingDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/booking/confirm/:id"
+            element={
+              <ProtectedRoute>
+                <BookingConfirm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bookings"
+            element={
+              <ProtectedRoute>
+                <Bookings />
               </ProtectedRoute>
             }
           />

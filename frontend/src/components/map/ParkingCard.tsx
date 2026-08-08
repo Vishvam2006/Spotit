@@ -5,6 +5,7 @@ interface ParkingCardProps {
   parking: ParkingLot;
   selected: boolean;
   onSelect: (parking: ParkingLot) => void;
+  onViewDetails?: (parking: ParkingLot) => void;
 }
 
 const badgeStyles: Record<string, string> = {
@@ -18,14 +19,22 @@ export default function ParkingCard({
   parking,
   selected,
   onSelect,
+  onViewDetails,
 }: ParkingCardProps) {
   const { color, label } = getMarkerAvailability(parking);
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(parking)}
-      className={`w-full rounded-xl border p-4 text-left transition-all ${
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect(parking);
+        }
+      }}
+      className={`w-full cursor-pointer rounded-xl border p-4 text-left transition-all ${
         selected
           ? 'border-blue-500 bg-blue-50 shadow-sm ring-2 ring-blue-500'
           : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
@@ -59,6 +68,19 @@ export default function ParkingCard({
           <dd className="font-semibold text-slate-900">{parking.totalSpaces}</dd>
         </div>
       </dl>
-    </button>
+
+      {onViewDetails && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onViewDetails(parking);
+          }}
+          className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+        >
+          View Details
+        </button>
+      )}
+    </div>
   );
 }
