@@ -32,6 +32,13 @@ export async function getParkingLot(req: Request, res: Response) {
 }
 
 export async function createParkingLot(req: Request, res: Response) {
+  if (req.user!.role !== 'OWNER' && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({
+      success: false,
+      message: 'Only parking owners can create parking lots',
+    });
+  }
+
   const result = createParkingSchema.safeParse(req.body);
 
   if (!result.success) {

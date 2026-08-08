@@ -4,7 +4,9 @@ import cors from 'cors';
 import { ZodError } from 'zod';
 import authRoutes from './routes/auth.routes';
 import parkingRoutes from './modules/parking/parking.routes';
+import bookingRoutes from './modules/booking/booking.routes';
 import { AuthError } from './services/auth.service';
+import { BookingError } from './modules/booking/booking.service';
 
 const app = express();
 
@@ -17,6 +19,7 @@ app.get('/', (_req: Request, res: Response) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/parking-lots', parkingRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ success: false, message: 'Route not found' });
@@ -30,6 +33,11 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   }
 
   if (err instanceof AuthError) {
+    res.status(err.statusCode).json({ success: false, message: err.message });
+    return;
+  }
+
+  if (err instanceof BookingError) {
     res.status(err.statusCode).json({ success: false, message: err.message });
     return;
   }

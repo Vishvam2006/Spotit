@@ -18,6 +18,7 @@ model User {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   ParkingLot   ParkingLot[]
+  Booking      Booking[]
 }
 
 model ParkingLot {
@@ -37,9 +38,40 @@ model ParkingLot {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   User            User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  Booking         Booking[]
 
   @@index([city])
   @@index([status])
+}
+
+enum BookingStatus {
+  RESERVED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  userId          String
+  parkingLotId    String
+  vehicleNumber   String
+  startTime       DateTime
+  reservedUntil   DateTime
+  checkInTime     DateTime?
+  checkOutTime    DateTime?
+  estimatedAmount Float?
+  finalAmount     Float?
+  status          BookingStatus @default(RESERVED)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parkingLot ParkingLot @relation(fields: [parkingLotId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([parkingLotId, status])
 }
 
 enum Role {
