@@ -7,6 +7,7 @@ import parkingRoutes from './modules/parking/parking.routes';
 import bookingRoutes from './modules/booking/booking.routes';
 import { AuthError } from './services/auth.service';
 import { BookingError } from './modules/booking/booking.service';
+import { ParkingError } from './modules/parking/parking.service';
 
 const app = express();
 
@@ -38,6 +39,11 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   }
 
   if (err instanceof BookingError) {
+    res.status(err.statusCode).json({ success: false, message: err.message });
+    return;
+  }
+
+  if (err instanceof ParkingError) {
     res.status(err.statusCode).json({ success: false, message: err.message });
     return;
   }

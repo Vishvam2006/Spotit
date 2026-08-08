@@ -1,5 +1,8 @@
 import { prisma } from "../../config/prisma";
-import type { CreateParkingInput, UpdateParkingInput } from "./parking.validation";
+import type {
+  CreateParkingInput,
+  UpdateParkingInput,
+} from "./parking.validation";
 
 export class ParkingError extends Error {
   statusCode: number;
@@ -9,6 +12,17 @@ export class ParkingError extends Error {
     this.name = "ParkingError";
     this.statusCode = statusCode;
   }
+}
+
+export async function getMyParkings(ownerId: string) {
+  return prisma.parkingLot.findMany({
+    where: {
+      ownerId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 }
 
 export async function getActiveParking() {
@@ -41,7 +55,7 @@ export async function updateParking(
   id: string,
   ownerId: string,
   data: UpdateParkingInput,
-  isAdmin = false,
+  isAdmin = false
 ) {
   const parking = await prisma.parkingLot.findUnique({
     where: { id },
@@ -70,7 +84,11 @@ export async function updateParking(
   });
 }
 
-export async function deleteParking(id: string, ownerId: string, isAdmin = false) {
+export async function deleteParking(
+  id: string,
+  ownerId: string,
+  isAdmin = false
+) {
   const parking = await prisma.parkingLot.findUnique({
     where: { id },
   });
