@@ -3,21 +3,43 @@ export interface LatLng {
   lng: number;
 }
 
-export async function getCurrentPosition(): Promise<LatLng | null> {
+export type GeolocationFailureReason = 'unsupported' | 'denied' | 'unavailable' | 'timeout';
+
+export type GeolocationResult =
+  | { ok: true; coords: LatLng }
+  | { ok: false; reason: GeolocationFailureReason };
+
+const REASON_BY_ERROR_CODE: Partial<Record<number, GeolocationFailureReason>> = {
+  1: 'denied',
+  2: 'unavailable',
+  3: 'timeout',
+};
+
+export function getCurrentPositionDetailed(): Promise<GeolocationResult> {
   if (!('geolocation' in navigator)) {
-    return null;
+    return Promise.resolve({ ok: false, reason: 'unsupported' });
   }
 
-  return new Promise<LatLng | null>((resolve) => {
+  return new Promise<GeolocationResult>((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
+          ok: true,
+          coords: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          },
         });
       },
-      () => resolve(null),
+      (error) => {
+        resolve({ ok: false, reason: REASON_BY_ERROR_CODE[error.code] ?? 'unavailable' });
+      },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
   });
+}
+
+export async function getCurrentPosition(): Promise<LatLng | null> {
+  const result = await getCurrentPositionDetailed();
+  return result.ok ? result.coords : null;
 }

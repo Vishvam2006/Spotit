@@ -1,5 +1,11 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
-import type { CreateParkingInput, UpdateParkingInput } from "./parking.validation";
+import { haversineDistanceKm } from "../../utils/distance";
+import type {
+  CreateParkingInput,
+  UpdateParkingInput,
+  ParkingListQuery,
+} from "./parking.validation";
 
 export class ParkingError extends Error {
   statusCode: number;
@@ -11,14 +17,75 @@ export class ParkingError extends Error {
   }
 }
 
-export async function getActiveParking() {
+export type ParkingLotWithDistance = Prisma.ParkingLotGetPayload<{}> & {
+  distanceKm?: number;
+};
+
+const orderByMap: Record<
+  Exclude<ParkingListQuery["sort"], "nearest" | undefined>,
+  Prisma.ParkingLotOrderByWithRelationInput
+> = {
+  newest: { createdAt: "desc" },
+  cheapest: { pricePerHour: "asc" },
+  expensive: { pricePerHour: "desc" },
+};
+
+function buildWhere(filters: ParkingListQuery): Prisma.ParkingLotWhereInput {
+  const where: Prisma.ParkingLotWhereInput = {
+    status: "ACTIVE",
+  };
+
+  const searchTerm = filters.q?.trim();
+  if (searchTerm) {
+    where.OR = [
+      { name: { contains: searchTerm, mode: "insensitive" } },
+      { address: { contains: searchTerm, mode: "insensitive" } },
+    ];
+  }
+
+  if (filters.city) {
+    where.city = filters.city;
+  }
+
+  if (filters.maxPrice !== undefined) {
+    where.pricePerHour = { lte: filters.maxPrice };
+  }
+
+  if (filters.availableOnly) {
+    where.availableSpaces = { gt: 0 };
+  }
+
+  return where;
+}
+
+function sortByDistance(
+  parkingLots: ParkingLotWithDistance[],
+  lat: number,
+  lng: number,
+): ParkingLotWithDistance[] {
+  return parkingLots
+    .map((parking) => ({
+      ...parking,
+      distanceKm: haversineDistanceKm(lat, lng, parking.latitude, parking.longitude),
+    }))
+    .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+}
+
+export async function getActiveParking(
+  filters: ParkingListQuery = {},
+): Promise<ParkingLotWithDistance[]> {
+  const where = buildWhere(filters);
+
+  if (filters.sort === "nearest") {
+    const lots = await prisma.parkingLot.findMany({ where });
+    return sortByDistance(lots, filters.lat!, filters.lng!);
+  }
+
+  const orderBy = orderByMap[filters.sort ?? "newest"];
+
   return prisma.parkingLot.findMany({
-    where: {
-      status: "ACTIVE",
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
+    where,
+    orderBy,
   });
 }
 

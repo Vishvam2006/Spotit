@@ -5,32 +5,77 @@ import Logo from '../components/Logo';
 import ParkingMap from '../components/map/ParkingMap';
 import ParkingCard from '../components/map/ParkingCard';
 import AddParkingForm from '../components/parking/AddParkingForm';
+import SearchFilters from '../components/parking/SearchFilters';
 import type { MapLocation } from '../components/map/ParkingMap';
 import Spinner from '../components/ui/Spinner';
 import Alert from '../components/ui/Alert';
 import { fetchParkingLots } from '../services/parking';
-import type { ParkingLot } from '../types/parking';
+import { getCurrentPositionDetailed } from '../utils/geolocation';
+import type { GeolocationFailureReason } from '../utils/geolocation';
+import type { ParkingFilters, ParkingLot } from '../types/parking';
+
+interface Notice {
+  type: 'success' | 'error';
+  message: string;
+}
+
+function locationErrorMessage(reason: GeolocationFailureReason): string {
+  switch (reason) {
+    case 'denied':
+      return 'Location permission was denied. Nearest sort needs your location.';
+    case 'unavailable':
+      return "We couldn't determine your location. Nearest sort needs your location.";
+    case 'timeout':
+      return 'Location request timed out. Please try selecting Nearest again.';
+    case 'unsupported':
+      return 'Your browser does not support location services. Nearest sort is unavailable.';
+  }
+}
+
+function hasMeaningfulFilters(filters: ParkingFilters): boolean {
+  return (
+    Boolean(filters.q?.trim()) ||
+    Boolean(filters.city) ||
+    filters.maxPrice !== undefined ||
+    Boolean(filters.availableOnly) ||
+    (filters.sort !== undefined && filters.sort !== 'newest') ||
+    filters.lat !== undefined ||
+    filters.lng !== undefined
+  );
+}
 
 export default function Home() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [filters, setFilters] = useState<ParkingFilters>({});
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
   const [isAddingParking, setIsAddingParking] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
-  const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(
-    null,
-  );
+  const [notice, setNotice] = useState<Notice | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const nearestRequestId = useRef(0);
 
-  const loadParking = useCallback(() => {
+  const hasFilters = hasMeaningfulFilters(filters);
+
+  const fetchLots = useCallback((nextFilters: ParkingFilters) => {
     let active = true;
 
-    fetchParkingLots()
+    queueMicrotask(() => {
+      if (active) setLoading(true);
+    });
+
+    fetchParkingLots(nextFilters)
       .then((lots) => {
-        if (active) setParkingLots(lots);
+        if (!active) return;
+        setParkingLots(lots);
+        setError(null);
+        if (!hasMeaningfulFilters(nextFilters)) {
+          setCities([...new Set(lots.map((lot) => lot.city))].sort());
+        }
       })
       .catch(() => {
         if (active) setError('Failed to load parking lots. Please try again.');
@@ -44,13 +89,49 @@ export default function Home() {
     };
   }, []);
 
-  useEffect(() => loadParking(), [loadParking]);
+  useEffect(() => fetchLots(filters), [fetchLots, filters]);
 
   useEffect(() => {
     if (!notice) return;
     const timeout = setTimeout(() => setNotice(null), 4000);
     return () => clearTimeout(timeout);
   }, [notice]);
+
+  const handleFiltersChange = useCallback((patch: Partial<ParkingFilters>) => {
+    if (patch.sort === 'nearest') {
+      const requestId = ++nearestRequestId.current;
+      getCurrentPositionDetailed().then((result) => {
+        if (requestId !== nearestRequestId.current) return;
+        if (result.ok) {
+          setFilters((previous) => ({
+            ...previous,
+            sort: 'nearest',
+            lat: result.coords.lat,
+            lng: result.coords.lng,
+          }));
+        } else {
+          setNotice({ type: 'error', message: locationErrorMessage(result.reason) });
+          setFilters((previous) => ({ ...previous, sort: previous.sort ?? 'newest' }));
+        }
+      });
+      return;
+    }
+
+    nearestRequestId.current += 1;
+    setFilters((previous) => {
+      const next = { ...previous, ...patch };
+      if (next.sort !== 'nearest') {
+        delete next.lat;
+        delete next.lng;
+      }
+      return next;
+    });
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setFilters({});
+    setSelectedParkingId(null);
+  }, []);
 
   const handleSelectId = useCallback((id: string | null) => {
     setSelectedParkingId(id);
@@ -91,8 +172,8 @@ export default function Home() {
     setSelectedLocation(null);
     setIsAddingParking(false);
     setNotice({ type: 'success', message: 'Parking lot created successfully.' });
-    loadParking();
-  }, [loadParking]);
+    fetchLots(filters);
+  }, [fetchLots, filters]);
 
   const handleLogout = () => {
     logout();
@@ -133,6 +214,15 @@ export default function Home() {
             <Alert variant={notice.type} message={notice.message} />
           </div>
         )}
+
+        <div className="mb-5">
+          <SearchFilters
+            filters={filters}
+            cities={cities}
+            onChange={handleFiltersChange}
+            onClear={handleClearFilters}
+          />
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-24">
@@ -196,8 +286,13 @@ export default function Home() {
                 </p>
 
                 {parkingLots.length === 0 ? (
-                  <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
-                    No parking lots available right now.
+                  <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center">
+                    <p className="text-sm font-semibold text-slate-700">
+                      {hasFilters ? 'No parking lots found.' : 'No parking lots available right now.'}
+                    </p>
+                    {hasFilters && (
+                      <p className="mt-1 text-sm text-slate-500">Try changing your filters.</p>
+                    )}
                   </div>
                 ) : (
                   <div className="mt-4 max-h-[540px] space-y-3 overflow-y-auto pr-1">
