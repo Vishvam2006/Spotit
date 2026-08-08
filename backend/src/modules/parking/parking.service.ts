@@ -1,6 +1,16 @@
 import { prisma } from "../../config/prisma";
 import type { CreateParkingInput, UpdateParkingInput } from "./parking.validation";
 
+export class ParkingError extends Error {
+  statusCode: number;
+
+  constructor(statusCode: number, message: string) {
+    super(message);
+    this.name = "ParkingError";
+    this.statusCode = statusCode;
+  }
+}
+
 export async function getActiveParking() {
   return prisma.parkingLot.findMany({
     where: {
@@ -31,17 +41,27 @@ export async function updateParking(
   id: string,
   ownerId: string,
   data: UpdateParkingInput,
+  isAdmin = false,
 ) {
   const parking = await prisma.parkingLot.findUnique({
     where: { id },
   });
 
   if (!parking) {
-    throw new Error("Parking lot not found");
+    throw new ParkingError(404, "Parking lot not found");
   }
 
-  if (parking.ownerId !== ownerId) {
-    throw new Error("Unauthorized");
+  if (!isAdmin && parking.ownerId !== ownerId) {
+    throw new ParkingError(403, "Unauthorized");
+  }
+
+  const merged = {
+    ...parking,
+    ...data,
+  };
+
+  if (merged.availableSpaces > merged.totalSpaces) {
+    throw new ParkingError(400, "Available spaces cannot exceed total spaces");
   }
 
   return prisma.parkingLot.update({
@@ -50,17 +70,17 @@ export async function updateParking(
   });
 }
 
-export async function deleteParking(id: string, ownerId: string) {
+export async function deleteParking(id: string, ownerId: string, isAdmin = false) {
   const parking = await prisma.parkingLot.findUnique({
     where: { id },
   });
 
   if (!parking) {
-    throw new Error("Parking lot not found");
+    throw new ParkingError(404, "Parking lot not found");
   }
 
-  if (parking.ownerId !== ownerId) {
-    throw new Error("Unauthorized");
+  if (!isAdmin && parking.ownerId !== ownerId) {
+    throw new ParkingError(403, "Unauthorized");
   }
 
   return prisma.parkingLot.delete({

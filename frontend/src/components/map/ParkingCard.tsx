@@ -34,7 +34,7 @@ export default function ParkingCard({
           onSelect(parking);
         }
       }}
-      className={`w-full cursor-pointer rounded-xl border p-4 text-left transition-all ${
+      className={`w-full cursor-pointer rounded-xl border p-4 text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-blue-500 ${
         selected
           ? 'border-blue-500 bg-blue-50 shadow-sm ring-2 ring-blue-500'
           : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'

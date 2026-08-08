@@ -10,7 +10,7 @@ const parkingBaseSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   pricePerHour: z.number().min(0),
-  totalSpaces: z.number().int().min(0),
+  totalSpaces: z.number().int().min(1),
   availableSpaces: z.number().int().min(0),
   status: parkingLotStatusEnum.optional(),
   imageUrl: z.string().optional(),

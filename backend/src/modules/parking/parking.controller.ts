@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import * as parkingService from "./parking.service";
+import { ParkingError } from "./parking.service";
 import {
   createParkingSchema,
   updateParkingSchema,
@@ -72,6 +73,7 @@ export async function updateParkingLot(req: Request, res: Response) {
   }
 
   const ownerId = req.user!.id;
+  const isAdmin = req.user!.role === "ADMIN";
   const id = String(req.params.id);
 
   try {
@@ -79,6 +81,7 @@ export async function updateParkingLot(req: Request, res: Response) {
       id,
       ownerId,
       result.data,
+      isAdmin,
     );
 
     res.json({
@@ -86,27 +89,38 @@ export async function updateParkingLot(req: Request, res: Response) {
       data: parkingLot,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    res.status(message === "Unauthorized" ? 403 : 404).json({
+    if (error instanceof ParkingError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    res.status(500).json({
       success: false,
-      message,
+      message: "Internal server error",
     });
   }
 }
 
 export async function deleteParkingLot(req: Request, res: Response) {
   const ownerId = req.user!.id;
+  const isAdmin = req.user!.role === "ADMIN";
   const id = String(req.params.id);
 
   try {
-    await parkingService.deleteParking(id, ownerId);
+    await parkingService.deleteParking(id, ownerId, isAdmin);
 
     res.status(204).send();
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    res.status(message === "Unauthorized" ? 403 : 404).json({
+    if (error instanceof ParkingError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    res.status(500).json({
       success: false,
-      message,
+      message: "Internal server error",
     });
   }
 }

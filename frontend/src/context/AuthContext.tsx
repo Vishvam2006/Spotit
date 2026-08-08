@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { api } from "../services/api";
+import { api, UNAUTHORIZED_EVENT } from "../services/api";
 import type { AuthResponse, MeResponse, User } from "../types";
 import { AuthContext } from "./auth-context";
 
@@ -93,6 +93,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
   }, []);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logout();
+    };
+
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+  }, [logout]);
 
   const value = useMemo(
     () => ({
