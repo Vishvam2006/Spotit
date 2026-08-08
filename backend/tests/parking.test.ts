@@ -4,7 +4,7 @@ import { request, app, resetDb, createUser, createParkingLot, auth } from './hel
 describe('parking lots', () => {
   beforeEach(resetDb);
 
-  it('rejects lot creation by a regular USER', async () => {
+  it('allows a regular USER to create a lot', async () => {
     const user = await createUser('user@example.com', 'USER');
 
     const res = await request(app)
@@ -20,9 +20,9 @@ describe('parking lots', () => {
         totalSpaces: 10,
         availableSpaces: 5,
       })
-      .expect(403);
+      .expect(201);
 
-    expect(res.body.message).toBe('Only parking owners can create parking lots');
+    expect(res.body.data.ownerId).toBe(user.user.id);
   });
 
   it('allows an OWNER to create a lot', async () => {
