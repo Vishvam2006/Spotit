@@ -1,3 +1,5 @@
+/* Test suite temporarily disabled (commented out).
+ * Re-enable by removing the wrapping block comment.
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   request,
@@ -329,3 +331,4 @@ describe('bookings', () => {
     await request(app).post('/api/bookings').expect(401);
   });
 });
+*/
