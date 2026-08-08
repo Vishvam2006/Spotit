@@ -12,7 +12,7 @@ import { fetchParkingLots } from '../services/parking';
 import type { ParkingLot } from '../types/parking';
 
 export default function Home() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,25 @@ export default function Home() {
   );
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const loadParking = useCallback(() => {
+  const isParkingOwner = user?.role === 'OWNER' || user?.role === 'ADMIN';
+
+  const reloadParking = useCallback(() => {
+    setLoading(true);
+    setError(null);
+
+    fetchParkingLots()
+      .then((lots) => {
+        setParkingLots(lots);
+      })
+      .catch(() => {
+        setError('Failed to load parking lots. Please try again.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
     let active = true;
 
     fetchParkingLots()
@@ -43,8 +61,6 @@ export default function Home() {
       active = false;
     };
   }, []);
-
-  useEffect(() => loadParking(), [loadParking]);
 
   useEffect(() => {
     if (!notice) return;
@@ -91,8 +107,8 @@ export default function Home() {
     setSelectedLocation(null);
     setIsAddingParking(false);
     setNotice({ type: 'success', message: 'Parking lot created successfully.' });
-    loadParking();
-  }, [loadParking]);
+    reloadParking();
+  }, [reloadParking]);
 
   const handleLogout = () => {
     logout();
@@ -116,6 +132,13 @@ export default function Home() {
               className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               My Bookings
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/my-parkings')}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              My Parking Lots
             </button>
             <button
               onClick={handleLogout}
@@ -157,12 +180,14 @@ export default function Home() {
                   Cancel
                 </button>
               ) : (
-                <button
-                  onClick={startAddParking}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  + Add Parking
-                </button>
+                !isParkingOwner && (
+                  <button
+                    onClick={startAddParking}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    + Add Parking
+                  </button>
+                )
               )}
             </div>
 
