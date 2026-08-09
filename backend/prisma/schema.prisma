@@ -64,14 +64,35 @@ model Booking {
   estimatedAmount Float?
   finalAmount     Float?
   status          BookingStatus @default(RESERVED)
+  lastLocationAt  DateTime?
+  lastSeenAt      DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parkingLot ParkingLot @relation(fields: [parkingLotId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parkingLot    ParkingLot      @relation(fields: [parkingLotId], references: [id], onDelete: Cascade)
+  locationAudit LocationAudit[]
 
   @@index([userId, status])
   @@index([parkingLotId, status])
+}
+
+model LocationAudit {
+  id              String   @id @default(cuid())
+  bookingId       String
+  eventType       String
+  lat             Float?
+  lng             Float?
+  distanceMeters  Float?
+  accuracyMeters  Float?
+  capturedAt      DateTime
+  accepted        Boolean
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
 }
 
 enum Role {
