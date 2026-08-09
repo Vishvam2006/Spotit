@@ -8,6 +8,7 @@ import Home from './pages/Home';
 import ParkingDetails from './pages/ParkingDetails';
 import BookingConfirm from './pages/BookingConfirm';
 import Bookings from './pages/Bookings';
+import MyParkings from './pages/MyParkings';
 
 export default function App() {
   return (
@@ -59,6 +60,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Bookings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-parkings"
+            element={
+              <ProtectedRoute>
+                <MyParkings />
               </ProtectedRoute>
             }
           />

@@ -4,7 +4,7 @@ import { prisma } from './config/prisma';
 
 const port = process.env.PORT || 5000;
 
-const server = app.listen(port, () => {
+const server = app.listen(Number(port), '0.0.0.0', () => {
   console.log(`ParkMitra server running on port ${port}`);
 });
 
@@ -13,7 +13,7 @@ function shutdown(signal: string) {
   server.close(() => {
     prisma
       .$disconnect()
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => process.exit(0));
   });
 }
