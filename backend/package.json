@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "vitest run --passWithNoTests",
+    "reconcile": "tsx scripts/reconcile.ts",
     "prisma:seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
