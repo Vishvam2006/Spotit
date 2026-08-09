@@ -7,3 +7,13 @@ export const createBookingSchema = z.object({
 });
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+
+export const locationSampleSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  accuracy: z.number().positive(),
+  capturedAt: z.string().datetime(),
+  speedMps: z.number().positive().optional(),
+});
+
+export type LocationSampleInput = z.infer<typeof locationSampleSchema>;

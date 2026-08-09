@@ -1,6 +1,16 @@
 import type { NextFunction, Request, Response } from 'express';
 import * as bookingService from './booking.service';
-import { createBookingSchema } from './booking.validation';
+import type { LocationSample } from './booking.geofence';
+import { createBookingSchema, locationSampleSchema } from './booking.validation';
+
+function parseLocationSample(body: unknown): LocationSample | undefined {
+  const parsed = locationSampleSchema.safeParse(body);
+  if (!parsed.success) {
+    return undefined;
+  }
+  const { capturedAt, ...rest } = parsed.data;
+  return { ...rest, capturedAt: new Date(capturedAt) };
+}
 
 export async function createBooking(
   req: Request,
@@ -54,6 +64,7 @@ export async function checkInBooking(
     const booking = await bookingService.checkInBooking(
       req.user!.id,
       String(req.params.id),
+      parseLocationSample(req.body),
     );
     res.json({ success: true, data: booking });
   } catch (error) {
@@ -70,6 +81,7 @@ export async function checkOutBooking(
     const booking = await bookingService.checkOutBooking(
       req.user!.id,
       String(req.params.id),
+      parseLocationSample(req.body),
     );
     res.json({ success: true, data: booking });
   } catch (error) {
