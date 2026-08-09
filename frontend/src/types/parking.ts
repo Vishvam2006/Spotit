@@ -1,5 +1,15 @@
 export type ParkingLotStatus = 'ACTIVE' | 'INACTIVE' | 'CLOSED';
 
+export type ParkingSort = 'newest' | 'cheapest' | 'expensive' | 'nearest';
+
+export interface ParkingFilters {
+  q?: string;
+  city?: string;
+  maxPrice?: number;
+  availableOnly?: boolean;
+  sort?: ParkingSort;
+  lat?: number;
+  lng?: number;
 /** Owner-management parking shape used by My Parkings feature. */
 export interface Parking {
   id: string;
@@ -45,6 +55,7 @@ export interface ParkingLot {
   imageUrl?: string;
   createdAt: string;
   updatedAt: string;
+  distanceKm?: number;
 }
 
 export interface ParkingLotsResponse {

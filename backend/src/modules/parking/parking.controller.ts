@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import * as parkingService from "./parking.service";
 import { ParkingError } from "./parking.service";
+
 import { createParkingSchema, updateParkingSchema } from "./parking.validation";
 
 export async function getMyParkings(req: Request, res: Response) {
@@ -14,8 +15,19 @@ export async function getMyParkings(req: Request, res: Response) {
   });
 }
 
-export async function getParkingLots(_req: Request, res: Response) {
-  const parkingLots = await parkingService.getActiveParking();
+
+export async function getParkingLots(req: Request, res: Response) {
+  const result = parkingListQuerySchema.safeParse(req.query);
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid filters",
+      errors: result.error.issues.map((issue) => issue.message),
+    });
+  }
+
+  const parkingLots = await parkingService.getActiveParking(result.data);
 
   res.json({
     success: true,
