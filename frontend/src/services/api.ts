@@ -28,6 +28,10 @@ api.interceptors.response.use(
   },
 );
 
+export function isNetworkError(error: unknown): boolean {
+  return axios.isAxiosError(error) && !error.response;
+}
+
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
     return (

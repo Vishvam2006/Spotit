@@ -5,7 +5,7 @@ import {
   checkOutBooking,
   type LocationSamplePayload,
 } from '../../services/bookings';
-import { getErrorMessage } from '../../services/api';
+import { getErrorMessage, isNetworkError } from '../../services/api';
 import { formatDateTime, formatINR } from '../../utils/format';
 import { formatDistanceMeters } from '../../utils/distance';
 import { getBookingStatusStyles } from '../../utils/bookingStatus';
@@ -22,6 +22,9 @@ interface ArrivalCardProps {
 }
 
 const SIMULATION_CAPTION = 'Simulated for the web MVP.';
+
+const FALLBACK_OFFLINE_MESSAGE =
+  "You're offline. Your booking is safe — check in again once you reconnect.";
 
 function farAwayCoords(origin: LatLng): LatLng {
   return {
@@ -128,7 +131,7 @@ export default function ArrivalCard({
         const updated = await action();
         onBookingUpdated(updated);
       } catch (err) {
-        setActionError(getErrorMessage(err));
+        setActionError(isNetworkError(err) ? FALLBACK_OFFLINE_MESSAGE : getErrorMessage(err));
       } finally {
         busyRef.current = false;
         setBusy(false);

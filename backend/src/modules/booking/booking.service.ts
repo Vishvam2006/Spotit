@@ -54,12 +54,61 @@ async function expireReservedBookings(tx: Prisma.TransactionClient) {
   }
 }
 
+async function completeStaleSessions(tx: Prisma.TransactionClient) {
+  const staleBefore = new Date(
+    Date.now() - geofenceConfig.sessionStaleSeconds * 1000,
+  );
+
+  const stale = await tx.booking.findMany({
+    where: {
+      status: 'ACTIVE',
+      OR: [
+        { lastSeenAt: { lt: staleBefore } },
+        { lastSeenAt: null, checkInTime: { lt: staleBefore } },
+      ],
+    },
+    select: {
+      id: true,
+      parkingLotId: true,
+      checkInTime: true,
+      parkingLot: { select: { pricePerHour: true } },
+    },
+  });
+
+  for (const booking of stale) {
+    const result = await tx.booking.updateMany({
+      where: { id: booking.id, status: 'ACTIVE' },
+      data: {
+        status: 'COMPLETED',
+        checkOutTime: new Date(),
+        finalAmount: booking.checkInTime
+          ? Math.max(
+              Math.round(
+                (booking.parkingLot.pricePerHour ?? 0) *
+                  ((Date.now() - booking.checkInTime.getTime()) / 3_600_000),
+              ),
+              0,
+            )
+          : null,
+      },
+    });
+
+    if (result.count === 1) {
+      await tx.parkingLot.update({
+        where: { id: booking.parkingLotId },
+        data: { availableSpaces: { increment: 1 } },
+      });
+    }
+  }
+}
+
 export async function createBooking(
   userId: string,
   input: CreateBookingInput,
 ): Promise<BookingWithLot> {
   return prisma.$transaction(async (tx) => {
     await expireReservedBookings(tx);
+    await completeStaleSessions(tx);
 
     const parkingLot = await tx.parkingLot.findUnique({
       where: { id: input.parkingLotId },
@@ -122,6 +171,7 @@ export async function createBooking(
 export async function getBookings(userId: string): Promise<BookingWithLot[]> {
   return prisma.$transaction(async (tx) => {
     await expireReservedBookings(tx);
+    await completeStaleSessions(tx);
 
     return tx.booking.findMany({
       where: { userId },
@@ -137,6 +187,7 @@ export async function getBookingById(
 ): Promise<BookingWithLot> {
   return prisma.$transaction(async (tx) => {
     await expireReservedBookings(tx);
+    await completeStaleSessions(tx);
 
     const booking = await tx.booking.findFirst({
       where: { id: bookingId, userId },
@@ -501,6 +552,7 @@ export async function heartbeatBooking(
 ): Promise<BookingWithLot> {
   return prisma.$transaction(async (tx) => {
     await expireReservedBookings(tx);
+    await completeStaleSessions(tx);
 
     const booking = await tx.booking.findFirst({
       where: { id: bookingId, userId },

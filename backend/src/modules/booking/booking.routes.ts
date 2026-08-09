@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/auth.middleware';
+import { bookingRateLimiter } from '../../middleware/rateLimit';
 import {
   createBooking,
   getBookings,
@@ -13,6 +14,7 @@ import {
 const router = Router();
 
 router.use(authenticate);
+router.use(bookingRateLimiter);
 
 router.post('/', createBooking);
 router.get('/', getBookings);
