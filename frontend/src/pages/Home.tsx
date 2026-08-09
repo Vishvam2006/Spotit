@@ -45,7 +45,7 @@ function hasMeaningfulFilters(filters: ParkingFilters): boolean {
 }
 
 export default function Home() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [filters, setFilters] = useState<ParkingFilters>({});
   const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
@@ -60,6 +60,7 @@ export default function Home() {
   const nearestRequestId = useRef(0);
 
   const hasFilters = hasMeaningfulFilters(filters);
+  const isParkingOwner = user?.role === 'OWNER' || user?.role === 'ADMIN';
 
   const fetchLots = useCallback((nextFilters: ParkingFilters) => {
     let active = true;
@@ -199,6 +200,13 @@ export default function Home() {
               My Bookings
             </button>
             <button
+              type="button"
+              onClick={() => navigate('/my-parkings')}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              My Parking Lots
+            </button>
+            <button
               onClick={handleLogout}
               className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -247,12 +255,14 @@ export default function Home() {
                   Cancel
                 </button>
               ) : (
-                <button
-                  onClick={startAddParking}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  + Add Parking
-                </button>
+                !isParkingOwner && (
+                  <button
+                    onClick={startAddParking}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    + Add Parking
+                  </button>
+                )
               )}
             </div>
 

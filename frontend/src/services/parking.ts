@@ -28,6 +28,11 @@ export async function fetchParkingLots(filters: ParkingFilters = {}): Promise<Pa
   return data.data;
 }
 
+export async function fetchMyParkingLots(): Promise<ParkingLot[]> {
+  const { data } = await api.get<ParkingLotsResponse>('/parking-lots/mine');
+  return data.data;
+}
+
 export async function fetchParkingLot(id: string): Promise<ParkingLot> {
   const { data } = await api.get<ParkingLotResponse>(`/parking-lots/${id}`);
   return data.data;

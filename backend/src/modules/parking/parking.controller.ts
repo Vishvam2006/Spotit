@@ -1,11 +1,20 @@
 import type { Request, Response } from "express";
 import * as parkingService from "./parking.service";
 import { ParkingError } from "./parking.service";
-import {
-  createParkingSchema,
-  updateParkingSchema,
-  parkingListQuerySchema,
-} from "./parking.validation";
+
+import { createParkingSchema, updateParkingSchema } from "./parking.validation";
+
+export async function getMyParkings(req: Request, res: Response) {
+  const ownerId = req.user!.id;
+
+  const parkings = await parkingService.getMyParkings(ownerId);
+
+  return res.json({
+    success: true,
+    data: parkings,
+  });
+}
+
 
 export async function getParkingLots(req: Request, res: Response) {
   const result = parkingListQuerySchema.safeParse(req.query);
@@ -55,10 +64,7 @@ export async function createParkingLot(req: Request, res: Response) {
 
   const ownerId = req.user!.id;
 
-  const parkingLot = await parkingService.createParking(
-    ownerId,
-    result.data,
-  );
+  const parkingLot = await parkingService.createParking(ownerId, result.data);
 
   res.status(201).json({
     success: true,
@@ -85,7 +91,7 @@ export async function updateParkingLot(req: Request, res: Response) {
       id,
       ownerId,
       result.data,
-      isAdmin,
+      isAdmin
     );
 
     res.json({

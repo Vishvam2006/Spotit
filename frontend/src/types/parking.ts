@@ -10,6 +10,33 @@ export interface ParkingFilters {
   sort?: ParkingSort;
   lat?: number;
   lng?: number;
+/** Owner-management parking shape used by My Parkings feature. */
+export interface Parking {
+  id: string;
+  ownerId: string;
+  name: string;
+  description?: string | null;
+  address: string;
+  latitude: number;
+  longitude: number;
+  totalSlots: number;
+  availableSlots: number;
+  pricePerHour: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ParkingInput {
+  name: string;
+  description?: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  totalSlots: number;
+  availableSlots: number;
+  pricePerHour: number;
+  isActive: boolean;
 }
 
 export interface ParkingLot {
@@ -39,4 +66,14 @@ export interface ParkingLotsResponse {
 export interface ParkingLotResponse {
   success: boolean;
   data: ParkingLot;
+}
+
+export interface ParkingResponse {
+  success: boolean;
+  data: Parking;
+}
+
+export interface ParkingsResponse {
+  success: boolean;
+  data: Parking[];
 }

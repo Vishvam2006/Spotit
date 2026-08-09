@@ -1,10 +1,12 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+
 import { haversineDistanceKm } from "../../utils/distance";
 import type {
   CreateParkingInput,
   UpdateParkingInput,
   ParkingListQuery,
+
 } from "./parking.validation";
 
 export class ParkingError extends Error {
@@ -83,6 +85,18 @@ export async function getActiveParking(
 
   const orderBy = orderByMap[filters.sort ?? "newest"];
 
+export async function getMyParkings(ownerId: string) {
+  return prisma.parkingLot.findMany({
+    where: {
+      ownerId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+export async function getActiveParking() {
   return prisma.parkingLot.findMany({
     where,
     orderBy,
@@ -108,7 +122,7 @@ export async function updateParking(
   id: string,
   ownerId: string,
   data: UpdateParkingInput,
-  isAdmin = false,
+  isAdmin = false
 ) {
   const parking = await prisma.parkingLot.findUnique({
     where: { id },
@@ -137,7 +151,11 @@ export async function updateParking(
   });
 }
 
-export async function deleteParking(id: string, ownerId: string, isAdmin = false) {
+export async function deleteParking(
+  id: string,
+  ownerId: string,
+  isAdmin = false
+) {
   const parking = await prisma.parkingLot.findUnique({
     where: { id },
   });
