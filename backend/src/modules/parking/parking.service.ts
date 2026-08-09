@@ -85,6 +85,12 @@ export async function getActiveParking(
 
   const orderBy = orderByMap[filters.sort ?? "newest"];
 
+  return prisma.parkingLot.findMany({
+    where,
+    orderBy,
+  });
+}
+
 export async function getMyParkings(ownerId: string) {
   return prisma.parkingLot.findMany({
     where: {
@@ -93,13 +99,6 @@ export async function getMyParkings(ownerId: string) {
     orderBy: {
       createdAt: "desc",
     },
-  });
-}
-
-export async function getActiveParking() {
-  return prisma.parkingLot.findMany({
-    where,
-    orderBy,
   });
 }
 
@@ -166,6 +165,21 @@ export async function deleteParking(
 
   if (!isAdmin && parking.ownerId !== ownerId) {
     throw new ParkingError(403, "Unauthorized");
+  }
+
+  const activeBooking = await prisma.booking.findFirst({
+    where: {
+      parkingLotId: id,
+      status: { in: ["RESERVED", "ACTIVE"] },
+    },
+    select: { id: true },
+  });
+
+  if (activeBooking) {
+    throw new ParkingError(
+      409,
+      "Cannot delete a parking lot with active or reserved bookings",
+    );
   }
 
   return prisma.parkingLot.delete({
