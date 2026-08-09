@@ -1,13 +1,18 @@
-import { execSync } from 'node:child_process';
-import path from 'node:path';
+import { PrismaClient } from '@prisma/client';
 
-export default function teardown() {
-  const backendDir = path.resolve(__dirname, '..');
-  // Reseed disabled alongside the commented-out test suite.
-  // execSync('npm run prisma:seed', {
-  //   cwd: backendDir,
-  //   stdio: 'inherit',
-  // });
-  void backendDir;
-  void execSync;
+const prisma = new PrismaClient();
+
+export default async function teardown() {
+  try {
+    // Clean up after all tests
+    await prisma.booking.deleteMany();
+    await prisma.parkingLot.deleteMany();
+    await prisma.user.deleteMany();
+    
+    console.log('✓ Test database cleaned after tests');
+  } catch (error) {
+    console.error('Failed to clean database after tests:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
 }

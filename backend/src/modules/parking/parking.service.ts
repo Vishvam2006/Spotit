@@ -135,6 +135,8 @@ export async function updateParking(
     throw new ParkingError(403, "Unauthorized");
   }
 
+  const occupiedSpaces = parking.totalSpaces - parking.availableSpaces;
+
   const merged = {
     ...parking,
     ...data,
@@ -144,9 +146,21 @@ export async function updateParking(
     throw new ParkingError(400, "Available spaces cannot exceed total spaces");
   }
 
+  if (merged.totalSpaces < occupiedSpaces) {
+    throw new ParkingError(
+      400,
+      "Total spaces cannot be less than currently occupied spaces",
+    );
+  }
+
+  let updateData: UpdateParkingInput = data;
+  if (data.totalSpaces !== undefined && data.availableSpaces === undefined) {
+    updateData = { ...data, availableSpaces: merged.totalSpaces - occupiedSpaces };
+  }
+
   return prisma.parkingLot.update({
     where: { id },
-    data,
+    data: updateData,
   });
 }
 

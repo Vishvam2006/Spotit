@@ -1,5 +1,3 @@
-/* Test suite temporarily disabled (commented out).
- * Re-enable by removing the wrapping block comment.
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   request,
@@ -51,8 +49,12 @@ describe('bookings', () => {
 
     expect(res.body.data.status).toBe('RESERVED');
     expect(res.body.data.vehicleNumber).toBe(VEHICLE);
+    expect(res.body.data.durationMinutes).toBe(durationMinutes);
     expect(res.body.data.estimatedAmount).toBe(expectedAmount);
-    expect(res.body.data.reservedUntil).toBeTruthy();
+    expect(res.body.data.reservedAt).toBeTruthy();
+    expect(res.body.data.checkInDeadline).toBeTruthy();
+    expect(res.body.data.checkInTime).toBeNull();
+    expect(res.body.data.sessionEndsAt).toBeNull();
   });
 
   it.each([30, 500, 90.5, Number.NaN])(
@@ -150,6 +152,7 @@ describe('bookings', () => {
 
     expect(res.body.data.status).toBe('ACTIVE');
     expect(res.body.data.checkInTime).toBeTruthy();
+    expect(res.body.data.sessionEndsAt).toBeTruthy();
 
     const updated = await prisma.parkingLot.findUnique({ where: { id: lot.id } });
     expect(updated?.availableSpaces).toBe(4);
@@ -170,6 +173,36 @@ describe('bookings', () => {
       .expect(200);
 
     expect(res.body.data.status).toBe('ACTIVE');
+  });
+
+  it('grants a short check-in window, not the full session, on booking', async () => {
+    const { user, lot } = await setup();
+
+    const res = await book(user.token, lot.id, { durationMinutes: 120 }).expect(201);
+
+    const reservedAt = new Date(res.body.data.reservedAt).getTime();
+    const checkInDeadline = new Date(res.body.data.checkInDeadline).getTime();
+    const windowMinutes = (checkInDeadline - reservedAt) / 60_000;
+
+    expect(windowMinutes).toBeGreaterThan(0);
+    expect(windowMinutes).toBeLessThanOrEqual(15);
+  });
+
+  it('starts the session timer at check-in, ending at checkInTime + duration', async () => {
+    const { user, lot } = await setup();
+    const booking = (await book(user.token, lot.id, { durationMinutes: 60 })).body.data;
+
+    const res = await request(app)
+      .post(`/api/bookings/${booking.id}/check-in`)
+      .set(auth(user.token))
+      .expect(200);
+
+    const checkInTime = new Date(res.body.data.checkInTime).getTime();
+    const sessionEndsAt = new Date(res.body.data.sessionEndsAt).getTime();
+    const sessionMinutes = (sessionEndsAt - checkInTime) / 60_000;
+
+    expect(res.body.data.sessionEndsAt).toBeTruthy();
+    expect(Math.round(sessionMinutes)).toBe(60);
   });
 
   it('rejects check-in of a COMPLETED booking', async () => {
@@ -275,7 +308,7 @@ describe('bookings', () => {
     const past = new Date(Date.now() - 60_000);
     await prisma.booking.update({
       where: { id: booking.id },
-      data: { startTime: past, reservedUntil: past },
+      data: { reservedAt: past, checkInDeadline: past },
     });
 
     const res1 = await request(app).get('/api/bookings').set(auth(user.token)).expect(200);
@@ -331,4 +364,3 @@ describe('bookings', () => {
     await request(app).post('/api/bookings').expect(401);
   });
 });
-*/

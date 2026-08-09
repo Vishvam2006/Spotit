@@ -7,11 +7,10 @@ export { app, prisma, request };
 export const testPassword = 'Password123!';
 
 export async function resetDb() {
-  await prisma.$transaction([
-    prisma.booking.deleteMany(),
-    prisma.parkingLot.deleteMany(),
-    prisma.user.deleteMany(),
-  ]);
+  // Delete all records in the correct order to respect foreign key constraints
+  await prisma.booking.deleteMany();
+  await prisma.parkingLot.deleteMany();
+  await prisma.user.deleteMany();
 }
 
 export async function createUser(

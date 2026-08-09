@@ -12,12 +12,8 @@ import Alert from '../components/ui/Alert';
 import { fetchParkingLots } from '../services/parking';
 import { getCurrentPositionDetailed } from '../utils/geolocation';
 import type { GeolocationFailureReason } from '../utils/geolocation';
+import { notifyError, notifySuccess } from '../utils/notify';
 import type { ParkingFilters, ParkingLot } from '../types/parking';
-
-interface Notice {
-  type: 'success' | 'error';
-  message: string;
-}
 
 function locationErrorMessage(reason: GeolocationFailureReason): string {
   switch (reason) {
@@ -55,7 +51,6 @@ export default function Home() {
   const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
   const [isAddingParking, setIsAddingParking] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
-  const [notice, setNotice] = useState<Notice | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const nearestRequestId = useRef(0);
 
@@ -92,12 +87,6 @@ export default function Home() {
 
   useEffect(() => fetchLots(filters), [fetchLots, filters]);
 
-  useEffect(() => {
-    if (!notice) return;
-    const timeout = setTimeout(() => setNotice(null), 4000);
-    return () => clearTimeout(timeout);
-  }, [notice]);
-
   const handleFiltersChange = useCallback((patch: Partial<ParkingFilters>) => {
     if (patch.sort === 'nearest') {
       const requestId = ++nearestRequestId.current;
@@ -111,7 +100,7 @@ export default function Home() {
             lng: result.coords.lng,
           }));
         } else {
-          setNotice({ type: 'error', message: locationErrorMessage(result.reason) });
+          notifyError(locationErrorMessage(result.reason));
           setFilters((previous) => ({ ...previous, sort: previous.sort ?? 'newest' }));
         }
       });
@@ -156,13 +145,11 @@ export default function Home() {
   const startAddParking = useCallback(() => {
     setIsAddingParking(true);
     setSelectedLocation(null);
-    setNotice(null);
   }, []);
 
   const cancelAddParking = useCallback(() => {
     setIsAddingParking(false);
     setSelectedLocation(null);
-    setNotice(null);
   }, []);
 
   const handleLocationSelect = useCallback((location: MapLocation) => {
@@ -172,7 +159,7 @@ export default function Home() {
   const handleParkingCreated = useCallback(() => {
     setSelectedLocation(null);
     setIsAddingParking(false);
-    setNotice({ type: 'success', message: 'Parking lot created successfully.' });
+    notifySuccess('Parking lot created successfully.');
     fetchLots(filters);
   }, [fetchLots, filters]);
 
@@ -217,12 +204,6 @@ export default function Home() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        {notice && (
-          <div className="mb-5">
-            <Alert variant={notice.type} message={notice.message} />
-          </div>
-        )}
-
         <div className="mb-5">
           <SearchFilters
             filters={filters}

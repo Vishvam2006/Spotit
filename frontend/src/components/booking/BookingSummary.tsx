@@ -40,13 +40,27 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
           </dd>
         </div>
         <div>
-          <dt className="text-slate-400">Starts</dt>
-          <dd className="font-semibold text-slate-900">{formatDateTime(booking.startTime)}</dd>
+          <dt className="text-slate-400">Reserved at</dt>
+          <dd className="font-semibold text-slate-900">{formatDateTime(booking.reservedAt)}</dd>
         </div>
         <div>
-          <dt className="text-slate-400">Reserved until</dt>
+          <dt className="text-slate-400">Check in by</dt>
           <dd className="font-semibold text-slate-900">
-            {formatDateTime(booking.reservedUntil)}
+            {formatDateTime(booking.checkInDeadline)}
+          </dd>
+        </div>
+        {booking.status === 'ACTIVE' && booking.sessionEndsAt && (
+          <div>
+            <dt className="text-slate-400">Session ends</dt>
+            <dd className="font-semibold text-slate-900">
+              {formatDateTime(booking.sessionEndsAt)}
+            </dd>
+          </div>
+        )}
+        <div>
+          <dt className="text-slate-400">Duration</dt>
+          <dd className="font-semibold text-slate-900">
+            {booking.durationMinutes} min
           </dd>
         </div>
         <div>

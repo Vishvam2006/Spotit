@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth-context';
 import { getErrorMessage } from '../services/api';
+import { notifyError, notifySuccess } from '../utils/notify';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
@@ -43,9 +44,11 @@ export default function Register() {
     try {
       await register(fullName.trim(), email.trim(), password);
       setSuccess('Account created successfully!');
+      notifySuccess('Account created successfully!');
       navigate('/', { replace: true });
     } catch (err) {
       setError(getErrorMessage(err));
+      notifyError(err);
     } finally {
       setLoading(false);
     }

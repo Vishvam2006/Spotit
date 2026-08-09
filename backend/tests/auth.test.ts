@@ -1,5 +1,3 @@
-/* Test suite temporarily disabled (commented out).
- * Re-enable by removing the wrapping block comment.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { request, app, resetDb, testPassword } from './helpers';
 
@@ -74,4 +72,3 @@ describe('auth', () => {
     expect(res.body.user.email).toBe('jane@example.com');
   });
 });
-*/

@@ -7,9 +7,11 @@ export interface Booking {
   userId: string;
   parkingLotId: string;
   vehicleNumber: string;
-  startTime: string;
-  reservedUntil: string;
+  durationMinutes: number;
+  reservedAt: string;
+  checkInDeadline: string;
   checkInTime: string | null;
+  sessionEndsAt: string | null;
   checkOutTime: string | null;
   estimatedAmount: number;
   finalAmount: number | null;

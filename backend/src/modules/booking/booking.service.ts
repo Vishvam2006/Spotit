@@ -30,7 +30,7 @@ async function expireReservedBookings(tx: Prisma.TransactionClient) {
   const expired = await tx.booking.findMany({
     where: {
       status: 'RESERVED',
-      reservedUntil: { lt: now },
+      checkInDeadline: { lt: now },
     },
     select: { id: true, parkingLotId: true },
   });
@@ -40,7 +40,7 @@ async function expireReservedBookings(tx: Prisma.TransactionClient) {
       where: {
         id: booking.id,
         status: 'RESERVED',
-        reservedUntil: { lt: now },
+        checkInDeadline: { lt: now },
       },
       data: { status: 'EXPIRED' },
     });
@@ -124,8 +124,35 @@ export async function createBooking(
     }
 
     const now = new Date();
-    const requestedStart = now;
+    const checkInDeadline = new Date(
+      now.getTime() + geofenceConfig.checkInDeadlineMinutes * 60_000,
+    );
     const requestedEnd = new Date(now.getTime() + input.durationMinutes * 60_000);
+
+    const overlapping = await tx.booking.findFirst({
+      where: {
+        userId,
+        status: { in: ['RESERVED', 'ACTIVE'] },
+        OR: [
+          {
+            // An active session occupies the slot until its planned end.
+            status: 'ACTIVE',
+            checkInTime: { lte: requestedEnd },
+            sessionEndsAt: { gte: now },
+          },
+          {
+            // A pending reservation holds the slot until its check-in deadline.
+            status: 'RESERVED',
+            reservedAt: { lte: requestedEnd },
+            checkInDeadline: { gte: now },
+          },
+        ],
+      },
+    });
+
+    if (overlapping) {
+      throw new BookingError(409, 'You already have an overlapping parking booking');
+    }
 
     const updated = await tx.parkingLot.updateMany({
       where: {
@@ -140,19 +167,6 @@ export async function createBooking(
       throw new BookingError(409, 'No parking spaces are available');
     }
 
-    const overlapping = await tx.booking.findFirst({
-      where: {
-        userId,
-        status: { in: ['RESERVED', 'ACTIVE'] },
-        startTime: { lt: requestedEnd },
-        reservedUntil: { gt: requestedStart },
-      },
-    });
-
-    if (overlapping) {
-      throw new BookingError(409, 'You already have an overlapping parking booking');
-    }
-
     const estimatedAmount = parkingLot.pricePerHour * (input.durationMinutes / 60);
 
     return tx.booking.create({
@@ -160,8 +174,11 @@ export async function createBooking(
         userId,
         parkingLotId: parkingLot.id,
         vehicleNumber: input.vehicleNumber,
-        startTime: requestedStart,
-        reservedUntil: requestedEnd,
+        durationMinutes: input.durationMinutes,
+        reservedAt: now,
+        checkInDeadline,
+        checkInTime: null,
+        sessionEndsAt: null,
         estimatedAmount,
       },
       include: bookingInclude,
@@ -233,7 +250,7 @@ export async function checkInBooking(
     throw new BookingError(409, 'Booking cannot be checked in from its current state');
   }
 
-  if (booking.reservedUntil.getTime() <= Date.now()) {
+  if (booking.checkInDeadline.getTime() <= Date.now()) {
     throw new BookingError(409, 'Booking cannot be checked in from its current state');
   }
 
@@ -285,15 +302,18 @@ export async function checkInBooking(
 
   return prisma.$transaction(async (tx) => {
     const now = new Date();
+    const sessionEndsAt = new Date(
+      now.getTime() + booking.durationMinutes * 60_000,
+    );
 
     const updated = await tx.booking.updateMany({
       where: {
         id: bookingId,
         userId,
         status: 'RESERVED',
-        reservedUntil: { gt: now },
+        checkInDeadline: { gt: now },
       },
-      data: { status: 'ACTIVE', checkInTime: now },
+      data: { status: 'ACTIVE', checkInTime: now, sessionEndsAt },
     });
 
     if (updated.count === 0) {
@@ -326,15 +346,23 @@ async function checkInBookingStatusOnly(
 ): Promise<BookingWithLot> {
   return prisma.$transaction(async (tx) => {
     const now = new Date();
+    const currentBooking = await tx.booking.findFirst({
+      where: { id: bookingId, userId },
+      select: { durationMinutes: true },
+    });
+
+    const sessionEndsAt = new Date(
+      now.getTime() + (currentBooking?.durationMinutes ?? 0) * 60_000,
+    );
 
     const updated = await tx.booking.updateMany({
       where: {
         id: bookingId,
         userId,
         status: 'RESERVED',
-        reservedUntil: { gt: now },
+        checkInDeadline: { gt: now },
       },
-      data: { status: 'ACTIVE', checkInTime: now },
+      data: { status: 'ACTIVE', checkInTime: now, sessionEndsAt },
     });
 
     if (updated.count === 0) {

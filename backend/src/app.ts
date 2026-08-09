@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import cors from 'cors';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import authRoutes from './routes/auth.routes';
 import parkingRoutes from './modules/parking/parking.routes';
 import bookingRoutes from './modules/booking/booking.routes';
@@ -22,34 +23,141 @@ app.use('/api/auth', authRoutes);
 app.use('/api/parking-lots', parkingRoutes);
 app.use('/api/bookings', bookingRoutes);
 
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({ success: false, message: 'Route not found' });
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+    code: 'NOT_FOUND',
+  });
 });
 
+function isBodyParseError(err: unknown): err is SyntaxError & { status: number; type: string } {
+  return (
+    err instanceof SyntaxError &&
+    (err as { status?: number }).status === 400 &&
+    (err as { type?: string }).type === 'entity.parse.failed'
+  );
+}
+
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (isBodyParseError(err)) {
+    res.status(400).json({
+      success: false,
+      message: 'Request body contains invalid JSON.',
+      code: 'INVALID_JSON',
+    });
+    return;
+  }
+
   if (err instanceof ZodError) {
-    const message = err.issues[0]?.message ?? 'Validation failed';
-    res.status(400).json({ success: false, message });
+    const issues = err.issues.map((issue) => issue.message);
+    res.status(400).json({
+      success: false,
+      message: issues[0] ?? 'Validation failed',
+      errors: issues,
+      code: 'VALIDATION_FAILED',
+    });
     return;
   }
 
   if (err instanceof AuthError) {
-    res.status(err.statusCode).json({ success: false, message: err.message });
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      code: 'AUTH_ERROR',
+    });
     return;
   }
 
   if (err instanceof BookingError) {
-    res.status(err.statusCode).json({ success: false, message: err.message });
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      code: 'BOOKING_ERROR',
+    });
     return;
   }
 
   if (err instanceof ParkingError) {
-    res.status(err.statusCode).json({ success: false, message: err.message });
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      code: 'PARKING_ERROR',
+    });
     return;
   }
 
-  console.error(err);
-  res.status(500).json({ success: false, message: 'Internal server error' });
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === 'P2002') {
+      res.status(409).json({
+        success: false,
+        message: 'A record with the same value already exists.',
+        code: 'CONFLICT',
+      });
+      return;
+    }
+
+    if (err.code === 'P2025') {
+      res.status(404).json({
+        success: false,
+        message: 'The requested record could not be found.',
+        code: 'NOT_FOUND',
+      });
+      return;
+    }
+
+    if (err.code === 'P2003') {
+      res.status(409).json({
+        success: false,
+        message: 'This action is not allowed because it breaks existing data.',
+        code: 'CONFLICT',
+      });
+      return;
+    }
+
+    if (err.code === 'P2034') {
+      res.status(409).json({
+        success: false,
+        message: 'The data changed while saving. Please review and retry.',
+        code: 'CONFLICT',
+      });
+      return;
+    }
+
+    console.error('[App] Prisma error:', err.code, err.meta, err.message);
+    res.status(500).json({
+      success: false,
+      message: 'A database error occurred. Please try again.',
+      code: 'DATABASE_ERROR',
+    });
+    return;
+  }
+
+  if (err instanceof Prisma.PrismaClientValidationError) {
+    res.status(400).json({
+      success: false,
+      message: 'The request does not match the expected format.',
+      code: 'VALIDATION_FAILED',
+    });
+    return;
+  }
+
+  if (err instanceof Prisma.PrismaClientInitializationError) {
+    console.error('[App] Prisma initialization error:', err.message);
+    res.status(503).json({
+      success: false,
+      message: 'The database is temporarily unavailable. Please try again shortly.',
+      code: 'SERVICE_UNAVAILABLE',
+    });
+    return;
+  }
+
+  console.error('[App] Unhandled error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Something went wrong on our end. Please try again.',
+    code: 'INTERNAL_ERROR',
+  });
 });
 
 export default app;

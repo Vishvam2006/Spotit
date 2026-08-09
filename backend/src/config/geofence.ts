@@ -18,6 +18,7 @@ function parseBoolean(value: string | undefined, fallback: boolean): boolean {
 export const geofenceConfig = {
   geofenceEnabled: parseBoolean(env.GEOFENCE_ENABLED, true),
   demoMode: parseBoolean(env.DEMO_MODE, false),
+  checkInDeadlineMinutes: parseNumber(env.CHECKIN_DEADLINE_MINUTES, 15),
   checkinRadiusMeters: parseNumber(env.CHECKIN_RADIUS_METERS, 120),
   checkoutRadiusMeters: parseNumber(env.CHECKOUT_RADIUS_METERS, 200),
   maxAccuracyMeters: parseNumber(env.MAX_ACCURACY_METERS, 50),

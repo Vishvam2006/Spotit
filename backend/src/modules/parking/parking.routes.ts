@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { authenticate } from "../../middleware/auth.middleware";
-import { requireOwner } from "../../middleware/requireOwner";
 import {
   getMyParkings,
   getParkingLots,
@@ -12,7 +11,9 @@ import {
 
 const router = Router();
 
-router.get("/mine", authenticate, requireOwner, getMyParkings);
+// Returns only the authenticated user's own lots, so any signed-in user
+// who has created lots can view and manage them.
+router.get("/mine", authenticate, getMyParkings);
 
 router.get("/", getParkingLots);
 router.get("/:id", getParkingLot);

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth-context';
 import { getErrorMessage } from '../services/api';
+import { notifyError, notifySuccess } from '../utils/notify';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
@@ -32,9 +33,11 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email.trim(), password);
+      notifySuccess('Welcome back!');
       navigate(from, { replace: true });
     } catch (err) {
       setError(getErrorMessage(err));
+      notifyError(err);
     } finally {
       setLoading(false);
     }

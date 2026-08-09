@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import GuestRoute from './components/GuestRoute';
@@ -73,6 +74,22 @@ export default function App() {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              fontSize: '14px',
+              fontWeight: 500,
+              borderRadius: '10px',
+            },
+            success: {
+              iconTheme: { primary: '#16a34a', secondary: '#fff' },
+            },
+            error: {
+              duration: 5000,
+            },
+          }}
+        />
       </AuthProvider>
     </BrowserRouter>
   );

@@ -57,9 +57,11 @@ model Booking {
   userId          String
   parkingLotId    String
   vehicleNumber   String
-  startTime       DateTime
-  reservedUntil   DateTime
+  durationMinutes Int
+  reservedAt      DateTime
+  checkInDeadline DateTime
   checkInTime     DateTime?
+  sessionEndsAt   DateTime?
   checkOutTime    DateTime?
   estimatedAmount Float?
   finalAmount     Float?

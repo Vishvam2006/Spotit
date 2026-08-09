@@ -15,6 +15,7 @@ import {
 } from '../services/parkingApi';
 import type { Parking } from '../types/parking';
 import { formatINR } from '../utils/format';
+import { notifyError, notifySuccess } from '../utils/notify';
 
 type FormMode = 'create' | 'edit' | null;
 
@@ -25,7 +26,6 @@ export default function MyParkings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [formMode, setFormMode] = useState<FormMode>(null);
   const [editingParking, setEditingParking] = useState<Parking | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<Parking | null>(null);
@@ -51,12 +51,6 @@ export default function MyParkings() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!notice) return;
-    const timeout = setTimeout(() => setNotice(null), 4000);
-    return () => clearTimeout(timeout);
-  }, [notice]);
-
   const openCreateForm = () => {
     setActionError(null);
     setEditingParking(undefined);
@@ -77,12 +71,12 @@ export default function MyParkings() {
   const handleSaved = (parking: Parking) => {
     if (formMode === 'create') {
       setParkings((current) => [parking, ...current]);
-      setNotice('Parking lot created successfully.');
+      notifySuccess('Parking lot created successfully.');
     } else {
       setParkings((current) =>
         current.map((item) => (item.id === parking.id ? parking : item)),
       );
-      setNotice('Parking lot updated successfully.');
+      notifySuccess('Parking lot updated successfully.');
     }
     closeForm();
   };
@@ -96,11 +90,13 @@ export default function MyParkings() {
       setParkings((current) =>
         current.map((item) => (item.id === updated.id ? updated : item)),
       );
-      setNotice(
+      notifySuccess(
         updated.isActive ? 'Parking lot activated.' : 'Parking lot deactivated.',
       );
     } catch (err) {
-      setActionError(getParkingErrorMessage(err));
+      const message = getParkingErrorMessage(err);
+      setActionError(message);
+      notifyError(message);
     } finally {
       setTogglingId(null);
     }
@@ -115,10 +111,12 @@ export default function MyParkings() {
     try {
       await deleteParking(deleteTarget.id);
       setParkings((current) => current.filter((item) => item.id !== deleteTarget.id));
-      setNotice('Parking lot deleted.');
+      notifySuccess('Parking lot deleted.');
       setDeleteTarget(null);
     } catch (err) {
-      setActionError(getParkingErrorMessage(err));
+      const message = getParkingErrorMessage(err);
+      setActionError(message);
+      notifyError(message);
     } finally {
       setDeletingId(null);
     }
@@ -171,12 +169,6 @@ export default function MyParkings() {
             </Button>
           )}
         </div>
-
-        {notice && (
-          <div className="mb-5">
-            <Alert variant="success" message={notice} />
-          </div>
-        )}
 
         {actionError && (
           <div className="mb-5">

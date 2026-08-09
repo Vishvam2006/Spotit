@@ -8,6 +8,7 @@ import {
 import { getErrorMessage, isNetworkError } from '../../services/api';
 import { formatDateTime, formatINR } from '../../utils/format';
 import { formatDistanceMeters } from '../../utils/distance';
+import { notifyError, notifySuccess } from '../../utils/notify';
 import { getBookingStatusStyles } from '../../utils/bookingStatus';
 import { useParkingGeofence } from '../../hooks/useParkingGeofence';
 import { useBookingHeartbeat } from '../../hooks/useBookingHeartbeat';
@@ -114,15 +115,20 @@ export default function ArrivalCard({
   const [actionError, setActionError] = useState<string | null>(null);
   const busyRef = useRef(false);
 
-  const reservedUntilMs = new Date(booking.reservedUntil).getTime();
-  const countdownMs = useCountdown(
-    reservedUntilMs,
+  const checkInDeadlineMs = new Date(booking.checkInDeadline).getTime();
+  const checkInCountdownMs = useCountdown(
+    checkInDeadlineMs,
     booking.status === 'RESERVED',
     onExpired,
   );
 
+  const sessionEndMs = booking.sessionEndsAt
+    ? new Date(booking.sessionEndsAt).getTime()
+    : 0;
+  const sessionCountdownMs = useCountdown(sessionEndMs, booking.status === 'ACTIVE', () => {});
+
   const runAction = useCallback(
-    async (action: () => Promise<Booking>) => {
+    async (action: () => Promise<Booking>, successMessage: string) => {
       if (busyRef.current) return;
       busyRef.current = true;
       setBusy(true);
@@ -130,8 +136,13 @@ export default function ArrivalCard({
       try {
         const updated = await action();
         onBookingUpdated(updated);
+        notifySuccess(successMessage);
       } catch (err) {
-        setActionError(isNetworkError(err) ? FALLBACK_OFFLINE_MESSAGE : getErrorMessage(err));
+        const message = isNetworkError(err)
+          ? FALLBACK_OFFLINE_MESSAGE
+          : getErrorMessage(err);
+        setActionError(message);
+        notifyError(message);
       } finally {
         busyRef.current = false;
         setBusy(false);
@@ -140,9 +151,16 @@ export default function ArrivalCard({
     [onBookingUpdated],
   );
 
-  const handleCheckIn = () => runAction(() => checkInBooking(booking.id, sample ?? undefined));
+  const handleCheckIn = () =>
+    runAction(
+      () => checkInBooking(booking.id, sample ?? undefined),
+      'Checked in! Your parking session has started.',
+    );
   const handleCheckOut = () =>
-    runAction(() => checkOutBooking(booking.id, sample ?? undefined));
+    runAction(
+      () => checkOutBooking(booking.id, sample ?? undefined),
+      'Checked out! Your booking is complete.',
+    );
 
   useBookingHeartbeat(booking, sample, onBookingUpdated);
 
@@ -189,16 +207,38 @@ export default function ArrivalCard({
 
       {booking.status === 'RESERVED' && (
         <div className="mt-4 rounded-xl bg-white p-4 ring-1 ring-emerald-200">
-          <p className="text-xs font-medium text-emerald-700/70">Reserved for</p>
+          <p className="text-xs font-medium text-emerald-700/70">
+            Check in within the next
+          </p>
           <p
             className={`mt-0.5 font-mono text-3xl font-bold tabular-nums ${
-              countdownMs === 0 ? 'text-orange-600' : 'text-emerald-900'
+              checkInCountdownMs === 0 ? 'text-orange-600' : 'text-emerald-900'
             }`}
           >
-            {formatCountdown(countdownMs)}
+            {formatCountdown(checkInCountdownMs)}
           </p>
           <p className="mt-1 text-xs text-emerald-700/70">
-            until {formatDateTime(booking.reservedUntil)}
+            Deadline {formatDateTime(booking.checkInDeadline)} — your slot is held
+            until you arrive.
+          </p>
+        </div>
+      )}
+
+      {booking.status === 'ACTIVE' && (
+        <div className="mt-4 rounded-xl bg-white p-4 ring-1 ring-emerald-200">
+          <p className="text-xs font-medium text-emerald-700/70">
+            Session ends in
+          </p>
+          <p
+            className={`mt-0.5 font-mono text-3xl font-bold tabular-nums ${
+              sessionCountdownMs === 0 ? 'text-orange-600' : 'text-emerald-900'
+            }`}
+          >
+            {formatCountdown(sessionCountdownMs)}
+          </p>
+          <p className="mt-1 text-xs text-emerald-700/70">
+            Planned end {booking.sessionEndsAt ? formatDateTime(booking.sessionEndsAt) : '—'}
+            · started at check-in
           </p>
         </div>
       )}

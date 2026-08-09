@@ -9,6 +9,7 @@ import { getErrorMessage } from '../services/api';
 import { fetchParkingLot } from '../services/parking';
 import { createBooking } from '../services/bookings';
 import { formatINR } from '../utils/format';
+import { notifyError, notifySuccess } from '../utils/notify';
 import type { ParkingLot } from '../types/parking';
 
 const DURATION_OPTIONS = [
@@ -78,9 +79,11 @@ export default function ParkingDetails() {
         vehicleNumber: trimmed,
         durationMinutes,
       });
+      notifySuccess('Booking confirmed! Your spot is reserved.');
       navigate(`/booking/confirm/${booking.id}`, { replace: true });
     } catch (err) {
       setSubmitError(getErrorMessage(err));
+      notifyError(err);
     } finally {
       setSubmitting(false);
     }

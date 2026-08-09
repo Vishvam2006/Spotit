@@ -1,5 +1,3 @@
-/* Test suite temporarily disabled (commented out).
- * Re-enable by removing the wrapping block comment.
 import { describe, it, expect, beforeEach } from 'vitest';
 import { request, app, resetDb, createUser, createParkingLot, auth } from './helpers';
 
@@ -80,4 +78,3 @@ describe('parking lots', () => {
       .expect(204);
   });
 });
-*/

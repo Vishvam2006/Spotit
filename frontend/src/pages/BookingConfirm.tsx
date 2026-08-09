@@ -57,8 +57,8 @@ export default function BookingConfirm() {
             <div className="rounded-2xl bg-emerald-600 p-6 text-white">
               <h1 className="text-2xl font-bold">Booking confirmed!</h1>
               <p className="mt-1 text-sm text-emerald-100">
-                Your spot at {booking.parkingLot.name} is reserved until{' '}
-                {new Date(booking.reservedUntil).toLocaleString()}.
+                Check in within {new Date(booking.checkInDeadline).toLocaleString()} to keep
+                your spot at {booking.parkingLot.name}.
               </p>
             </div>
 
@@ -69,8 +69,8 @@ export default function BookingConfirm() {
             <div className="mt-6 rounded-2xl bg-blue-50 p-5 ring-1 ring-blue-200">
               <h2 className="text-sm font-bold text-blue-900">What happens next</h2>
               <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-blue-800">
-                <li>Head to the parking lot before the reserved time ends.</li>
-                <li>Check in to start your booking when you arrive.</li>
+                <li>Head to the parking lot before your check-in deadline.</li>
+                <li>Check in when you arrive — your paid session timer starts then.</li>
                 <li>Check out when you leave — your final amount is calculated on time used.</li>
               </ol>
             </div>

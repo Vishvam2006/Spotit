@@ -8,6 +8,7 @@ import Spinner from '../components/ui/Spinner';
 import Button from '../components/ui/Button';
 import { getErrorMessage } from '../services/api';
 import { cancelBooking, fetchBookings } from '../services/bookings';
+import { notifyError, notifySuccess } from '../utils/notify';
 import type { Booking, BookingStatus } from '../types/booking';
 
 const STATUS_GROUPS: { key: BookingStatus; label: string }[] = [
@@ -90,9 +91,11 @@ export default function Bookings() {
     setCancellingId(booking.id);
     try {
       await cancelBooking(booking.id);
+      notifySuccess('Booking cancelled. The space has been released.');
       loadBookings();
     } catch (err) {
       setActionError(getErrorMessage(err));
+      notifyError(err);
     } finally {
       setCancellingId(null);
     }
