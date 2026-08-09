@@ -2,7 +2,11 @@ import type { Request, Response } from "express";
 import * as parkingService from "./parking.service";
 import { ParkingError } from "./parking.service";
 
-import { createParkingSchema, updateParkingSchema } from "./parking.validation";
+import {
+  createParkingSchema,
+  updateParkingSchema,
+  parkingListQuerySchema,
+} from "./parking.validation";
 
 export async function getMyParkings(req: Request, res: Response) {
   const ownerId = req.user!.id;

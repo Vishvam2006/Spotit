@@ -16,15 +16,11 @@ const bookingInclude = { parkingLot: true } as const;
 
 export type BookingWithLot = Booking & { parkingLot: ParkingLot };
 
-async function expireReservedBookings(
-  tx: Prisma.TransactionClient,
-  userId: string,
-) {
+async function expireReservedBookings(tx: Prisma.TransactionClient) {
   const now = new Date();
 
   const expired = await tx.booking.findMany({
     where: {
-      userId,
       status: 'RESERVED',
       reservedUntil: { lt: now },
     },
@@ -55,7 +51,7 @@ export async function createBooking(
   input: CreateBookingInput,
 ): Promise<BookingWithLot> {
   return prisma.$transaction(async (tx) => {
-    await expireReservedBookings(tx, userId);
+    await expireReservedBookings(tx);
 
     const parkingLot = await tx.parkingLot.findUnique({
       where: { id: input.parkingLotId },
@@ -117,7 +113,7 @@ export async function createBooking(
 
 export async function getBookings(userId: string): Promise<BookingWithLot[]> {
   return prisma.$transaction(async (tx) => {
-    await expireReservedBookings(tx, userId);
+    await expireReservedBookings(tx);
 
     return tx.booking.findMany({
       where: { userId },
@@ -132,7 +128,7 @@ export async function getBookingById(
   bookingId: string,
 ): Promise<BookingWithLot> {
   return prisma.$transaction(async (tx) => {
-    await expireReservedBookings(tx, userId);
+    await expireReservedBookings(tx);
 
     const booking = await tx.booking.findFirst({
       where: { id: bookingId, userId },

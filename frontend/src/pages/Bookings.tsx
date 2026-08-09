@@ -2,13 +2,41 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import BookingSummary from '../components/booking/BookingSummary';
-import ActiveBookingCard from '../components/booking/ActiveBookingCard';
+import ArrivalCard from '../components/booking/ArrivalCard';
 import Alert from '../components/ui/Alert';
 import Spinner from '../components/ui/Spinner';
 import Button from '../components/ui/Button';
 import { getErrorMessage } from '../services/api';
-import { cancelBooking, checkOutBooking, fetchBookings } from '../services/bookings';
-import type { Booking } from '../types/booking';
+import { cancelBooking, fetchBookings } from '../services/bookings';
+import type { Booking, BookingStatus } from '../types/booking';
+
+const STATUS_GROUPS: { key: BookingStatus; label: string }[] = [
+  { key: 'RESERVED', label: 'Reserved' },
+  { key: 'ACTIVE', label: 'Active' },
+  { key: 'COMPLETED', label: 'Completed' },
+  { key: 'CANCELLED', label: 'Cancelled' },
+  { key: 'EXPIRED', label: 'Expired' },
+];
+
+const LIVE_STATUSES: BookingStatus[] = ['RESERVED', 'ACTIVE'];
+
+const REFRESH_INTERVAL_MS = 30_000;
+
+function groupByStatus(bookings: Booking[]): Record<BookingStatus, Booking[]> {
+  const groups: Record<BookingStatus, Booking[]> = {
+    RESERVED: [],
+    ACTIVE: [],
+    COMPLETED: [],
+    CANCELLED: [],
+    EXPIRED: [],
+  };
+
+  for (const booking of bookings) {
+    groups[booking.status]?.push(booking);
+  }
+
+  return groups;
+}
 
 export default function Bookings() {
   const navigate = useNavigate();
@@ -39,14 +67,23 @@ export default function Bookings() {
 
   useEffect(() => loadBookings(), [loadBookings]);
 
-  const activeBooking = bookings.find((booking) => booking.status === 'ACTIVE');
+  const hasLiveBookings = bookings.some((booking) => LIVE_STATUSES.includes(booking.status));
 
-  const handleCheckOut = async () => {
-    if (!activeBooking) return;
-    setActionError(null);
-    await checkOutBooking(activeBooking.id);
+  useEffect(() => {
+    if (!hasLiveBookings) return;
+    const interval = setInterval(loadBookings, REFRESH_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [hasLiveBookings, loadBookings]);
+
+  const handleBookingUpdated = useCallback((updated: Booking) => {
+    setBookings((current) =>
+      current.map((booking) => (booking.id === updated.id ? updated : booking)),
+    );
+  }, []);
+
+  const handleExpired = useCallback(() => {
     loadBookings();
-  };
+  }, [loadBookings]);
 
   const handleCancel = async (booking: Booking) => {
     setActionError(null);
@@ -60,6 +97,8 @@ export default function Bookings() {
       setCancellingId(null);
     }
   };
+
+  const groups = groupByStatus(bookings);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -105,31 +144,53 @@ export default function Bookings() {
             </Link>
           </div>
         ) : (
-          <div className="mt-6 space-y-5">
-            {activeBooking && (
-              <ActiveBookingCard booking={activeBooking} onCheckOut={handleCheckOut} />
-            )}
+          <div className="mt-6 space-y-8">
+            {STATUS_GROUPS.map(({ key, label }) => {
+              const groupBookings = groups[key];
+              if (groupBookings.length === 0) return null;
 
-            {bookings.map((booking) => (
-              <div key={booking.id}>
-                {booking.status !== 'ACTIVE' && (
-                  <BookingSummary booking={booking} />
-                )}
-
-                {booking.status === 'RESERVED' && (
-                  <div className="mt-3 flex justify-end">
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleCancel(booking)}
-                      loading={cancellingId === booking.id}
-                      className="max-w-40"
-                    >
-                      Cancel booking
-                    </Button>
+              return (
+                <section key={key}>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
+                      {label}
+                    </h2>
+                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                      {groupBookings.length}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  <div className="mt-3 space-y-4">
+                    {groupBookings.map((booking) => (
+                      <div key={booking.id}>
+                        {LIVE_STATUSES.includes(booking.status) ? (
+                          <ArrivalCard
+                            booking={booking}
+                            onBookingUpdated={handleBookingUpdated}
+                            onExpired={handleExpired}
+                          />
+                        ) : (
+                          <BookingSummary booking={booking} />
+                        )}
+
+                        {booking.status === 'RESERVED' && (
+                          <div className="mt-3 flex justify-end">
+                            <Button
+                              variant="secondary"
+                              onClick={() => handleCancel(booking)}
+                              loading={cancellingId === booking.id}
+                              className="max-w-40"
+                            >
+                              Cancel booking
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         )}
       </main>

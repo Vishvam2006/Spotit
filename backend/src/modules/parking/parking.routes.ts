@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../../middleware/auth.middleware";
+import { requireOwner } from "../../middleware/requireOwner";
 import {
   getMyParkings,
   getParkingLots,
@@ -11,7 +12,7 @@ import {
 
 const router = Router();
 
-router.get("/mine", authenticate, getMyParkings);
+router.get("/mine", authenticate, requireOwner, getMyParkings);
 
 router.get("/", getParkingLots);
 router.get("/:id", getParkingLot);

@@ -10,6 +10,8 @@ export interface ParkingFilters {
   sort?: ParkingSort;
   lat?: number;
   lng?: number;
+}
+
 /** Owner-management parking shape used by My Parkings feature. */
 export interface Parking {
   id: string;
