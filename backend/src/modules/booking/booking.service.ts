@@ -55,8 +55,9 @@ async function expireReservedBookings(tx: Prisma.TransactionClient) {
 }
 
 async function completeStaleSessions(tx: Prisma.TransactionClient) {
+  const now = new Date();
   const staleBefore = new Date(
-    Date.now() - geofenceConfig.sessionStaleSeconds * 1000,
+    now.getTime() - geofenceConfig.sessionStaleSeconds * 1000,
   );
 
   const stale = await tx.booking.findMany({
@@ -80,12 +81,12 @@ async function completeStaleSessions(tx: Prisma.TransactionClient) {
       where: { id: booking.id, status: 'ACTIVE' },
       data: {
         status: 'COMPLETED',
-        checkOutTime: new Date(),
+        checkOutTime: now,
         finalAmount: booking.checkInTime
           ? Math.max(
               Math.round(
                 (booking.parkingLot.pricePerHour ?? 0) *
-                  ((Date.now() - booking.checkInTime.getTime()) / 3_600_000),
+                  ((now.getTime() - booking.checkInTime.getTime()) / 3_600_000),
               ),
               0,
             )
@@ -582,7 +583,10 @@ export async function heartbeatBooking(
       await tx.booking.update({ where: { id: booking.id }, data });
     }
 
-    return booking;
+    return tx.booking.findFirst({
+      where: { id: bookingId, userId },
+      include: bookingInclude,
+    }) as Promise<BookingWithLot>;
   });
 }
 
