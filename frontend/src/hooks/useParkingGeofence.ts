@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DEMO_MODE } from '../config/demo';
 import { haversineDistanceMeters } from '../utils/distance';
 import type { LatLng } from '../utils/geolocation';
 
@@ -24,6 +25,9 @@ export interface UseParkingGeofenceResult {
   outsideStreak: number;
   canCheckOut: boolean;
   simulated: boolean;
+  simulationEnabled: boolean;
+  accuracyMeters: number | null;
+  sampleTimestamp: number | null;
   error: string | null;
   simulate: (coords: LatLng) => void;
   clearSimulation: () => void;
@@ -57,6 +61,8 @@ export function useParkingGeofence({
   const [watchedPosition, setWatchedPosition] = useState<LatLng | null>(null);
   const [simulatedPosition, setSimulatedPosition] = useState<LatLng | null>(null);
   const [outsideStreak, setOutsideStreak] = useState(0);
+  const [sampleAccuracyMeters, setSampleAccuracyMeters] = useState<number | null>(null);
+  const [sampleTimestamp, setSampleTimestamp] = useState<number | null>(null);
 
   const supported =
     typeof navigator !== 'undefined' && 'geolocation' in navigator;
@@ -97,6 +103,8 @@ export function useParkingGeofence({
           lng: position.coords.longitude,
         };
         setWatchedPosition(coords);
+        setSampleAccuracyMeters(position.coords.accuracy);
+        setSampleTimestamp(position.timestamp);
         setWatchStatus('active');
         setWatchError(null);
         recordPosition(coords);
@@ -153,7 +161,12 @@ export function useParkingGeofence({
 
   const simulate = useCallback(
     (coords: LatLng) => {
+      if (!DEMO_MODE) {
+        return;
+      }
       setSimulatedPosition(coords);
+      setSampleAccuracyMeters(10);
+      setSampleTimestamp(Date.now());
       setWatchStatus('active');
       setWatchError(null);
       recordPosition(coords);
@@ -163,6 +176,8 @@ export function useParkingGeofence({
 
   const clearSimulation = useCallback(() => {
     setSimulatedPosition(null);
+    setSampleAccuracyMeters(null);
+    setSampleTimestamp(null);
   }, []);
 
   return {
@@ -172,6 +187,9 @@ export function useParkingGeofence({
     outsideStreak: displayStreak,
     canCheckOut: active && displayStreak >= outsideReadingsRequired,
     simulated: simulatedPosition !== null,
+    simulationEnabled: DEMO_MODE,
+    accuracyMeters: sampleAccuracyMeters,
+    sampleTimestamp,
     error,
     simulate,
     clearSimulation,

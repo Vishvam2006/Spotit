@@ -82,6 +82,7 @@ export default function ArrivalCard({
     outsideStreak,
     canCheckOut: geofenceCanCheckOut,
     simulated,
+    simulationEnabled,
     error: geofenceError,
     simulate,
   } = useParkingGeofence({ target, enabled: true });
@@ -141,6 +142,11 @@ export default function ArrivalCard({
 
   return (
     <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-6 shadow-sm">
+      {simulationEnabled && (
+        <div className="mb-4 rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold tracking-wide text-amber-800 ring-1 ring-amber-300">
+          DEMO MODE — simulation controls enabled
+        </div>
+      )}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="font-bold text-emerald-900">{booking.parkingLot.name}</h3>
@@ -238,31 +244,33 @@ export default function ArrivalCard({
         )}
       </div>
 
-      <div className="mt-4 border-t border-emerald-200 pt-4">
-        <p className="text-xs font-medium text-emerald-700/70">Test mode</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            className="w-auto"
-            disabled={busy}
-            onClick={() => simulate(target)}
-          >
-            Simulate arrival
-          </Button>
-          <Button
-            variant="secondary"
-            className="w-auto"
-            disabled={busy}
-            onClick={() => simulate(farAwayCoords(target))}
-          >
-            Simulate leaving
-          </Button>
+      {simulationEnabled && (
+        <div className="mt-4 border-t border-emerald-200 pt-4">
+          <p className="text-xs font-medium text-emerald-700/70">Test mode</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              className="w-auto"
+              disabled={busy}
+              onClick={() => simulate(target)}
+            >
+              Simulate arrival
+            </Button>
+            <Button
+              variant="secondary"
+              className="w-auto"
+              disabled={busy}
+              onClick={() => simulate(farAwayCoords(target))}
+            >
+              Simulate leaving
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-emerald-700/70">
+            {SIMULATION_CAPTION} Use these buttons to test the check-in and check-out flow in a
+            browser.
+          </p>
         </div>
-        <p className="mt-2 text-xs text-emerald-700/70">
-          {SIMULATION_CAPTION} Use these buttons to test the check-in and check-out flow in a
-          browser.
-        </p>
-      </div>
+      )}
     </div>
   );
 }
