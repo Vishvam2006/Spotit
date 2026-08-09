@@ -6,6 +6,7 @@ import {
   getBookingById,
   checkInBooking,
   checkOutBooking,
+  heartbeatBooking,
   cancelBooking,
 } from './booking.controller';
 
@@ -18,6 +19,7 @@ router.get('/', getBookings);
 router.get('/:id', getBookingById);
 router.post('/:id/check-in', checkInBooking);
 router.post('/:id/check-out', checkOutBooking);
+router.post('/:id/heartbeat', heartbeatBooking);
 router.post('/:id/cancel', cancelBooking);
 
 export default router;

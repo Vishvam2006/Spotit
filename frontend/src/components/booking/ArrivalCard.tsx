@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Booking } from '../../types/booking';
-import { checkInBooking, checkOutBooking } from '../../services/bookings';
+import {
+  checkInBooking,
+  checkOutBooking,
+  type LocationSamplePayload,
+} from '../../services/bookings';
 import { getErrorMessage } from '../../services/api';
 import { formatDateTime, formatINR } from '../../utils/format';
 import { formatDistanceMeters } from '../../utils/distance';
 import { getBookingStatusStyles } from '../../utils/bookingStatus';
 import { useParkingGeofence } from '../../hooks/useParkingGeofence';
+import { useBookingHeartbeat } from '../../hooks/useBookingHeartbeat';
 import type { LatLng } from '../../utils/geolocation';
 import Button from '../ui/Button';
 import Alert from '../ui/Alert';
@@ -77,15 +82,30 @@ export default function ArrivalCard({
   );
 
   const {
+    position,
     distanceMeters,
     isInside,
     outsideStreak,
     canCheckOut: geofenceCanCheckOut,
     simulated,
     simulationEnabled,
+    accuracyMeters,
+    sampleTimestamp,
     error: geofenceError,
     simulate,
   } = useParkingGeofence({ target, enabled: true });
+
+  const sample = useMemo<LocationSamplePayload | null>(() => {
+    if (!position || accuracyMeters === null || sampleTimestamp === null) {
+      return null;
+    }
+    return {
+      lat: position.lat,
+      lng: position.lng,
+      accuracy: accuracyMeters,
+      capturedAt: new Date(sampleTimestamp).toISOString(),
+    };
+  }, [position, accuracyMeters, sampleTimestamp]);
 
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -117,8 +137,11 @@ export default function ArrivalCard({
     [onBookingUpdated],
   );
 
-  const handleCheckIn = () => runAction(() => checkInBooking(booking.id));
-  const handleCheckOut = () => runAction(() => checkOutBooking(booking.id));
+  const handleCheckIn = () => runAction(() => checkInBooking(booking.id, sample ?? undefined));
+  const handleCheckOut = () =>
+    runAction(() => checkOutBooking(booking.id, sample ?? undefined));
+
+  useBookingHeartbeat(booking, sample, onBookingUpdated);
 
   const proximityMet =
     booking.status === 'RESERVED' ? isInside || simulated : geofenceCanCheckOut || simulated;

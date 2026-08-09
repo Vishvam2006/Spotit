@@ -494,6 +494,46 @@ async function checkOutBookingStatusOnly(
   });
 }
 
+export async function heartbeatBooking(
+  userId: string,
+  bookingId: string,
+  sample?: LocationSample,
+): Promise<BookingWithLot> {
+  return prisma.$transaction(async (tx) => {
+    await expireReservedBookings(tx);
+
+    const booking = await tx.booking.findFirst({
+      where: { id: bookingId, userId },
+      include: bookingInclude,
+    });
+
+    if (!booking) {
+      throw new BookingError(404, 'Booking not found');
+    }
+
+    if (booking.status === 'ACTIVE') {
+      const now = new Date();
+      const data: Prisma.BookingUpdateInput = { lastSeenAt: now };
+
+      if (sample) {
+        const geofenceOn = geofenceConfig.geofenceEnabled && !geofenceConfig.demoMode;
+        if (!geofenceOn) {
+          data.lastLocationAt = now;
+        } else {
+          const verdict = verifyLocationSample(sample, booking.parkingLot, 'CHECK_IN');
+          if (verdict.accepted) {
+            data.lastLocationAt = now;
+          }
+        }
+      }
+
+      await tx.booking.update({ where: { id: booking.id }, data });
+    }
+
+    return booking;
+  });
+}
+
 export async function cancelBooking(
   userId: string,
   bookingId: string,

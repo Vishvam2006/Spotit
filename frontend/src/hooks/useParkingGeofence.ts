@@ -20,6 +20,7 @@ export interface UseParkingGeofenceOptions {
 
 export interface UseParkingGeofenceResult {
   status: GeofenceStatus;
+  position: LatLng | null;
   distanceMeters: number | null;
   isInside: boolean;
   outsideStreak: number;
@@ -182,6 +183,7 @@ export function useParkingGeofence({
 
   return {
     status,
+    position: effectivePosition,
     distanceMeters,
     isInside,
     outsideStreak: displayStreak,

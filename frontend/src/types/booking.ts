@@ -14,17 +14,9 @@ export interface Booking {
   estimatedAmount: number;
   finalAmount: number | null;
   status: BookingStatus;
+  lastLocationAt: string | null;
+  lastSeenAt: string | null;
   createdAt: string;
   updatedAt: string;
   parkingLot: ParkingLot;
-}
-
-export interface BookingsResponse {
-  success: boolean;
-  data: Booking[];
-}
-
-export interface BookingResponse {
-  success: boolean;
-  data: Booking;
 }

@@ -89,6 +89,23 @@ export async function checkOutBooking(
   }
 }
 
+export async function heartbeatBooking(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const booking = await bookingService.heartbeatBooking(
+      req.user!.id,
+      String(req.params.id),
+      parseLocationSample(req.body),
+    );
+    res.json({ success: true, data: booking });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function cancelBooking(
   req: Request,
   res: Response,
