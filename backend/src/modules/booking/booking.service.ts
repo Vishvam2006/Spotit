@@ -1,6 +1,6 @@
 import { prisma } from '../../config/prisma';
 import { geofenceConfig } from '../../config/geofence';
-import type { Booking, ParkingLot, Prisma } from '@prisma/client';
+import type { Booking, ParkingLot, Prisma, VehicleType } from '@prisma/client';
 import type { CreateBookingInput } from './booking.validation';
 import { verifyLocationSample, type LocationSample } from './booking.geofence';
 
@@ -22,7 +22,52 @@ export class BookingError extends Error {
 
 const bookingInclude = { parkingLot: true } as const;
 
-export type BookingWithLot = Booking & { parkingLot: ParkingLot };
+export interface BookingVehicle {
+  id: string | null;
+  registration: string;
+  type: VehicleType;
+  imageUrl: string;
+  make: string | null;
+  model: string | null;
+  color: string | null;
+}
+
+/**
+ * Builds the vehicle object returned to clients purely from the booking's
+ * stored snapshot, so later edits or deletions of the Vehicle row never
+ * change historical bookings.
+ */
+function toVehicle(
+  booking: Pick<
+    Booking,
+    | 'vehicleId'
+    | 'vehicleRegistration'
+    | 'vehicleType'
+    | 'vehicleImageUrl'
+    | 'vehicleMake'
+    | 'vehicleModel'
+    | 'vehicleColor'
+  >,
+): BookingVehicle {
+  return {
+    id: booking.vehicleId,
+    registration: booking.vehicleRegistration,
+    type: booking.vehicleType,
+    imageUrl: booking.vehicleImageUrl,
+    make: booking.vehicleMake,
+    model: booking.vehicleModel,
+    color: booking.vehicleColor,
+  };
+}
+
+export type BookingWithLot = Booking & {
+  parkingLot: ParkingLot;
+  vehicle: BookingVehicle;
+};
+
+function mapBooking(booking: Booking & { parkingLot: ParkingLot }): BookingWithLot {
+  return { ...booking, vehicle: toVehicle(booking) };
+}
 
 async function expireReservedBookings(tx: Prisma.TransactionClient) {
   const now = new Date();
@@ -111,12 +156,24 @@ export async function createBooking(
     await expireReservedBookings(tx);
     await completeStaleSessions(tx);
 
+    const vehicle = await tx.vehicle.findFirst({
+      where: { id: input.vehicleId, userId },
+    });
+
+    if (!vehicle) {
+      throw new BookingError(404, 'Vehicle not found');
+    }
+
     const parkingLot = await tx.parkingLot.findUnique({
       where: { id: input.parkingLotId },
     });
 
     if (!parkingLot) {
       throw new BookingError(404, 'Parking lot not found');
+    }
+
+    if (parkingLot.ownerId === userId) {
+      throw new BookingError(409, 'You cannot book your own parking spot');
     }
 
     if (parkingLot.status !== 'ACTIVE') {
@@ -169,11 +226,18 @@ export async function createBooking(
 
     const estimatedAmount = parkingLot.pricePerHour * (input.durationMinutes / 60);
 
-    return tx.booking.create({
+    const booking = await tx.booking.create({
       data: {
         userId,
         parkingLotId: parkingLot.id,
-        vehicleNumber: input.vehicleNumber,
+        vehicleNumber: vehicle.registration,
+        vehicleId: vehicle.id,
+        vehicleRegistration: vehicle.registration,
+        vehicleType: vehicle.type,
+        vehicleImageUrl: vehicle.imageUrl,
+        vehicleMake: vehicle.make,
+        vehicleModel: vehicle.model,
+        vehicleColor: vehicle.color,
         durationMinutes: input.durationMinutes,
         reservedAt: now,
         checkInDeadline,
@@ -183,6 +247,8 @@ export async function createBooking(
       },
       include: bookingInclude,
     });
+
+    return mapBooking(booking);
   });
 }
 
@@ -195,7 +261,7 @@ export async function getBookings(userId: string): Promise<BookingWithLot[]> {
       where: { userId },
       orderBy: { createdAt: 'desc' },
       include: bookingInclude,
-    });
+    }).then((bookings) => bookings.map(mapBooking));
   });
 }
 
@@ -216,7 +282,7 @@ export async function getBookingById(
       throw new BookingError(404, 'Booking not found');
     }
 
-    return booking;
+    return mapBooking(booking);
   });
 }
 
@@ -243,7 +309,7 @@ export async function checkInBooking(
   }
 
   if (booking.status === 'ACTIVE') {
-    return booking;
+    return mapBooking(booking);
   }
 
   if (booking.status !== 'RESERVED') {
@@ -327,16 +393,22 @@ export async function checkInBooking(
       }
 
       if (current.status === 'ACTIVE') {
-        return current;
+        return mapBooking(current);
       }
 
       throw new BookingError(409, 'Booking cannot be checked in from its current state');
     }
 
-    return tx.booking.findFirst({
+    const checkedIn = await tx.booking.findFirst({
       where: { id: bookingId, userId },
       include: bookingInclude,
-    }) as Promise<BookingWithLot>;
+    });
+
+    if (!checkedIn) {
+      throw new BookingError(404, 'Booking not found');
+    }
+
+    return mapBooking(checkedIn);
   });
 }
 
@@ -376,16 +448,22 @@ async function checkInBookingStatusOnly(
       }
 
       if (booking.status === 'ACTIVE') {
-        return booking;
+        return mapBooking(booking);
       }
 
       throw new BookingError(409, 'Booking cannot be checked in from its current state');
     }
 
-    return tx.booking.findFirst({
+    const checkedIn = await tx.booking.findFirst({
       where: { id: bookingId, userId },
       include: bookingInclude,
-    }) as Promise<BookingWithLot>;
+    });
+
+    if (!checkedIn) {
+      throw new BookingError(404, 'Booking not found');
+    }
+
+    return mapBooking(checkedIn);
   });
 }
 
@@ -412,7 +490,7 @@ export async function checkOutBooking(
   }
 
   if (booking.status === 'COMPLETED') {
-    return booking;
+    return mapBooking(booking);
   }
 
   if (booking.status !== 'ACTIVE') {
@@ -482,7 +560,7 @@ export async function checkOutBooking(
       });
 
       if (current?.status === 'COMPLETED') {
-        return current;
+        return mapBooking(current);
       }
 
       throw new BookingError(409, 'Booking can only be checked out while active');
@@ -508,7 +586,7 @@ export async function checkOutBooking(
       data: { availableSpaces: { increment: 1 } },
     });
 
-    return updatedBooking;
+    return mapBooking(updatedBooking);
   });
 }
 
@@ -528,10 +606,16 @@ async function checkOutBookingStatusOnly(
     }
 
     if (existing.status === 'COMPLETED') {
-      return tx.booking.findFirst({
+      const completed = await tx.booking.findFirst({
         where: { id: bookingId, userId },
         include: bookingInclude,
-      }) as Promise<BookingWithLot>;
+      });
+
+      if (!completed) {
+        throw new BookingError(404, 'Booking not found');
+      }
+
+      return mapBooking(completed);
     }
 
     const updated = await tx.booking.updateMany({
@@ -570,7 +654,7 @@ async function checkOutBookingStatusOnly(
       data: { availableSpaces: { increment: 1 } },
     });
 
-    return updatedBooking;
+    return mapBooking(updatedBooking);
   });
 }
 
@@ -611,10 +695,16 @@ export async function heartbeatBooking(
       await tx.booking.update({ where: { id: booking.id }, data });
     }
 
-    return tx.booking.findFirst({
+    const heartbeatBooking = await tx.booking.findFirst({
       where: { id: bookingId, userId },
       include: bookingInclude,
-    }) as Promise<BookingWithLot>;
+    });
+
+    if (!heartbeatBooking) {
+      throw new BookingError(404, 'Booking not found');
+    }
+
+    return mapBooking(heartbeatBooking);
   });
 }
 
@@ -640,16 +730,20 @@ export async function cancelBooking(
       throw new BookingError(409, 'Only reserved bookings can be cancelled');
     }
 
-    const booking = (await tx.booking.findFirst({
+    const booking = await tx.booking.findFirst({
       where: { id: bookingId, userId },
       include: bookingInclude,
-    })) as BookingWithLot;
+    });
+
+    if (!booking) {
+      throw new BookingError(404, 'Booking not found');
+    }
 
     await tx.parkingLot.update({
       where: { id: booking.parkingLotId },
       data: { availableSpaces: { increment: 1 } },
     });
 
-    return booking;
+    return mapBooking(booking);
   });
 }

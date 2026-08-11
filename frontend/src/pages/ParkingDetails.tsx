@@ -1,16 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import Logo from '../components/Logo';
+import AppLayout from '../components/layout/AppLayout';
 import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 import Spinner from '../components/ui/Spinner';
+import VehicleSelector from '../components/vehicle/VehicleSelector';
 import { getErrorMessage } from '../services/api';
 import { fetchParkingLot } from '../services/parking';
+import { fetchVehicles } from '../services/vehicles';
 import { createBooking } from '../services/bookings';
 import { formatINR } from '../utils/format';
 import { notifyError, notifySuccess } from '../utils/notify';
+import { useAuth } from '../context/auth-context';
 import type { ParkingLot } from '../types/parking';
+import type { Vehicle } from '../types/vehicle';
 
 const DURATION_OPTIONS = [
   { minutes: 60, label: '1 hour' },
@@ -22,14 +25,18 @@ const DURATION_OPTIONS = [
 export default function ParkingDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [parking, setParking] = useState<ParkingLot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [vehicleNumber, setVehicleNumber] = useState('');
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(true);
+  const [vehiclesError, setVehiclesError] = useState<string | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(120);
-  const [vehicleError, setVehicleError] = useState<string | undefined>();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (!id) return;
@@ -51,6 +58,30 @@ export default function ParkingDetails() {
     };
   }, [id]);
 
+  useEffect(() => {
+    let active = true;
+
+    fetchVehicles()
+      .then((result) => {
+        if (active) {
+          setVehicles(result);
+          setSelectedVehicleId(
+            result.find((vehicle) => vehicle.isDefault)?.id ?? result[0]?.id ?? null,
+          );
+        }
+      })
+      .catch(() => {
+        if (active) setVehiclesError('Failed to load your vehicles.');
+      })
+      .finally(() => {
+        if (active) setVehiclesLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const selectedOption =
     DURATION_OPTIONS.find((option) => option.minutes === durationMinutes) ??
     DURATION_OPTIONS[0];
@@ -62,21 +93,21 @@ export default function ParkingDetails() {
   const handleBook = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitError(null);
-    setVehicleError(undefined);
 
-    const trimmed = vehicleNumber.trim();
-    if (trimmed.length < 2) {
-      setVehicleError('Vehicle number must be at least 2 characters');
+    if (!selectedVehicleId) {
+      setSubmitError('Please choose a vehicle to book with.');
       return;
     }
 
     if (!parking) return;
 
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const booking = await createBooking({
         parkingLotId: parking.id,
-        vehicleNumber: trimmed,
+        vehicleId: selectedVehicleId,
         durationMinutes,
       });
       notifySuccess('Booking confirmed! Your spot is reserved.');
@@ -85,36 +116,39 @@ export default function ParkingDetails() {
       setSubmitError(getErrorMessage(err));
       notifyError(err);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <Spinner className="h-8 w-8 text-blue-600" />
-      </div>
+      <AppLayout>
+        <div className="flex flex-1 items-center justify-center">
+          <Spinner className="h-8 w-8 text-blue-600" />
+        </div>
+      </AppLayout>
     );
   }
 
   if (error || !parking) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <PageHeader />
-        <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+      <AppLayout>
+        <main className="mx-auto max-w-2xl px-4 pt-8 pb-24 sm:px-6 md:pb-8">
           <Alert variant="error" message={error ?? 'Parking lot not found.'} />
           <Button variant="secondary" className="mt-4 max-w-xs" onClick={() => navigate('/')}>
             Back to map
           </Button>
         </main>
-      </div>
+      </AppLayout>
     );
   }
 
+  const isOwner = user?.id === parking.ownerId;
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <PageHeader />
-      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+    <AppLayout>
+      <main className="mx-auto max-w-2xl px-4 pt-8 pb-24 sm:px-6 md:pb-8">
         <button
           type="button"
           onClick={() => navigate('/')}
@@ -138,7 +172,14 @@ export default function ParkingDetails() {
           </div>
         </div>
 
-        {parking.status !== 'ACTIVE' ? (
+        {isOwner ? (
+          <div className="mt-6">
+            <Alert
+              variant="error"
+              message="You own this parking spot, so you cannot book it."
+            />
+          </div>
+        ) : parking.status !== 'ACTIVE' ? (
           <div className="mt-6">
             <Alert variant="error" message="This parking lot is currently not accepting bookings." />
           </div>
@@ -180,14 +221,22 @@ export default function ParkingDetails() {
                 </div>
               </div>
 
-              <Input
-                id="vehicle-number"
-                label="Vehicle number"
-                placeholder="e.g. KA01AB1234"
-                value={vehicleNumber}
-                onChange={(event) => setVehicleNumber(event.target.value)}
-                error={vehicleError}
-              />
+              {vehiclesLoading ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Spinner className="h-4 w-4 text-blue-600" />
+                  Loading your vehicles…
+                </div>
+              ) : vehiclesError ? (
+                <Alert variant="error" message={vehiclesError} />
+              ) : (
+                <VehicleSelector
+                  vehicles={vehicles}
+                  selectedId={selectedVehicleId}
+                  onChange={setSelectedVehicleId}
+                  onManage={() => navigate('/my-vehicles')}
+                  disabled={submitting}
+                />
+              )}
             </div>
 
             <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-5">
@@ -197,14 +246,19 @@ export default function ParkingDetails() {
                   {formatINR(estimatedAmount)}
                 </p>
               </div>
-              <Button type="submit" loading={submitting} className="max-w-56">
+              <Button
+                type="submit"
+                loading={submitting}
+                disabled={vehicles.length === 0}
+                className="max-w-56"
+              >
                 Confirm booking
               </Button>
             </div>
           </form>
         )}
       </main>
-    </div>
+    </AppLayout>
   );
 }
 
@@ -214,18 +268,5 @@ function InfoTile({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-medium text-slate-400">{label}</p>
       <p className="mt-1 text-lg font-bold text-slate-900">{value}</p>
     </div>
-  );
-}
-
-function PageHeader() {
-  return (
-    <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-3">
-          <Logo className="h-9 w-9" />
-          <span className="text-xl font-bold tracking-tight text-slate-900">ParkMitra</span>
-        </div>
-      </div>
-    </header>
   );
 }

@@ -3,7 +3,7 @@ import type { Booking } from '../types/booking';
 
 export interface CreateBookingPayload {
   parkingLotId: string;
-  vehicleNumber: string;
+  vehicleId: string;
   durationMinutes: number;
 }
 

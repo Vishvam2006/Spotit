@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import Logo from '../components/Logo';
+import AppLayout from '../components/layout/AppLayout';
 import ParkingForm from '../components/parking/ParkingForm';
 import Alert from '../components/ui/Alert';
 import Button from '../components/ui/Button';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Spinner from '../components/ui/Spinner';
-import { useAuth } from '../context/auth-context';
 import {
   deleteParking,
   getMyParkings,
@@ -20,8 +18,6 @@ import { notifyError, notifySuccess } from '../utils/notify';
 type FormMode = 'create' | 'edit' | null;
 
 export default function MyParkings() {
-  const navigate = useNavigate();
-  const { logout } = useAuth();
   const [parkings, setParkings] = useState<Parking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,46 +118,9 @@ export default function MyParkings() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
-
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Logo className="h-9 w-9" />
-            <span className="text-xl font-bold tracking-tight text-slate-900">
-              ParkMitra
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/"
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Map
-            </Link>
-            <Link
-              to="/dashboard"
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Dashboard
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+    <AppLayout>
+      <main className="mx-auto max-w-5xl px-4 pt-6 pb-24 sm:px-6 md:pb-8">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">My Parkings</h1>
@@ -297,6 +256,6 @@ export default function MyParkings() {
           }}
         />
       )}
-    </div>
+    </AppLayout>
   );
 }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/auth-context';
-import Logo from '../components/Logo';
+import AppLayout from '../components/layout/AppLayout';
 import ParkingMap from '../components/map/ParkingMap';
 import type { MapLocation } from '../components/map/ParkingMap';
 import SearchBar from '../components/map/SearchBar';
@@ -34,7 +33,6 @@ function filterLotsByRadius(
 }
 
 export default function Home() {
-  const { logout } = useAuth();
   const navigate = useNavigate();
   const [allParkingLots, setAllParkingLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,56 +193,8 @@ export default function Home() {
     reloadParkingLots();
   }, [reloadParkingLots]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
-
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="shrink-0 border-b border-slate-200 bg-white">
-        <div className="flex items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Logo className="h-9 w-9" />
-            <span className="text-xl font-bold tracking-tight text-slate-900">
-              ParkMitra
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/bookings')}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              My Bookings
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/my-parkings')}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              My Parking Lots
-            </button>
-            {isParkingOwner && (
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard')}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                Dashboard
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
-
+    <AppLayout>
       <div className="shrink-0 space-y-0 border-b border-slate-200 bg-white">
         <div className="px-4 py-4 sm:px-6">
           <SearchBar
@@ -284,7 +234,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3 sm:px-6">
+      <div className="flex min-h-0 flex-1 flex-col px-4 pb-20 pt-3 sm:px-6 md:pb-4">
         <div className="relative min-h-[480px] flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -321,6 +271,6 @@ export default function Home() {
           </div>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }

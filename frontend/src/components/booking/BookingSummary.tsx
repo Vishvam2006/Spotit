@@ -1,6 +1,7 @@
 import type { Booking } from '../../types/booking';
 import { formatDateTime, formatINR } from '../../utils/format';
 import { getBookingStatusStyles } from '../../utils/bookingStatus';
+import VehicleDetails from '../vehicle/VehicleDetails';
 
 interface BookingSummaryProps {
   booking: Booking;
@@ -29,9 +30,11 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
       </div>
 
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-        <div>
+        <div className="sm:col-span-2">
           <dt className="text-slate-400">Vehicle</dt>
-          <dd className="font-semibold text-slate-900">{booking.vehicleNumber}</dd>
+          <dd className="mt-1.5">
+            <VehicleDetails vehicle={booking.vehicle} />
+          </dd>
         </div>
         <div>
           <dt className="text-slate-400">Booking ID</dt>

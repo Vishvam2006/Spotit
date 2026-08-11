@@ -1,6 +1,22 @@
 import type { ParkingLot } from './parking';
+import type { VehicleType } from './vehicle';
 
 export type BookingStatus = 'RESERVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
+
+/**
+ * Snapshot of the vehicle at the time the booking was created. Old bookings
+ * (created before the vehicle library existed) have `id: null` and an empty
+ * `imageUrl`, so the UI must render a placeholder for that legacy state.
+ */
+export interface BookingVehicle {
+  id: string | null;
+  registration: string;
+  type: VehicleType;
+  imageUrl: string;
+  make: string | null;
+  model: string | null;
+  color: string | null;
+}
 
 export interface Booking {
   id: string;
@@ -21,4 +37,5 @@ export interface Booking {
   createdAt: string;
   updatedAt: string;
   parkingLot: ParkingLot;
+  vehicle: BookingVehicle;
 }

@@ -1,4 +1,3 @@
-import { Link, useNavigate } from 'react-router-dom';
 import {
   IndianRupee,
   CalendarDays,
@@ -7,7 +6,7 @@ import {
   RefreshCw,
   SquareParking,
 } from 'lucide-react';
-import Logo from '../components/Logo';
+import AppLayout from '../components/layout/AppLayout';
 import Alert from '../components/ui/Alert';
 import Spinner from '../components/ui/Spinner';
 import DashboardCard from '../components/owner/DashboardCard';
@@ -17,7 +16,6 @@ import BookingsTable from '../components/owner/BookingsTable';
 import LineChart from '../components/owner/LineChart';
 import BarChart from '../components/owner/BarChart';
 import { useOwnerDashboard } from '../hooks/useOwnerDashboard';
-import { useAuth } from '../context/auth-context';
 import { formatINR } from '../utils/format';
 
 function OccupancyBar({
@@ -49,8 +47,6 @@ function OccupancyBar({
 }
 
 export default function OwnerDashboard() {
-  const navigate = useNavigate();
-  const { logout } = useAuth();
   const {
     data,
     statuses,
@@ -62,60 +58,11 @@ export default function OwnerDashboard() {
     manualRefresh,
   } = useOwnerDashboard();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
-
   const dashboard = data.dashboard;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Logo className="h-9 w-9" />
-            <span className="text-xl font-bold tracking-tight text-slate-900">
-              ParkMitra
-            </span>
-          </div>
-          <nav className="flex flex-wrap items-center gap-2">
-            <Link
-              to="/"
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100"
-            >
-              Map
-            </Link>
-            <Link
-              to="/bookings"
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100"
-            >
-              My Bookings
-            </Link>
-            <Link
-              to="/my-parkings"
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100"
-            >
-              My Parking Lots
-            </Link>
-            <Link
-              to="/dashboard"
-              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
-            >
-              Dashboard
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100"
-            >
-              Sign out
-            </button>
-          </nav>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+    <AppLayout>
+      <main className="mx-auto max-w-6xl px-4 pt-6 pb-24 sm:px-6 md:pb-8">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Owner Dashboard</h1>
@@ -274,6 +221,6 @@ export default function OwnerDashboard() {
           </>
         )}
       </main>
-    </div>
+    </AppLayout>
   );
 }

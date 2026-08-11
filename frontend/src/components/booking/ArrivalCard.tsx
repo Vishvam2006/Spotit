@@ -15,6 +15,7 @@ import { useBookingHeartbeat } from '../../hooks/useBookingHeartbeat';
 import type { LatLng } from '../../utils/geolocation';
 import Button from '../ui/Button';
 import Alert from '../ui/Alert';
+import VehicleDetails from '../vehicle/VehicleDetails';
 
 interface ArrivalCardProps {
   booking: Booking;
@@ -246,7 +247,9 @@ export default function ArrivalCard({
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
         <div>
           <dt className="text-emerald-700/70">Vehicle</dt>
-          <dd className="font-semibold text-emerald-900">{booking.vehicleNumber}</dd>
+          <dd className="mt-1.5">
+            <VehicleDetails vehicle={booking.vehicle} />
+          </dd>
         </div>
         <div>
           <dt className="text-emerald-700/70">

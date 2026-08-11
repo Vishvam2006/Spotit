@@ -19,6 +19,7 @@ model User {
   updatedAt    DateTime     @updatedAt
   ParkingLot   ParkingLot[]
   Booking      Booking[]
+  vehicles     Vehicle[]
 }
 
 model ParkingLot {
@@ -53,24 +54,56 @@ enum BookingStatus {
   EXPIRED
 }
 
+enum VehicleType {
+  TWO_WHEELER
+  FOUR_WHEELER
+}
+
+model Vehicle {
+  id            String      @id @default(cuid())
+  userId        String
+  registration  String
+  type          VehicleType
+  imageUrl      String
+  imagePublicId String
+  make          String?
+  model         String?
+  color         String?
+  isDefault     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, registration])
+  @@index([userId])
+}
+
 model Booking {
-  id              String        @id @default(cuid())
-  userId          String
-  parkingLotId    String
-  vehicleNumber   String
-  durationMinutes Int
-  reservedAt      DateTime
-  checkInDeadline DateTime
-  checkInTime     DateTime?
-  sessionEndsAt   DateTime?
-  checkOutTime    DateTime?
-  estimatedAmount Float?
-  finalAmount     Float?
-  status          BookingStatus @default(RESERVED)
-  lastLocationAt  DateTime?
-  lastSeenAt      DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  userId            String
+  parkingLotId      String
+  vehicleNumber     String
+  durationMinutes   Int
+  reservedAt        DateTime
+  checkInDeadline   DateTime
+  checkInTime       DateTime?
+  sessionEndsAt     DateTime?
+  checkOutTime      DateTime?
+  estimatedAmount   Float?
+  finalAmount       Float?
+  status            BookingStatus @default(RESERVED)
+  lastLocationAt    DateTime?
+  lastSeenAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  vehicleId         String?
+  vehicleRegistration String
+  vehicleType       VehicleType
+  vehicleImageUrl   String
+  vehicleMake       String?
+  vehicleModel      String?
+  vehicleColor      String?
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   parkingLot    ParkingLot      @relation(fields: [parkingLotId], references: [id], onDelete: Cascade)
@@ -78,6 +111,7 @@ model Booking {
 
   @@index([userId, status])
   @@index([parkingLotId, status])
+  @@index([vehicleId])
 }
 
 model LocationAudit {

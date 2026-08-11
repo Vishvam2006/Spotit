@@ -6,6 +6,7 @@ import {
   resetDb,
   createUser,
   createParkingLot,
+  createVehicleRecord,
   auth,
 } from './helpers';
 
@@ -48,14 +49,15 @@ async function setup(lotOverrides: Record<string, unknown> = {}) {
     longitude: LOT_LNG,
     ...lotOverrides,
   });
-  return { owner, user, lot };
+  const vehicle = await createVehicleRecord(user.user.id, { registration: VEHICLE });
+  return { owner, user, lot, vehicle };
 }
 
-function book(token: string, parkingLotId: string) {
+function book(token: string, parkingLotId: string, vehicleId: string) {
   return request(app)
     .post('/api/bookings')
     .set(auth(token))
-    .send({ parkingLotId, vehicleNumber: VEHICLE, durationMinutes: 120 });
+    .send({ parkingLotId, vehicleId, durationMinutes: 120 });
 }
 
 async function checkIn(token: string, bookingId: string, sample?: object) {
@@ -112,9 +114,9 @@ describe('QA Audit — End-to-end journey', () => {
   beforeEach(resetDb);
 
   it('completes register → book → check-in → check-out → history', async () => {
-    const { user, lot } = await setup({ availableSpaces: 3 });
+    const { user, lot, vehicle } = await setup({ availableSpaces: 3 });
 
-    const bookingRes = await book(user.token, lot.id).expect(201);
+    const bookingRes = await book(user.token, lot.id, vehicle.id).expect(201);
     const bookingId = bookingRes.body.data.id;
     expect(bookingRes.body.data.status).toBe('RESERVED');
 
@@ -150,8 +152,8 @@ describe('QA Audit — Check-in verification', () => {
   beforeEach(resetDb);
 
   it('rejects check-in without location when geofence enabled', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await checkIn(user.token, booking.id);
     expect(res.status).toBe(409);
@@ -162,8 +164,8 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('rejects location outside parking radius', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await checkIn(user.token, booking.id, farFromLot(500));
     expect(res.status).toBe(409);
@@ -171,8 +173,8 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('rejects stale location timestamp', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await checkIn(
       user.token,
@@ -184,8 +186,8 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('rejects poor accuracy', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await checkIn(user.token, booking.id, atLot({ accuracy: 100 }));
     expect(res.status).toBe(409);
@@ -193,8 +195,8 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('rejects impossible speed', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await checkIn(user.token, booking.id, atLot({ speedMps: 50 }));
     expect(res.status).toBe(409);
@@ -202,8 +204,8 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('rejects future timestamp via validation (missing sample)', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await checkIn(user.token, booking.id, {
       lat: LOT_LAT,
@@ -216,8 +218,8 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('returns 202 until dwell time and reading count met', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res1 = await checkIn(user.token, booking.id, atLot());
     expect(res1.status).toBe(202);
@@ -230,8 +232,8 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('is idempotent once ACTIVE', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
     await completeCheckIn(user.token, booking.id);
 
     const res = await checkIn(user.token, booking.id, atLot());
@@ -240,8 +242,8 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('rejects check-in after expiry', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     await prisma.booking.update({
       where: { id: booking.id },
@@ -253,8 +255,8 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('rejects check-in after cancellation', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     await request(app)
       .post(`/api/bookings/${booking.id}/cancel`)
@@ -266,8 +268,8 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('rejects check-in from wrong parking lot coordinates', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await checkIn(user.token, booking.id, locationSample(23.0225, 72.5714));
     expect(res.status).toBe(409);
@@ -275,16 +277,16 @@ describe('QA Audit — Check-in verification', () => {
   });
 
   it('rejects adjacent-road location outside radius', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await checkIn(user.token, booking.id, nearAdjacentLot());
     expect([202, 409]).toContain(res.status);
   });
 
   it('audits rejected check-in attempts', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     await checkIn(user.token, booking.id, farFromLot(500));
 
@@ -300,8 +302,8 @@ describe('QA Audit — Check-out verification', () => {
   beforeEach(resetDb);
 
   async function activeBooking() {
-    const { user, lot } = await setup({ availableSpaces: 2 });
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup({ availableSpaces: 2 });
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
     await completeCheckIn(user.token, booking.id);
     await prisma.booking.update({
       where: { id: booking.id },
@@ -333,8 +335,8 @@ describe('QA Audit — Check-out verification', () => {
   });
 
   it('rejects checkout before grace period', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
     await completeCheckIn(user.token, booking.id);
 
     const outside = farFromLot(500);
@@ -393,10 +395,12 @@ describe('QA Audit — Booking and capacity loopholes', () => {
     const lot = await createParkingLot(owner.token, { availableSpaces: 1 });
     const user1 = await createUser('u1@example.com', 'USER');
     const user2 = await createUser('u2@example.com', 'USER');
+    const vehicle1 = await createVehicleRecord(user1.user.id, { registration: 'KA01AB1234' });
+    const vehicle2 = await createVehicleRecord(user2.user.id, { registration: 'KA02XY5678' });
 
     const [res1, res2] = await Promise.all([
-      book(user1.token, lot.id),
-      book(user2.token, lot.id),
+      book(user1.token, lot.id, vehicle1.id),
+      book(user2.token, lot.id, vehicle2.id),
     ]);
     expect([res1.status, res2.status].sort()).toEqual([201, 409]);
 
@@ -405,13 +409,13 @@ describe('QA Audit — Booking and capacity loopholes', () => {
   });
 
   it('does not decrement capacity when an overlapping booking is rejected', async () => {
-    const { user, lot } = await setup({ availableSpaces: 5 });
-    await book(user.token, lot.id).expect(201);
+    const { user, lot, vehicle } = await setup({ availableSpaces: 5 });
+    await book(user.token, lot.id, vehicle.id).expect(201);
 
     const before = (await prisma.parkingLot.findUnique({ where: { id: lot.id } }))
       ?.availableSpaces;
 
-    const res = await book(user.token, lot.id);
+    const res = await book(user.token, lot.id, vehicle.id);
     expect(res.status).toBe(409);
     expect(res.body.message).toBe('You already have an overlapping parking booking');
 
@@ -422,8 +426,8 @@ describe('QA Audit — Booking and capacity loopholes', () => {
   });
 
   it('rejects duplicate cancel', async () => {
-    const { user, lot } = await setup({ availableSpaces: 2 });
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup({ availableSpaces: 2 });
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     await request(app)
       .post(`/api/bookings/${booking.id}/cancel`)
@@ -440,8 +444,8 @@ describe('QA Audit — Booking and capacity loopholes', () => {
   });
 
   it('blocks deleting lot with RESERVED bookings', async () => {
-    const { owner, user, lot } = await setup();
-    await book(user.token, lot.id).expect(201);
+    const { owner, user, lot, vehicle } = await setup();
+    await book(user.token, lot.id, vehicle.id).expect(201);
 
     const res = await request(app)
       .delete(`/api/parking-lots/${lot.id}`)
@@ -450,8 +454,8 @@ describe('QA Audit — Booking and capacity loopholes', () => {
   });
 
   it('blocks deleting lot with ACTIVE bookings', async () => {
-    const { owner, user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { owner, user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
     await completeCheckIn(user.token, booking.id);
 
     const res = await request(app)
@@ -471,8 +475,8 @@ describe('QA Audit — Booking and capacity loopholes', () => {
   });
 
   it('rejects editing totalSpaces below occupied spaces', async () => {
-    const { owner, user, lot } = await setup({ totalSpaces: 10, availableSpaces: 5 });
-    await book(user.token, lot.id).expect(201);
+    const { owner, user, lot, vehicle } = await setup({ totalSpaces: 10, availableSpaces: 5 });
+    await book(user.token, lot.id, vehicle.id).expect(201);
 
     const res = await request(app)
       .patch(`/api/parking-lots/${lot.id}`)
@@ -486,8 +490,8 @@ describe('QA Audit — Booking and capacity loopholes', () => {
   });
 
 it('allows reducing totalSpaces to exactly the occupied count', async () => {
-    const { owner, user, lot } = await setup({ totalSpaces: 10, availableSpaces: 5 });
-    await book(user.token, lot.id).expect(201);
+    const { owner, user, lot, vehicle } = await setup({ totalSpaces: 10, availableSpaces: 5 });
+    await book(user.token, lot.id, vehicle.id).expect(201);
 
     const res = await request(app)
       .patch(`/api/parking-lots/${lot.id}`)
@@ -504,8 +508,8 @@ describe('QA Audit — Heartbeat and session recovery', () => {
   beforeEach(resetDb);
 
   it('updates lastSeenAt on heartbeat for ACTIVE booking', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
     await completeCheckIn(user.token, booking.id);
 
     const res = await request(app)
@@ -517,8 +521,8 @@ describe('QA Audit — Heartbeat and session recovery', () => {
   });
 
   it('does not checkout via heartbeat', async () => {
-    const { user, lot } = await setup();
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup();
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
     await completeCheckIn(user.token, booking.id);
 
     await request(app)
@@ -532,8 +536,8 @@ describe('QA Audit — Heartbeat and session recovery', () => {
   });
 
   it('auto-completes stale session and restores capacity once', async () => {
-    const { user, lot } = await setup({ availableSpaces: 2 });
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const { user, lot, vehicle } = await setup({ availableSpaces: 2 });
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
     await completeCheckIn(user.token, booking.id);
 
     await prisma.booking.update({
@@ -555,9 +559,9 @@ describe('QA Audit — Heartbeat and session recovery', () => {
   });
 
   it('rejects heartbeat for another user booking', async () => {
-    const { user, lot } = await setup();
+    const { user, lot, vehicle } = await setup();
     const other = await createUser('other@example.com', 'USER');
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await request(app)
       .post(`/api/bookings/${booking.id}/heartbeat`)
@@ -571,18 +575,18 @@ describe('QA Audit — Authentication and authorization', () => {
   beforeEach(resetDb);
 
   it('BUG: wrong user check-in returns 409 instead of 404 when no location sent', async () => {
-    const { user, lot } = await setup();
+    const { user, lot, vehicle } = await setup();
     const other = await createUser('other@example.com', 'USER');
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await checkIn(other.token, booking.id);
     expect(res.status).toBe(409);
   });
 
   it('wrong user check-in with location returns 404', async () => {
-    const { user, lot } = await setup();
+    const { user, lot, vehicle } = await setup();
     const other = await createUser('other@example.com', 'USER');
-    const booking = (await book(user.token, lot.id).expect(201)).body.data;
+    const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     const res = await checkIn(other.token, booking.id, atLot());
     expect(res.status).toBe(404);
@@ -668,8 +672,8 @@ describe('QA Audit — Search and discovery', () => {
   });
 
   it('reflects reduced availability after booking', async () => {
-    const { user, lot } = await setup({ availableSpaces: 3 });
-    await book(user.token, lot.id).expect(201);
+    const { user, lot, vehicle } = await setup({ availableSpaces: 3 });
+    await book(user.token, lot.id, vehicle.id).expect(201);
 
     const res = await request(app).get(`/api/parking-lots/${lot.id}`).expect(200);
     expect(res.body.data.availableSpaces).toBe(2);

@@ -9,6 +9,7 @@ import Home from './pages/Home';
 import ParkingDetails from './pages/ParkingDetails';
 import BookingConfirm from './pages/BookingConfirm';
 import Bookings from './pages/Bookings';
+import MyVehicles from './pages/MyVehicles';
 import MyParkings from './pages/MyParkings';
 import OwnerDashboard from './pages/OwnerDashboard';
 
@@ -70,6 +71,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MyParkings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-vehicles"
+            element={
+              <ProtectedRoute>
+                <MyVehicles />
               </ProtectedRoute>
             }
           />

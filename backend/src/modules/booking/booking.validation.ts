@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const createBookingSchema = z.object({
   parkingLotId: z.string().min(1),
-  vehicleNumber: z.string().trim().min(2).max(20),
+  vehicleId: z.string().min(1),
   durationMinutes: z.number().int().min(60).max(480),
 });
 
