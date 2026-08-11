@@ -1,76 +1,74 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth-context';
 import Logo from '../components/Logo';
 import ParkingMap from '../components/map/ParkingMap';
-import ParkingCard from '../components/map/ParkingCard';
-import AddParkingForm from '../components/parking/AddParkingForm';
-import SearchFilters from '../components/parking/SearchFilters';
 import type { MapLocation } from '../components/map/ParkingMap';
+import SearchBar from '../components/map/SearchBar';
+import DistanceFilter from '../components/map/DistanceFilter';
+import AddParkingForm from '../components/parking/AddParkingForm';
 import Spinner from '../components/ui/Spinner';
 import Alert from '../components/ui/Alert';
 import { fetchParkingLots } from '../services/parking';
+import { DEFAULT_MAP_CENTER } from '../config/map';
+import { geocodePlaceQuery } from '../utils/geocoding';
 import { getCurrentPositionDetailed } from '../utils/geolocation';
-import type { GeolocationFailureReason } from '../utils/geolocation';
-import { notifyError, notifySuccess } from '../utils/notify';
-import type { ParkingFilters, ParkingLot } from '../types/parking';
+import type { LatLng } from '../utils/geolocation';
+import { isWithinRadiusKm } from '../utils/distance';
+import { notifyError, notifyInfo, notifySuccess } from '../utils/notify';
+import type { ParkingLot } from '../types/parking';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
-function locationErrorMessage(reason: GeolocationFailureReason): string {
-  switch (reason) {
-    case 'denied':
-      return 'Location permission was denied. Nearest sort needs your location.';
-    case 'unavailable':
-      return "We couldn't determine your location. Nearest sort needs your location.";
-    case 'timeout':
-      return 'Location request timed out. Please try selecting Nearest again.';
-    case 'unsupported':
-      return 'Your browser does not support location services. Nearest sort is unavailable.';
-  }
-}
+const DEFAULT_RADIUS_KM = 25;
+const SEARCH_DEBOUNCE_MS = 500;
 
-function hasMeaningfulFilters(filters: ParkingFilters): boolean {
-  return (
-    Boolean(filters.q?.trim()) ||
-    Boolean(filters.city) ||
-    filters.maxPrice !== undefined ||
-    Boolean(filters.availableOnly) ||
-    (filters.sort !== undefined && filters.sort !== 'newest') ||
-    filters.lat !== undefined ||
-    filters.lng !== undefined
+function filterLotsByRadius(
+  lots: ParkingLot[],
+  center: LatLng,
+  radiusKm: number,
+): ParkingLot[] {
+  if (radiusKm <= 0) return [];
+  return lots.filter((lot) =>
+    isWithinRadiusKm(center.lat, center.lng, lot.latitude, lot.longitude, radiusKm),
   );
 }
 
 export default function Home() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState<ParkingFilters>({});
-  const [parkingLots, setParkingLots] = useState<ParkingLot[]>([]);
-  const [cities, setCities] = useState<string[]>([]);
+  const [allParkingLots, setAllParkingLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<LatLng | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [submittedSearch, setSubmittedSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+  const [searchLocation, setSearchLocation] = useState<LatLng | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
   const [isAddingParking, setIsAddingParking] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
-  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const nearestRequestId = useRef(0);
 
-  const hasFilters = hasMeaningfulFilters(filters);
-  const isParkingOwner = user?.role === 'OWNER' || user?.role === 'ADMIN';
+  const reloadParkingLots = useCallback(() => {
+    fetchParkingLots()
+      .then((lots) => {
+        setAllParkingLots(lots);
+        setError(null);
+      })
+      .catch(() => {
+        setError('Failed to load parking lots. Please try again.');
+      });
+  }, []);
 
-  const fetchLots = useCallback((nextFilters: ParkingFilters) => {
+  useEffect(() => {
     let active = true;
 
-    queueMicrotask(() => {
-      if (active) setLoading(true);
-    });
-
-    fetchParkingLots(nextFilters)
+    fetchParkingLots()
       .then((lots) => {
-        if (!active) return;
-        setParkingLots(lots);
-        setError(null);
-        if (!hasMeaningfulFilters(nextFilters)) {
-          setCities([...new Set(lots.map((lot) => lot.city))].sort());
+        if (active) {
+          setAllParkingLots(lots);
+          setError(null);
         }
       })
       .catch(() => {
@@ -85,57 +83,91 @@ export default function Home() {
     };
   }, []);
 
-  useEffect(() => fetchLots(filters), [fetchLots, filters]);
+  useEffect(() => {
+    let active = true;
 
-  const handleFiltersChange = useCallback((patch: Partial<ParkingFilters>) => {
-    if (patch.sort === 'nearest') {
-      const requestId = ++nearestRequestId.current;
-      getCurrentPositionDetailed().then((result) => {
-        if (requestId !== nearestRequestId.current) return;
-        if (result.ok) {
-          setFilters((previous) => ({
-            ...previous,
-            sort: 'nearest',
-            lat: result.coords.lat,
-            lng: result.coords.lng,
-          }));
-        } else {
-          notifyError(locationErrorMessage(result.reason));
-          setFilters((previous) => ({ ...previous, sort: previous.sort ?? 'newest' }));
-        }
-      });
-      return;
-    }
+    getCurrentPositionDetailed().then((result) => {
+      if (!active) return;
 
-    nearestRequestId.current += 1;
-    setFilters((previous) => {
-      const next = { ...previous, ...patch };
-      if (next.sort !== 'nearest') {
-        delete next.lat;
-        delete next.lng;
+      if (result.ok) {
+        setUserLocation(result.coords);
+      } else if (result.reason === 'denied') {
+        notifyInfo('Location permission denied. Showing the default map area.');
       }
-      return next;
     });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const handleClearFilters = useCallback(() => {
-    setFilters({});
-    setSelectedParkingId(null);
-  }, []);
+  useEffect(() => {
+    const trimmed = submittedSearch.trim() || debouncedSearch.trim();
+    if (!trimmed) return;
 
-  const handleSelectId = useCallback((id: string | null) => {
-    setSelectedParkingId(id);
-    if (!id) return;
+    let active = true;
 
-    requestAnimationFrame(() => {
-      cardRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    queueMicrotask(() => {
+      if (active) setSearching(true);
     });
-  }, []);
 
-  const handleSelectParking = useCallback(
-    (parking: ParkingLot) => handleSelectId(parking.id),
-    [handleSelectId],
+    geocodePlaceQuery(trimmed)
+      .then((location) => {
+        if (!active) return;
+        if (location) {
+          setSearchLocation(location);
+        } else {
+          notifyError('Could not find that location. Try another search.');
+          setSearchLocation(null);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          notifyError('Search failed. Please try again.');
+          setSearchLocation(null);
+        }
+      })
+      .finally(() => {
+        if (active) setSearching(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [debouncedSearch, submittedSearch]);
+
+  const mapCenter = useMemo(
+    () => searchLocation ?? userLocation ?? DEFAULT_MAP_CENTER,
+    [searchLocation, userLocation],
   );
+
+  const filteredParkingLots = useMemo(
+    () => filterLotsByRadius(allParkingLots, mapCenter, radiusKm),
+    [allParkingLots, mapCenter, radiusKm],
+  );
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    setSelectedParkingId(null);
+    if (!value.trim()) {
+      setSubmittedSearch('');
+      setSearchLocation(null);
+      setSearching(false);
+    }
+  }, []);
+
+  const handleSearchSubmit = useCallback(() => {
+    setSubmittedSearch(searchQuery.trim());
+    setSelectedParkingId(null);
+  }, [searchQuery]);
+
+  const handleSearchClear = useCallback(() => {
+    setSearchQuery('');
+    setSubmittedSearch('');
+    setSearchLocation(null);
+    setSelectedParkingId(null);
+    setSearching(false);
+  }, []);
 
   const handleViewDetails = useCallback(
     (parking: ParkingLot) => navigate(`/parking/${parking.id}`),
@@ -160,8 +192,8 @@ export default function Home() {
     setSelectedLocation(null);
     setIsAddingParking(false);
     notifySuccess('Parking lot created successfully.');
-    fetchLots(filters);
-  }, [fetchLots, filters]);
+    reloadParkingLots();
+  }, [reloadParkingLots]);
 
   const handleLogout = () => {
     logout();
@@ -169,9 +201,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-slate-50">
+      <header className="shrink-0 border-b border-slate-200 bg-white">
+        <div className="flex items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Logo className="h-9 w-9" />
             <span className="text-xl font-bold tracking-tight text-slate-900">
@@ -194,6 +226,7 @@ export default function Home() {
               My Parking Lots
             </button>
             <button
+              type="button"
               onClick={handleLogout}
               className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -203,112 +236,82 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <div className="mb-5">
-          <SearchFilters
-            filters={filters}
-            cities={cities}
-            onChange={handleFiltersChange}
-            onClear={handleClearFilters}
+      <div className="shrink-0 space-y-0 border-b border-slate-200 bg-white">
+        <div className="px-4 py-4 sm:px-6">
+          <SearchBar
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onSubmit={handleSearchSubmit}
+            onClear={handleSearchClear}
+            searching={searching}
           />
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <Spinner className="h-8 w-8 text-blue-600" />
+        <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <DistanceFilter
+            variant="inline"
+            radiusKm={radiusKm}
+            onChange={setRadiusKm}
+            visibleCount={filteredParkingLots.length}
+            totalCount={allParkingLots.length}
+          />
+          {isAddingParking ? (
+            <button
+              type="button"
+              onClick={cancelAddParking}
+              className="shrink-0 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:self-center"
+            >
+              Cancel
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={startAddParking}
+              className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:self-center"
+            >
+              + Add Parking
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3 sm:px-6">
+        <div className="relative min-h-[480px] flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+          {loading ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Spinner className="h-8 w-8 text-blue-600" />
+            </div>
+          ) : error ? (
+            <div className="absolute inset-0 flex items-center justify-center p-6">
+              <Alert variant="error" message={error} />
+            </div>
+          ) : (
+            <div className="absolute inset-0">
+              <ParkingMap
+                parkingLots={filteredParkingLots}
+                selectedParkingId={selectedParkingId}
+                onSelect={setSelectedParkingId}
+                onViewDetails={handleViewDetails}
+                mapCenter={mapCenter}
+                userLocation={userLocation}
+                isAddingParking={isAddingParking}
+                selectedLocation={selectedLocation}
+                onLocationSelect={handleLocationSelect}
+              />
+            </div>
+          )}
+        </div>
+
+        {isAddingParking && (
+          <div className="mt-4">
+            <AddParkingForm
+              selectedLocation={selectedLocation}
+              onCreated={handleParkingCreated}
+              onCancel={cancelAddParking}
+            />
           </div>
-        ) : error ? (
-          <Alert variant="error" message={error} />
-        ) : (
-          <>
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">Parking Lots</h1>
-                <p className="mt-0.5 text-sm text-slate-500">
-                  Click a parking lot to see it on the map.
-                </p>
-              </div>
-              {isAddingParking ? (
-                <button
-                  onClick={cancelAddParking}
-                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  Cancel
-                </button>
-              ) : (
-                !isParkingOwner && (
-                  <button
-                    onClick={startAddParking}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    + Add Parking
-                  </button>
-                )
-              )}
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-              <section className="space-y-5">
-                <div className="h-[560px] overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-                  <ParkingMap
-                    parkingLots={parkingLots}
-                    selectedParkingId={selectedParkingId}
-                    onSelect={handleSelectId}
-                    onViewDetails={handleViewDetails}
-                    isAddingParking={isAddingParking}
-                    selectedLocation={selectedLocation}
-                    onLocationSelect={handleLocationSelect}
-                  />
-                </div>
-
-                {isAddingParking && (
-                  <AddParkingForm
-                    selectedLocation={selectedLocation}
-                    onCreated={handleParkingCreated}
-                    onCancel={cancelAddParking}
-                  />
-                )}
-              </section>
-
-              <aside>
-                <h2 className="text-lg font-bold text-slate-900">All Parking Lots</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  {parkingLots.length} available
-                </p>
-
-                {parkingLots.length === 0 ? (
-                  <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center">
-                    <p className="text-sm font-semibold text-slate-700">
-                      {hasFilters ? 'No parking lots found.' : 'No parking lots available right now.'}
-                    </p>
-                    {hasFilters && (
-                      <p className="mt-1 text-sm text-slate-500">Try changing your filters.</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="mt-4 max-h-[540px] space-y-3 overflow-y-auto pr-1">
-                    {parkingLots.map((parking) => (
-                      <div
-                        key={parking.id}
-                        ref={(el) => {
-                          cardRefs.current[parking.id] = el;
-                        }}
-                      >
-                        <ParkingCard
-                          parking={parking}
-                          selected={parking.id === selectedParkingId}
-                          onSelect={handleSelectParking}
-                          onViewDetails={handleViewDetails}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </aside>
-            </div>
-          </>
         )}
-      </main>
+      </div>
     </div>
   );
 }

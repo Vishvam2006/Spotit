@@ -9,6 +9,7 @@ import {
 import type { MapMouseEvent } from '@vis.gl/react-google-maps';
 import { AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import type { ParkingLot } from '../../types/parking';
+import type { LatLng } from '../../utils/geolocation';
 import {
   GOOGLE_MAPS_API_KEY,
   GOOGLE_MAPS_MAP_ID,
@@ -18,6 +19,7 @@ import {
 } from '../../config/map';
 import ParkingMarker from './ParkingMarker';
 import ParkingPopup from './ParkingPopup';
+import UserLocationMarker from './UserLocationMarker';
 import MapControls from './MapControls';
 import Spinner from '../ui/Spinner';
 
@@ -35,6 +37,8 @@ interface ParkingMapProps {
   onLocationSelect?: (location: MapLocation) => void;
   isAddingParking?: boolean;
   selectedLocation?: MapLocation | null;
+  mapCenter?: LatLng | null;
+  userLocation?: LatLng | null;
 }
 
 export default function ParkingMap({
@@ -46,8 +50,11 @@ export default function ParkingMap({
   onLocationSelect,
   isAddingParking = false,
   selectedLocation = null,
+  mapCenter = null,
+  userLocation = null,
 }: ParkingMapProps) {
   const [loadError, setLoadError] = useState(false);
+  const [mapView, setMapView] = useState<'roadmap' | 'satellite'>('roadmap');
 
   if (!GOOGLE_MAPS_API_KEY) {
     return (
@@ -65,7 +72,7 @@ export default function ParkingMap({
   };
 
   return (
-    <div className="relative h-full w-full">
+    <div className="absolute inset-0">
       <APIProvider
         apiKey={GOOGLE_MAPS_API_KEY}
         libraries={GOOGLE_MAPS_LIBRARIES}
@@ -73,10 +80,14 @@ export default function ParkingMap({
       >
         <Map
           className="h-full w-full"
+          style={{ width: '100%', height: '100%' }}
           defaultCenter={DEFAULT_MAP_CENTER}
           defaultZoom={DEFAULT_MAP_ZOOM}
           mapId={GOOGLE_MAPS_MAP_ID}
+          mapTypeId={mapView === 'satellite' ? 'hybrid' : 'roadmap'}
           onClick={handleMapClick}
+          gestureHandling="greedy"
+          disableDefaultUI
         >
           {parkingLots.map((parking) => (
             <ParkingMarker
@@ -86,6 +97,8 @@ export default function ParkingMap({
               onSelect={(p) => onSelect(p.id)}
             />
           ))}
+
+          {userLocation && <UserLocationMarker position={userLocation} />}
 
           {selectedParking && onViewDetails && (
             <ParkingPopup
@@ -105,9 +118,19 @@ export default function ParkingMap({
             </AdvancedMarker>
           )}
 
-          <CameraController parkingLots={parkingLots} selectedParkingId={selectedParkingId} />
+          <CameraController
+            mapCenter={mapCenter}
+            parkingLots={parkingLots}
+            selectedParkingId={selectedParkingId}
+          />
 
-          <MapControls />
+          <MapTypeController mapView={mapView} />
+
+          <MapControls
+            userLocation={userLocation}
+            mapView={mapView}
+            onMapViewChange={setMapView}
+          />
         </Map>
 
         <MapStatus loadError={loadError} />
@@ -116,14 +139,33 @@ export default function ParkingMap({
   );
 }
 
+function MapTypeController({ mapView }: { mapView: 'roadmap' | 'satellite' }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    map.setMapTypeId(mapView === 'satellite' ? 'hybrid' : 'roadmap');
+  }, [map, mapView]);
+
+  return null;
+}
+
 function CameraController({
+  mapCenter,
   parkingLots,
   selectedParkingId,
 }: {
+  mapCenter: LatLng | null;
   parkingLots: ParkingLot[];
   selectedParkingId: string | null;
 }) {
   const map = useMap();
+
+  useEffect(() => {
+    if (!map || !mapCenter) return;
+    map.panTo(mapCenter);
+    map.setZoom(14);
+  }, [map, mapCenter]);
 
   useEffect(() => {
     if (!map || !selectedParkingId) return;
@@ -166,7 +208,7 @@ function MapStatus({ loadError }: { loadError: boolean }) {
 
 function MapFallback({ message }: { message: string }) {
   return (
-    <div className="flex h-full w-full items-center justify-center rounded-xl bg-slate-50 p-6 ring-1 ring-slate-200">
+    <div className="flex h-full w-full items-center justify-center bg-slate-50 p-6">
       <p className="text-center text-sm font-medium text-slate-600">{message}</p>
     </div>
   );
