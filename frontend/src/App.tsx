@@ -10,6 +10,7 @@ import ParkingDetails from './pages/ParkingDetails';
 import BookingConfirm from './pages/BookingConfirm';
 import Bookings from './pages/Bookings';
 import MyParkings from './pages/MyParkings';
+import OwnerDashboard from './pages/OwnerDashboard';
 
 export default function App() {
   return (
@@ -69,6 +70,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MyParkings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['OWNER', 'ADMIN']}>
+                <OwnerDashboard />
               </ProtectedRoute>
             }
           />

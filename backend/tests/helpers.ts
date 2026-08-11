@@ -92,3 +92,49 @@ export async function createParkingLot(
 export function auth(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
+
+export interface DirectBookingInput {
+  userId: string;
+  parkingLotId: string;
+  vehicleNumber: string;
+  durationMinutes: number;
+  status?: 'RESERVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
+  reservedAt?: Date;
+  checkInDeadline?: Date;
+  checkInTime?: Date | null;
+  sessionEndsAt?: Date | null;
+  checkOutTime?: Date | null;
+  estimatedAmount?: number;
+  finalAmount?: number | null;
+}
+
+export async function createBooking(
+  data: DirectBookingInput,
+): Promise<{ id: string; status: string }> {
+  const now = new Date();
+  const reservedAt = data.reservedAt ?? now;
+  const checkInDeadline = data.checkInDeadline ?? new Date(now.getTime() + 15 * 60_000);
+  const durationMinutes = data.durationMinutes;
+  const estimatedAmount =
+    data.estimatedAmount ?? Math.round((durationMinutes / 60) * 40);
+
+  const booking = await prisma.booking.create({
+    data: {
+      userId: data.userId,
+      parkingLotId: data.parkingLotId,
+      vehicleNumber: data.vehicleNumber,
+      durationMinutes,
+      reservedAt,
+      checkInDeadline,
+      status: data.status ?? 'RESERVED',
+      checkInTime: data.checkInTime ?? null,
+      sessionEndsAt: data.sessionEndsAt ?? null,
+      checkOutTime: data.checkOutTime ?? null,
+      estimatedAmount,
+      finalAmount: data.finalAmount ?? null,
+    },
+    select: { id: true, status: true },
+  });
+
+  return booking;
+}

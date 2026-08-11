@@ -6,9 +6,11 @@ import { Prisma } from '@prisma/client';
 import authRoutes from './routes/auth.routes';
 import parkingRoutes from './modules/parking/parking.routes';
 import bookingRoutes from './modules/booking/booking.routes';
+import ownerRoutes from './modules/owner/owner.routes';
 import { AuthError } from './services/auth.service';
 import { BookingError } from './modules/booking/booking.service';
 import { ParkingError } from './modules/parking/parking.service';
+import { OwnerError } from './modules/owner/owner.service';
 
 const app = express();
 
@@ -22,6 +24,7 @@ app.get('/', (_req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/parking-lots', parkingRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/owner', ownerRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({
@@ -83,6 +86,15 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       success: false,
       message: err.message,
       code: 'PARKING_ERROR',
+    });
+    return;
+  }
+
+  if (err instanceof OwnerError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      code: 'OWNER_ERROR',
     });
     return;
   }
