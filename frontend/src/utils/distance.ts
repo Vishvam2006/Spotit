@@ -20,6 +20,33 @@ export function haversineDistanceMeters(
   return EARTH_RADIUS_METERS * c;
 }
 
+export function haversineDistanceKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  return haversineDistanceMeters(lat1, lng1, lat2, lng2) / 1000;
+}
+
+export function isWithinRadiusKm(
+  centerLat: number,
+  centerLng: number,
+  pointLat: number,
+  pointLng: number,
+  radiusKm: number,
+): boolean {
+  if (radiusKm <= 0) return false;
+  return haversineDistanceKm(centerLat, centerLng, pointLat, pointLng) <= radiusKm;
+}
+
+export function formatDistanceKm(radiusKm: number): string {
+  if (radiusKm < 1) {
+    return `${Math.round(radiusKm * 1000)} m`;
+  }
+  return `${radiusKm % 1 === 0 ? radiusKm : radiusKm.toFixed(1)} km`;
+}
+
 export function formatDistanceMeters(distanceMeters: number): string {
   if (distanceMeters < 1000) {
     return `${Math.round(distanceMeters)} m`;

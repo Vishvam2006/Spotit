@@ -26,12 +26,16 @@ export default function ParkingPopup({
             <dd className="font-semibold">₹{parking.pricePerHour}/hr</dd>
           </div>
           <div className="flex justify-between gap-6">
-            <dt>Available</dt>
+            <dt>Available slots</dt>
             <dd className="font-semibold">{parking.availableSpaces}</dd>
           </div>
           <div className="flex justify-between gap-6">
-            <dt>Total</dt>
+            <dt>Total slots</dt>
             <dd className="font-semibold">{parking.totalSpaces}</dd>
+          </div>
+          <div className="flex justify-between gap-6">
+            <dt>Status</dt>
+            <dd className="font-semibold capitalize">{parking.status.toLowerCase()}</dd>
           </div>
         </dl>
         <button
