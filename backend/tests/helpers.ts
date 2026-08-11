@@ -6,6 +6,23 @@ export { app, prisma, request };
 
 export const testPassword = 'Password123!';
 
+export const testPhoto = 'data:image/png;base64,iVBORw0KGgo=';
+
+export const testPhotos = [testPhoto, testPhoto];
+
+export interface ParkingLotOverrides {
+  name?: string;
+  address?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+  pricePerHour?: number;
+  totalSpaces?: number;
+  availableSpaces?: number;
+  status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+  photos?: string[];
+}
+
 export async function resetDb() {
   // Delete all records in the correct order to respect foreign key constraints
   await prisma.booking.deleteMany();
@@ -82,6 +99,7 @@ export async function createParkingLot(
       totalSpaces: 10,
       availableSpaces: 5,
       status: 'ACTIVE',
+      photos: testPhotos,
       ...overrides,
     })
     .expect(201);

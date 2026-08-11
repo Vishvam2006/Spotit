@@ -22,6 +22,7 @@ function toParking(lot: ParkingLot): Parking {
     availableSlots: lot.availableSpaces,
     pricePerHour: lot.pricePerHour,
     isActive: lot.status === 'ACTIVE',
+    photos: lot.photos ?? [],
     createdAt: lot.createdAt,
     updatedAt: lot.updatedAt,
   };
@@ -39,6 +40,7 @@ function toWirePayload(data: ParkingInput) {
     totalSpaces: data.totalSlots,
     availableSpaces: data.availableSlots,
     status: (data.isActive ? 'ACTIVE' : 'INACTIVE') as ParkingLotStatus,
+    photos: data.photos,
   };
 }
 

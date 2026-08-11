@@ -4,6 +4,7 @@ import Button from '../ui/Button';
 import Alert from '../ui/Alert';
 import { createParking, getParkingErrorMessage, updateParking } from '../../services/parkingApi';
 import type { Parking, ParkingInput } from '../../types/parking';
+import PhotoUploader, { MIN_PARKING_PHOTOS } from './PhotoUploader';
 
 interface ParkingFormProps {
   mode: 'create' | 'edit';
@@ -36,7 +37,7 @@ const emptyFormState: FormState = {
   isActive: true,
 };
 
-type FormErrors = Partial<Record<keyof FormState, string>>;
+type FormErrors = Partial<Record<keyof FormState, string>> & { photos?: string };
 
 function toFormState(parking?: Parking): FormState {
   if (!parking) return emptyFormState;
@@ -54,7 +55,7 @@ function toFormState(parking?: Parking): FormState {
   };
 }
 
-function toPayload(form: FormState): ParkingInput {
+function toPayload(form: FormState, photos: string[]): ParkingInput {
   return {
     name: form.name.trim(),
     description: form.description.trim() || undefined,
@@ -65,6 +66,7 @@ function toPayload(form: FormState): ParkingInput {
     availableSlots: Number(form.availableSlots),
     pricePerHour: Number(form.pricePerHour),
     isActive: form.isActive,
+    photos,
   };
 }
 
@@ -75,6 +77,7 @@ export default function ParkingForm({
   onCancel,
 }: ParkingFormProps) {
   const [form, setForm] = useState<FormState>(() => toFormState(initialValues));
+  const [photos, setPhotos] = useState<string[]>(() => initialValues?.photos ?? []);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -130,6 +133,10 @@ export default function ParkingForm({
       nextErrors.pricePerHour = 'Price per hour must be 0 or more';
     }
 
+    if (mode === 'create' && photos.length < MIN_PARKING_PHOTOS) {
+      nextErrors.photos = `At least ${MIN_PARKING_PHOTOS} photos of the parking space are required`;
+    }
+
     return nextErrors;
   };
 
@@ -143,7 +150,7 @@ export default function ParkingForm({
 
     setSubmitting(true);
     try {
-      const payload = toPayload(form);
+      const payload = toPayload(form, photos);
       const saved =
         mode === 'create'
           ? await createParking(payload)
@@ -289,6 +296,15 @@ export default function ParkingForm({
             />
             Active parking lot
           </label>
+        </div>
+
+        <div className="sm:col-span-2">
+          <PhotoUploader
+            value={photos}
+            onChange={setPhotos}
+            error={errors.photos}
+            required={mode === 'create'}
+          />
         </div>
       </div>
 
