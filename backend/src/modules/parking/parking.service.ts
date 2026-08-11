@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { cloudinary } from "../../config/cloudinary";
 
 import { haversineDistanceKm } from "../../utils/distance";
 import type {
@@ -108,10 +109,55 @@ export async function getParkingById(id: string) {
   });
 }
 
+const cloudinaryConfigured = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET,
+);
+
+function isDataUri(value: string) {
+  return value.startsWith("data:image/");
+}
+
+async function uploadPhoto(value: string): Promise<string> {
+  if (!isDataUri(value)) {
+    return value;
+  }
+
+  if (!cloudinaryConfigured) {
+    return value;
+  }
+
+  const result = await cloudinary.uploader.upload(value, {
+    folder: "parkmitra/parking-lots",
+    resource_type: "image",
+  });
+
+  return result.secure_url;
+}
+
+async function resolvePhotos(photos?: string[]): Promise<{ photos: string[]; imageUrl: string }> {
+  if (!photos || photos.length === 0) {
+    return { photos: [], imageUrl: "" };
+  }
+
+  const resolved = await Promise.all(photos.map(uploadPhoto));
+
+  return {
+    photos: resolved,
+    imageUrl: resolved[0],
+  };
+}
+
 export async function createParking(ownerId: string, data: CreateParkingInput) {
+  const { photos, imageUrl } = await resolvePhotos(data.photos);
+  const { photos: _photos, imageUrl: _imageUrl, ...rest } = data;
+
   return prisma.parkingLot.create({
     data: {
-      ...data,
+      ...rest,
+      photos,
+      imageUrl: imageUrl || _imageUrl,
       ownerId,
     },
   });
@@ -156,6 +202,11 @@ export async function updateParking(
   let updateData: UpdateParkingInput = data;
   if (data.totalSpaces !== undefined && data.availableSpaces === undefined) {
     updateData = { ...data, availableSpaces: merged.totalSpaces - occupiedSpaces };
+  }
+
+  if (updateData.photos !== undefined) {
+    const resolved = await resolvePhotos(updateData.photos);
+    updateData = { ...updateData, photos: resolved.photos, imageUrl: resolved.imageUrl };
   }
 
   return prisma.parkingLot.update({

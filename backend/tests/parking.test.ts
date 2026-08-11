@@ -1,10 +1,32 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { request, app, resetDb, createUser, createParkingLot, auth } from './helpers';
+import { request, app, resetDb, createUser, createParkingLot, auth, testPhotos } from './helpers';
 
 describe('parking lots', () => {
   beforeEach(resetDb);
 
   it('allows a regular USER to create a lot', async () => {
+    const user = await createUser('user@example.com', 'USER');
+
+    const res = await request(app)
+      .post('/api/parking-lots')
+      .set(auth(user.token))
+    .send({
+      name: 'My Parking',
+      address: 'MG Road',
+      city: 'Bengaluru',
+      latitude: 12.9756,
+      longitude: 77.6068,
+      pricePerHour: 40,
+      totalSpaces: 10,
+      availableSpaces: 5,
+      photos: testPhotos,
+    })
+    .expect(201);
+
+    expect(res.body.data.ownerId).toBe(user.user.id);
+  });
+
+  it('requires at least 2 photos when creating a lot', async () => {
     const user = await createUser('user@example.com', 'USER');
 
     const res = await request(app)
@@ -19,10 +41,11 @@ describe('parking lots', () => {
         pricePerHour: 40,
         totalSpaces: 10,
         availableSpaces: 5,
+        photos: [testPhotos[0]],
       })
-      .expect(201);
+      .expect(400);
 
-    expect(res.body.data.ownerId).toBe(user.user.id);
+    expect(res.body.errors.fieldErrors.photos).toBeDefined();
   });
 
   it('allows an OWNER to create a lot', async () => {

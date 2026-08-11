@@ -25,6 +25,7 @@ export interface Parking {
   availableSlots: number;
   pricePerHour: number;
   isActive: boolean;
+  photos?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -39,6 +40,7 @@ export interface ParkingInput {
   availableSlots: number;
   pricePerHour: number;
   isActive: boolean;
+  photos?: string[];
 }
 
 export interface ParkingLot {
@@ -55,6 +57,7 @@ export interface ParkingLot {
   availableSpaces: number;
   status: ParkingLotStatus;
   imageUrl?: string;
+  photos?: string[];
   createdAt: string;
   updatedAt: string;
   distanceKm?: number;

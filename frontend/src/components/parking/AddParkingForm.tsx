@@ -6,6 +6,7 @@ import Alert from '../ui/Alert';
 import { getErrorMessage } from '../../services/api';
 import { createParkingLot } from '../../services/parking';
 import type { ParkingLotStatus } from '../../types/parking';
+import PhotoUploader, { MIN_PARKING_PHOTOS } from './PhotoUploader';
 
 export interface SelectedLocation {
   lat: number;
@@ -40,7 +41,7 @@ const initialFormState: FormState = {
   status: 'ACTIVE',
 };
 
-type FormErrors = Partial<Record<keyof FormState, string>>;
+type FormErrors = Partial<Record<keyof FormState, string>> & { photos?: string };
 
 export default function AddParkingForm({
   selectedLocation,
@@ -48,6 +49,7 @@ export default function AddParkingForm({
   onCancel,
 }: AddParkingFormProps) {
   const [form, setForm] = useState<FormState>(initialFormState);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -80,6 +82,10 @@ export default function AddParkingForm({
       nextErrors.availableSpaces = 'Available spaces cannot exceed total spaces';
     }
 
+    if (photos.length < MIN_PARKING_PHOTOS) {
+      nextErrors.photos = `At least ${MIN_PARKING_PHOTOS} photos of the parking space are required`;
+    }
+
     return nextErrors;
   };
 
@@ -110,6 +116,7 @@ export default function AddParkingForm({
         totalSpaces: Number(form.totalSpaces),
         availableSpaces: Number(form.availableSpaces),
         status: form.status,
+        photos,
       });
       onCreated();
     } catch (error) {
@@ -244,6 +251,14 @@ export default function AddParkingForm({
           placeholder="Select a location on the map"
           className="cursor-not-allowed"
         />
+        <div className="sm:col-span-2">
+          <PhotoUploader
+            value={photos}
+            onChange={setPhotos}
+            error={errors.photos}
+            required
+          />
+        </div>
       </div>
 
       <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

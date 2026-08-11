@@ -2,6 +2,22 @@ import { z } from "zod";
 
 export const parkingLotStatusEnum = z.enum(["ACTIVE", "INACTIVE", "CLOSED"]);
 
+export const MAX_PARKING_PHOTOS = 5;
+export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+
+const photoString = z
+  .string()
+  .refine(
+    (value) =>
+      value.startsWith("data:image/") ||
+      /^https?:\/\/.+/i.test(value),
+    { message: "Photo must be a data-URI image or an http(s) URL" },
+  )
+  .refine(
+    (value) => !value.startsWith("data:image/") || value.length <= MAX_PHOTO_BYTES * 1.4,
+    { message: "Photo exceeds the 8MB size limit" },
+  );
+
 const parkingBaseSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
@@ -14,6 +30,7 @@ const parkingBaseSchema = z.object({
   availableSpaces: z.number().int().min(0),
   status: parkingLotStatusEnum.optional(),
   imageUrl: z.string().optional(),
+  photos: z.array(photoString).max(MAX_PARKING_PHOTOS),
 });
 
 export const createParkingSchema = parkingBaseSchema.refine(
@@ -22,7 +39,10 @@ export const createParkingSchema = parkingBaseSchema.refine(
     message: "Available spaces cannot exceed total spaces",
     path: ["availableSpaces"],
   },
-);
+).refine((data) => data.photos.length >= 2, {
+  message: "At least 2 photos of the parking space are required",
+  path: ["photos"],
+});
 
 export const updateParkingSchema = parkingBaseSchema.partial().refine(
   (data) =>
@@ -32,6 +52,12 @@ export const updateParkingSchema = parkingBaseSchema.partial().refine(
   {
     message: "Available spaces cannot exceed total spaces",
     path: ["availableSpaces"],
+  },
+).refine(
+  (data) => data.photos === undefined || data.photos.length >= 2,
+  {
+    message: "At least 2 photos of the parking space are required",
+    path: ["photos"],
   },
 );
 

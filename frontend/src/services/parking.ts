@@ -50,6 +50,7 @@ export interface CreateParkingPayload {
   availableSpaces: number;
   status: ParkingLotStatus;
   imageUrl?: string;
+  photos: string[];
 }
 
 interface CreateParkingResponse {
