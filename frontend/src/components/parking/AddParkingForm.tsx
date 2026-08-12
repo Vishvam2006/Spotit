@@ -17,6 +17,7 @@ interface AddParkingFormProps {
   selectedLocation: SelectedLocation | null;
   onCreated: () => void;
   onCancel: () => void;
+  embedded?: boolean;
 }
 
 interface FormState {
@@ -47,6 +48,7 @@ export default function AddParkingForm({
   selectedLocation,
   onCreated,
   onCancel,
+  embedded = false,
 }: AddParkingFormProps) {
   const [form, setForm] = useState<FormState>(initialFormState);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -129,16 +131,22 @@ export default function AddParkingForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+      className={
+        embedded
+          ? ''
+          : 'rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200'
+      }
     >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Add Parking</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Click anywhere on the map to choose the parking location.
-          </p>
+      {!embedded && (
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Add Parking</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Click anywhere on the map to choose the parking location.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {submitError && (
         <div className="mt-4">
@@ -168,7 +176,7 @@ export default function AddParkingForm({
             onChange={(event) => updateField('description', event.target.value)}
             rows={3}
             placeholder="Describe the parking (optional)"
-            className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1.5 min-h-24 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-base text-slate-950 shadow-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:text-sm"
           />
         </div>
         <Input
@@ -228,7 +236,7 @@ export default function AddParkingForm({
             onChange={(event) =>
               updateField('status', event.target.value as ParkingLotStatus)
             }
-            className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-950 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:text-sm"
           >
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>

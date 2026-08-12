@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMap } from '@vis.gl/react-google-maps';
+import { LocateFixed, Map as MapIcon, RotateCcw, Satellite } from 'lucide-react';
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from '../../config/map';
 import { getCurrentPosition } from '../../utils/geolocation';
 import type { LatLng } from '../../utils/geolocation';
@@ -48,34 +49,44 @@ export default function MapControls({
   };
 
   const buttonClasses =
-    'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60';
+    'pm-touch-target inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-md shadow-slate-900/10 transition-colors hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60';
 
   return (
-    <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
+    <div className="absolute left-4 top-40 z-10 flex flex-row gap-2 sm:left-auto sm:right-4 sm:top-4 sm:flex-col">
       <button
         type="button"
         onClick={toggleMapView}
         disabled={!map}
         className={buttonClasses}
         aria-pressed={mapView === 'satellite'}
+        aria-label={mapView === 'satellite' ? 'Switch to map view' : 'Switch to satellite view'}
+        title={mapView === 'satellite' ? 'Map view' : 'Satellite'}
       >
-        {mapView === 'satellite' ? 'Map view' : 'Satellite'}
+        {mapView === 'satellite' ? (
+          <MapIcon className="h-5 w-5" aria-hidden="true" />
+        ) : (
+          <Satellite className="h-5 w-5" aria-hidden="true" />
+        )}
       </button>
       <button
         type="button"
         onClick={handleReset}
         disabled={!map}
         className={buttonClasses}
+        aria-label="Reset map"
+        title="Reset map"
       >
-        Reset Map
+        <RotateCcw className="h-5 w-5" aria-hidden="true" />
       </button>
       <button
         type="button"
         onClick={handleLocateMe}
         disabled={!map || locating}
         className={buttonClasses}
+        aria-label={locating ? 'Locating' : 'Locate me'}
+        title="Locate me"
       >
-        {locating ? 'Locating…' : 'Locate Me'}
+        <LocateFixed className={`h-5 w-5 ${locating ? 'animate-pulse' : ''}`} aria-hidden="true" />
       </button>
     </div>
   );

@@ -1,3 +1,4 @@
+import { Search, X } from 'lucide-react';
 import Input from '../ui/Input';
 
 interface SearchBarProps {
@@ -6,6 +7,7 @@ interface SearchBarProps {
   onSubmit: () => void;
   onClear: () => void;
   searching?: boolean;
+  compact?: boolean;
 }
 
 export default function SearchBar({
@@ -14,15 +16,16 @@ export default function SearchBar({
   onSubmit,
   onClear,
   searching = false,
+  compact = false,
 }: SearchBarProps) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+    <div className="flex items-end gap-2">
       <div className="flex-1">
         <Input
           id="map-search"
           label="Search location"
           type="search"
-          placeholder='Try "Delhi Gate" or "MG Road"'
+          placeholder='Search destination or area'
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
@@ -31,6 +34,7 @@ export default function SearchBar({
               onSubmit();
             }
           }}
+          className={compact ? '[&_label]:sr-only' : ''}
         />
       </div>
       <div className="flex gap-2 pb-0.5">
@@ -38,17 +42,19 @@ export default function SearchBar({
           type="button"
           onClick={onSubmit}
           disabled={searching}
-          className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={searching ? 'Searching' : 'Search'}
+          className="pm-touch-target inline-flex items-center justify-center rounded-xl bg-emerald-600 px-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {searching ? 'Searching…' : 'Search'}
+          <Search className={`h-5 w-5 ${searching ? 'animate-pulse' : ''}`} aria-hidden="true" />
         </button>
         {value && (
           <button
             type="button"
             onClick={onClear}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Clear search"
+            className="pm-touch-target inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
           >
-            Clear
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         )}
       </div>

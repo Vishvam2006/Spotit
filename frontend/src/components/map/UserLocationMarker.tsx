@@ -7,10 +7,13 @@ interface UserLocationMarkerProps {
 
 export default function UserLocationMarker({ position }: UserLocationMarkerProps) {
   return (
-    <AdvancedMarker position={position} title="Your location" zIndex={3}>
-      <div className="relative flex h-5 w-5 items-center justify-center">
-        <span className="absolute h-8 w-8 animate-ping rounded-full bg-blue-400/40" />
-        <span className="relative h-4 w-4 rounded-full border-2 border-white bg-blue-600 shadow-md ring-2 ring-blue-200" />
+    <AdvancedMarker position={position} title="Your location" zIndex={20}>
+      <div className="relative flex h-12 w-12 items-center justify-center" aria-label="Your location">
+        <span className="absolute h-12 w-12 rounded-full bg-sky-500/15" />
+        <span className="absolute h-9 w-9 animate-ping rounded-full bg-sky-400/35" />
+        <span className="relative flex h-6 w-6 items-center justify-center rounded-full border-[3px] border-white bg-sky-500 shadow-lg shadow-sky-900/30 ring-4 ring-sky-500/20">
+          <span className="h-2 w-2 rounded-full bg-white" />
+        </span>
       </div>
     </AdvancedMarker>
   );

@@ -114,7 +114,7 @@ export default function ParkingMap({
               title="Selected parking location"
               zIndex={2}
             >
-              <Pin background="#2563eb" borderColor="#1d4ed8" glyphColor="#ffffff" />
+              <Pin background="#059669" borderColor="#064e3b" glyphColor="#ffffff" />
             </AdvancedMarker>
           )}
 
@@ -198,7 +198,7 @@ function MapStatus({ loadError }: { loadError: boolean }) {
   if (status === APILoadingStatus.LOADING || status === APILoadingStatus.NOT_LOADED) {
     return (
       <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80">
-        <Spinner className="h-8 w-8 text-blue-600" />
+        <Spinner className="h-8 w-8 text-emerald-600" />
       </div>
     );
   }
