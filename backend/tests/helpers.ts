@@ -9,7 +9,7 @@ export const testPassword = 'Password123!';
 
 export const testPhoto = 'data:image/png;base64,iVBORw0KGgo=';
 
-export const testPhotos = [testPhoto, testPhoto];
+export const testPhotos = [testPhoto];
 
 export interface ParkingLotOverrides {
   name?: string;

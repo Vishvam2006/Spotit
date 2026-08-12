@@ -145,6 +145,7 @@ export default function ParkingDetails() {
   }
 
   const isOwner = user?.id === parking.ownerId;
+  const imageUrl = parking.photos?.[0] ?? parking.imageUrl;
 
   return (
     <AppLayout>
@@ -158,9 +159,15 @@ export default function ParkingDetails() {
         </button>
 
         <div className="mt-4 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white">
+          {imageUrl && (
+            <div className="aspect-video bg-slate-100">
+              <img src={imageUrl} alt={parking.name} className="h-full w-full object-cover" />
+            </div>
+          )}
+
+          <div className="bg-slate-950 p-6 text-white">
             <h1 className="text-2xl font-bold">{parking.name}</h1>
-            <p className="mt-1 text-sm text-blue-100">
+            <p className="mt-1 text-sm text-slate-200">
               {parking.address}, {parking.city}
             </p>
           </div>

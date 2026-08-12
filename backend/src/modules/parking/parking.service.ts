@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { cloudinary } from "../../config/cloudinary";
+import { isCloudinaryConfigured } from "../../config/cloudinaryHelpers";
 
 import { haversineDistanceKm } from "../../utils/distance";
 import type {
@@ -109,12 +110,6 @@ export async function getParkingById(id: string) {
   });
 }
 
-const cloudinaryConfigured = Boolean(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET,
-);
-
 function isDataUri(value: string) {
   return value.startsWith("data:image/");
 }
@@ -124,12 +119,12 @@ async function uploadPhoto(value: string): Promise<string> {
     return value;
   }
 
-  if (!cloudinaryConfigured) {
+  if (!isCloudinaryConfigured()) {
     return value;
   }
 
   const result = await cloudinary.uploader.upload(value, {
-    folder: "parkmitra/parking-lots",
+    folder: process.env.CLOUDINARY_PARKING_FOLDER ?? "parkmitra/parking-lots",
     resource_type: "image",
   });
 

@@ -24,6 +24,7 @@ export default function ParkingCard({
   onViewDetails,
 }: ParkingCardProps) {
   const { color, label } = getMarkerAvailability(parking);
+  const imageUrl = parking.photos?.[0] ?? parking.imageUrl;
 
   return (
     <div
@@ -42,6 +43,12 @@ export default function ParkingCard({
           : 'border-slate-200 bg-white shadow-sm hover:border-slate-300 hover:bg-slate-50'
       }`}
     >
+      {imageUrl && (
+        <div className="-mx-4 -mt-4 mb-4 aspect-video overflow-hidden rounded-t-xl bg-slate-100">
+          <img src={imageUrl} alt={parking.name} className="h-full w-full object-cover" />
+        </div>
+      )}
+
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-base font-bold text-slate-950">

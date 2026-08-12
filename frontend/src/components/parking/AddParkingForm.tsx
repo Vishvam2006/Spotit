@@ -243,22 +243,17 @@ export default function AddParkingForm({
             <option value="CLOSED">Closed</option>
           </select>
         </div>
-        <Input
-          id="parking-latitude"
-          label="Latitude"
-          value={selectedLocation ? selectedLocation.lat.toFixed(6) : ''}
-          readOnly
-          placeholder="Select a location on the map"
-          className="cursor-not-allowed"
-        />
-        <Input
-          id="parking-longitude"
-          label="Longitude"
-          value={selectedLocation ? selectedLocation.lng.toFixed(6) : ''}
-          readOnly
-          placeholder="Select a location on the map"
-          className="cursor-not-allowed"
-        />
+        <div className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm">
+          <span
+            className={`h-3 w-3 shrink-0 rounded-full ${
+              selectedLocation ? 'bg-emerald-500 ring-4 ring-emerald-500/20' : 'bg-slate-300'
+            }`}
+            aria-hidden="true"
+          />
+          <span className="font-semibold text-slate-800">
+            {selectedLocation ? 'Parking location pinned on the map' : 'Choose the parking location on the map'}
+          </span>
+        </div>
         <div className="sm:col-span-2">
           <PhotoUploader
             value={photos}

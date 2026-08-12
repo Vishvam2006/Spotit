@@ -184,9 +184,20 @@ export default function ArrivalCard({
       : geofenceCanCheckOut || simulated
         ? 'Confirmed outside the lot — ready to check out.'
         : 'Wait for outside-location readings (or simulate leaving) to check out.';
+  const parkingImageUrl = booking.parkingLot.photos?.[0] ?? booking.parkingLot.imageUrl;
 
   return (
-    <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-6 shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-emerald-300 bg-emerald-50 shadow-sm">
+      {parkingImageUrl && (
+        <div className="aspect-video bg-emerald-100">
+          <img
+            src={parkingImageUrl}
+            alt={booking.parkingLot.name}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
+      <div className="p-6">
       {simulationEnabled && (
         <div className="mb-4 rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold tracking-wide text-amber-800 ring-1 ring-amber-300">
           DEMO MODE — simulation controls enabled
@@ -340,6 +351,7 @@ export default function ArrivalCard({
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 }

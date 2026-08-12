@@ -12,10 +12,21 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
     booking.status === 'COMPLETED' && booking.finalAmount !== null
       ? booking.finalAmount
       : booking.estimatedAmount;
+  const parkingImageUrl = booking.parkingLot.photos?.[0] ?? booking.parkingLot.imageUrl;
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-      <div className="flex items-start justify-between gap-4">
+    <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+      {parkingImageUrl && (
+        <div className="aspect-video bg-slate-100">
+          <img
+            src={parkingImageUrl}
+            alt={booking.parkingLot.name}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
+
+      <div className="flex items-start justify-between gap-4 p-6 pb-0">
         <div>
           <h3 className="text-lg font-bold text-slate-900">{booking.parkingLot.name}</h3>
           <p className="mt-0.5 text-sm text-slate-500">{booking.parkingLot.address}</p>
@@ -29,7 +40,7 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
         </span>
       </div>
 
-      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+      <dl className="grid gap-3 p-6 text-sm sm:grid-cols-2">
         <div className="sm:col-span-2">
           <dt className="text-slate-400">Vehicle</dt>
           <dd className="mt-1.5">

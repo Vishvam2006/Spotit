@@ -16,6 +16,17 @@ describe('verifyVehicleImage (structural checks when Cloudinary is unconfigured)
     await expect(verifyVehicleImage(USER_ID, publicId, `${URL_BASE}/${publicId}.jpg`)).resolves.toBeUndefined();
   });
 
+  it('accepts a transformed Cloudinary delivery URL for the same publicId', async () => {
+    const publicId = `${OWN_FOLDER}/abc123`;
+    await expect(
+      verifyVehicleImage(
+        USER_ID,
+        publicId,
+        `https://res.cloudinary.com/parkmitra/image/upload/c_fill,g_auto,w_640,h_640/v123/${publicId}.webp`,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
   it('rejects a publicId outside the user\'s folder', async () => {
     const publicId = 'parkmitra/vehicles/someone-else/abc123';
     await expect(

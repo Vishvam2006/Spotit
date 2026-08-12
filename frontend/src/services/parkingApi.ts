@@ -9,6 +9,23 @@ import type {
   ParkingLotsResponse,
 } from '../types/parking';
 
+export interface ParkingPhotoUploadSignature {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  signature: string;
+  folder: string;
+  transformation: string;
+  allowedFormats: readonly string[];
+  resourceType: 'image';
+}
+
+interface Envelope {
+  success: boolean;
+  data?: unknown;
+  message?: string;
+}
+
 function toParking(lot: ParkingLot): Parking {
   return {
     id: lot.id,
@@ -100,4 +117,12 @@ export async function toggleParking(id: string, isActive: boolean): Promise<Park
 
 export async function deleteParking(id: string): Promise<void> {
   await api.delete(`/parking-lots/${id}`);
+}
+
+export async function fetchParkingPhotoUploadSignature(): Promise<ParkingPhotoUploadSignature> {
+  const { data } = await api.post<Envelope>('/uploads/parking-photo-signature');
+  if (!data.success) {
+    throw new Error(data.message ?? 'Request failed');
+  }
+  return data.data as ParkingPhotoUploadSignature;
 }

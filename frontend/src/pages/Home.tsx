@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   CarFront,
   ChevronLeft,
@@ -73,6 +73,7 @@ function getGreeting(): string {
 
 export default function Home() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [allParkingLots, setAllParkingLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +88,7 @@ export default function Home() {
   const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
   const [isAddingParking, setIsAddingParking] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
+  const [returnToMyParkings, setReturnToMyParkings] = useState(false);
 
   const requestUserLocation = useCallback(async (): Promise<LatLng | null> => {
     const result = await getCurrentPositionDetailed();
@@ -129,6 +131,18 @@ export default function Home() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('addParking') !== '1') return;
+
+    setMapOpen(true);
+    setIsAddingParking(true);
+    setSelectedParkingId(null);
+    setSelectedLocation(null);
+    setReturnToMyParkings(true);
+    setSearchParams({}, { replace: true });
+    void requestUserLocation();
+  }, [requestUserLocation, searchParams, setSearchParams]);
 
   useEffect(() => {
     const trimmed = submittedSearch.trim();
@@ -274,12 +288,14 @@ export default function Home() {
     setIsAddingParking(true);
     setSelectedParkingId(null);
     setSelectedLocation(null);
+    setReturnToMyParkings(false);
     void requestUserLocation();
   }, [requestUserLocation]);
 
   const cancelAddParking = useCallback(() => {
     setIsAddingParking(false);
     setSelectedLocation(null);
+    setReturnToMyParkings(false);
   }, []);
 
   const handleLocationSelect = useCallback((location: MapLocation) => {
@@ -289,9 +305,13 @@ export default function Home() {
   const handleParkingCreated = useCallback(() => {
     setSelectedLocation(null);
     setIsAddingParking(false);
-    notifySuccess('Parking lot created successfully.');
     reloadParkingLots();
-  }, [reloadParkingLots]);
+    if (returnToMyParkings) {
+      navigate('/my-parkings');
+      return;
+    }
+    notifySuccess('Parking lot created successfully.');
+  }, [navigate, reloadParkingLots, returnToMyParkings]);
 
   if (!mapOpen) {
     return (

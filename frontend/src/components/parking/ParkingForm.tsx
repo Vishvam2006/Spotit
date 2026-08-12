@@ -134,7 +134,7 @@ export default function ParkingForm({
     }
 
     if (mode === 'create' && photos.length < MIN_PARKING_PHOTOS) {
-      nextErrors.photos = `At least ${MIN_PARKING_PHOTOS} photos of the parking space are required`;
+      nextErrors.photos = `At least ${MIN_PARKING_PHOTOS} photo of the parking space is required`;
     }
 
     return nextErrors;

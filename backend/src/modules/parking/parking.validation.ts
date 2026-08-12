@@ -3,6 +3,7 @@ import { z } from "zod";
 export const parkingLotStatusEnum = z.enum(["ACTIVE", "INACTIVE", "CLOSED"]);
 
 export const MAX_PARKING_PHOTOS = 5;
+export const MIN_PARKING_PHOTOS = 1;
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 
 const photoString = z
@@ -39,8 +40,8 @@ export const createParkingSchema = parkingBaseSchema.refine(
     message: "Available spaces cannot exceed total spaces",
     path: ["availableSpaces"],
   },
-).refine((data) => data.photos.length >= 2, {
-  message: "At least 2 photos of the parking space are required",
+).refine((data) => data.photos.length >= MIN_PARKING_PHOTOS, {
+  message: "At least 1 photo of the parking space is required",
   path: ["photos"],
 });
 
@@ -54,9 +55,9 @@ export const updateParkingSchema = parkingBaseSchema.partial().refine(
     path: ["availableSpaces"],
   },
 ).refine(
-  (data) => data.photos === undefined || data.photos.length >= 2,
+  (data) => data.photos === undefined || data.photos.length >= MIN_PARKING_PHOTOS,
   {
-    message: "At least 2 photos of the parking space are required",
+    message: "At least 1 photo of the parking space is required",
     path: ["photos"],
   },
 );
