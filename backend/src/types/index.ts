@@ -19,6 +19,11 @@ declare global {
   namespace Express {
     interface Request {
       user?: JwtPayload;
+      file?: {
+        path: string;
+        originalname: string;
+        mimetype: string;
+      };
     }
   }
 }

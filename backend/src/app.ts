@@ -9,6 +9,7 @@ import bookingRoutes from './modules/booking/booking.routes';
 import ownerRoutes from './modules/owner/owner.routes';
 import vehicleRoutes from './modules/vehicle/vehicle.routes';
 import uploadsRoutes from './modules/uploads/uploads.routes';
+import verificationRoutes from './modules/verification/verification.routes';
 import { AuthError } from './services/auth.service';
 import { BookingError } from './modules/booking/booking.service';
 import { ParkingError } from './modules/parking/parking.service';
@@ -30,6 +31,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/owner', ownerRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/uploads', uploadsRoutes);
+app.use('/api/verification', verificationRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({

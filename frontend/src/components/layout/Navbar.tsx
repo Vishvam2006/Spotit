@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Map,
+  ShieldCheck,
   SquareParking,
   User,
   type LucideIcon,
@@ -50,6 +51,7 @@ export default function Navbar() {
     { to: '/', label: 'Map', icon: Map, end: true },
     { to: '/bookings', label: 'Bookings', icon: CalendarDays },
     { to: '/my-vehicles', label: 'My Vehicles', icon: Car },
+    { to: '/ai-verification', label: 'AI Verification', icon: ShieldCheck },
     { to: '/my-parkings', label: 'My Parkings', icon: SquareParking },
     ...(canViewDashboard
       ? [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }]

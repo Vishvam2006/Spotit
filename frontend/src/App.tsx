@@ -10,6 +10,7 @@ import ParkingDetails from './pages/ParkingDetails';
 import BookingConfirm from './pages/BookingConfirm';
 import Bookings from './pages/Bookings';
 import MyVehicles from './pages/MyVehicles';
+import AIVerification from './pages/AIVerification';
 import MyParkings from './pages/MyParkings';
 import OwnerDashboard from './pages/OwnerDashboard';
 
@@ -79,6 +80,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MyVehicles />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai-verification"
+            element={
+              <ProtectedRoute>
+                <AIVerification />
               </ProtectedRoute>
             }
           />
