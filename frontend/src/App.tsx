@@ -13,7 +13,6 @@ import MyVehicles from './pages/MyVehicles';
 import AIVerification from './pages/AIVerification';
 import MyParkings from './pages/MyParkings';
 import OwnerDashboard from './pages/OwnerDashboard';
-import { AIVerification } from './pages/AIVerification';
 
 export default function App() {
   return (
@@ -85,8 +84,6 @@ export default function App() {
             }
           />
           <Route
-
-
             path="/verification"
             element={
               <ProtectedRoute>
