@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { authenticate } from '../../middleware/auth.middleware';
-import { verifyDocumentHandler } from './verification.controller';
+import { verifyHandler, verifyDocumentHandler } from './verification.controller';
 
 const router = Router();
 
@@ -98,6 +98,8 @@ function uploadDocumentMiddleware(req: Request, res: Response, next: NextFunctio
     next(err);
   });
 }
+
+router.post('/verify', authenticate, verifyHandler);
 
 router.post(
   '/document',

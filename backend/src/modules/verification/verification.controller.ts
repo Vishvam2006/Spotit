@@ -1,6 +1,48 @@
 import type { Request, Response, NextFunction } from 'express';
+import fs from 'fs';
 import { prisma } from '../../config/prisma';
-import { VerificationService, type AccountDataPayload } from './verification.service';
+import { processDocumentVerification } from './verification.service';
+
+export async function verifyHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Authentication required' });
+      return;
+    }
+
+    const { files, vehicleId, expectedRegistration, expectedName } = req.body;
+
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      res.status(400).json({ success: false, message: 'At least one document image must be provided.' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { fullName: true },
+    });
+
+    const result = await processDocumentVerification({
+      userId,
+      files,
+      vehicleId,
+      expectedRegistration,
+      expectedName: expectedName || user?.fullName,
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 
 export async function verifyDocumentHandler(
   req: Request,
@@ -19,43 +61,36 @@ export async function verifyDocumentHandler(
       return;
     }
 
-    // Retrieve authoritative user account data from Database
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { fullName: true, email: true },
+      select: { fullName: true },
     });
 
-    if (!user) {
-      res.status(404).json({ success: false, message: 'User account not found' });
-      return;
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const base64Data = fileBuffer.toString('base64');
+
+    const result = await processDocumentVerification({
+      userId,
+      files: [
+        {
+          name: req.file.originalname,
+          data: `data:${req.file.mimetype};base64,${base64Data}`,
+        },
+      ],
+      expectedName: user?.fullName,
+    });
+
+    if (req.file.path && fs.existsSync(req.file.path)) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        console.warn('Failed to remove temp upload file:', err);
+      }
     }
-
-    // Retrieve user's vehicles for RC comparison
-    const vehicles = await prisma.vehicle.findMany({
-      where: { userId },
-      select: { registration: true, isDefault: true },
-      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
-    });
-
-    const primaryVehicleReg = vehicles.length > 0 ? vehicles[0].registration : undefined;
-    const dobFromReq = typeof req.body?.date_of_birth === 'string' ? req.body.date_of_birth.trim() : undefined;
-
-    const accountPayload: AccountDataPayload = {
-      name: user.fullName,
-      date_of_birth: dobFromReq || null,
-      vehicle_registration_number: primaryVehicleReg || null,
-    };
-
-    // Process document via isolated AI verification engine
-    const verificationResult = await VerificationService.verifyDocument(
-      req.file.path,
-      req.file.originalname,
-      accountPayload,
-    );
 
     res.json({
       success: true,
-      data: verificationResult,
+      data: result,
     });
   } catch (error) {
     next(error);
