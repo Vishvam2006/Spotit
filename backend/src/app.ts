@@ -15,11 +15,12 @@ import { BookingError } from './modules/booking/booking.service';
 import { ParkingError } from './modules/parking/parking.service';
 import { OwnerError } from './modules/owner/owner.service';
 import { VehicleError } from './modules/vehicle/vehicle.service';
+import { VerificationError } from './modules/verification/verification.service';
 
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'ParkMitra API is running' });
@@ -111,6 +112,15 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       success: false,
       message: err.message,
       code: 'VEHICLE_ERROR',
+    });
+    return;
+  }
+
+  if (err instanceof VerificationError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      code: 'VERIFICATION_ERROR',
     });
     return;
   }

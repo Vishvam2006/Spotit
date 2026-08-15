@@ -51,7 +51,8 @@ export default function Navbar() {
     { to: '/', label: 'Map', icon: Map, end: true },
     { to: '/bookings', label: 'Bookings', icon: CalendarDays },
     { to: '/my-vehicles', label: 'My Vehicles', icon: Car },
-    { to: '/ai-verification', label: 'AI Verification', icon: ShieldCheck },
+
+    { to: '/verification', label: 'AI Verification', icon: ShieldCheck },
     { to: '/my-parkings', label: 'My Parkings', icon: SquareParking },
     ...(canViewDashboard
       ? [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }]
@@ -90,15 +91,13 @@ export default function Navbar() {
   const initials = getInitials(user?.fullName ?? '');
 
   const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-      isActive
-        ? 'bg-blue-50 text-blue-700'
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+    `rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${isActive
+      ? 'bg-blue-50 text-blue-700'
+      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
     }`;
 
   const mobileTabClass = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-1 flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-semibold transition-colors ${
-      isActive ? 'text-blue-600' : 'text-slate-500'
+    `flex flex-1 flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-semibold transition-colors ${isActive ? 'text-blue-600' : 'text-slate-500'
     }`;
 
   return (
@@ -134,9 +133,8 @@ export default function Navbar() {
               </span>
               <span className="hidden lg:inline">{user?.fullName}</span>
               <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${
-                  accountOpen ? 'rotate-180' : ''
-                }`}
+                className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${accountOpen ? 'rotate-180' : ''
+                  }`}
               />
             </button>
 
