@@ -34,7 +34,37 @@ export default function RevenueTable({ rows, loading }: RevenueTableProps) {
       ) : rows.length === 0 ? (
         <p className="px-5 pb-6 text-sm text-slate-500">No revenue data yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+          {/* Mobile: card per lot, so revenue figures stay visible without
+              horizontal scrolling. */}
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {rows.map((row) => (
+              <li key={row.id} className="px-5 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 truncate font-semibold text-slate-900">{row.name}</p>
+                  <p className="shrink-0 font-semibold text-slate-900">
+                    {formatINR(row.totalRevenue)}
+                  </p>
+                </div>
+                <dl className="mt-2 flex gap-6 text-xs">
+                  <div>
+                    <dt className="text-slate-400">Today</dt>
+                    <dd className="mt-0.5 text-slate-600">{formatINR(row.todayRevenue)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-400">This month</dt>
+                    <dd className="mt-0.5 text-slate-600">{formatINR(row.monthlyRevenue)}</dd>
+                  </div>
+                </dl>
+              </li>
+            ))}
+            <li className="flex items-center justify-between bg-slate-50/60 px-5 py-3 font-semibold text-slate-900">
+              <span>Total</span>
+              <span>{formatINR(totals.total)}</span>
+            </li>
+          </ul>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-y border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -68,6 +98,7 @@ export default function RevenueTable({ rows, loading }: RevenueTableProps) {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

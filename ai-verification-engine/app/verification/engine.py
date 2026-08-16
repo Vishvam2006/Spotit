@@ -153,7 +153,14 @@ class VerificationEngine:
         validity_status = validate_validity(dl_fields.valid_until, dl_fields.valid_from, current_date=current_date)
 
         # Deterministic Decision
-        return evaluate_dl_decision(name_status, dob_status, validity_status, confidence=confidence)
+        result = evaluate_dl_decision(name_status, dob_status, validity_status, confidence=confidence)
+        result.extracted_fields = {
+            "name": dl_fields.name,
+            "date_of_birth": dl_fields.date_of_birth,
+            "valid_from": dl_fields.valid_from,
+            "valid_until": dl_fields.valid_until,
+        }
+        return result
 
     def _verify_rc(
         self,
@@ -177,4 +184,11 @@ class VerificationEngine:
         validity_status = validate_validity(rc_fields.valid_until, rc_fields.valid_from, current_date=current_date)
 
         # Deterministic Decision
-        return evaluate_rc_decision(name_status, veh_status, validity_status, confidence=confidence)
+        result = evaluate_rc_decision(name_status, veh_status, validity_status, confidence=confidence)
+        result.extracted_fields = {
+            "name": rc_fields.name,
+            "vehicle_registration_number": rc_fields.vehicle_registration_number,
+            "valid_from": rc_fields.valid_from,
+            "valid_until": rc_fields.valid_until,
+        }
+        return result

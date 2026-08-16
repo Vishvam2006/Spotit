@@ -11,33 +11,21 @@ import { cancelBooking, fetchBookings } from '../services/bookings';
 import { notifyError, notifySuccess } from '../utils/notify';
 import type { Booking, BookingStatus } from '../types/booking';
 
-const STATUS_GROUPS: { key: BookingStatus; label: string }[] = [
-  { key: 'RESERVED', label: 'Reserved' },
-  { key: 'ACTIVE', label: 'Active' },
-  { key: 'COMPLETED', label: 'Completed' },
-  { key: 'CANCELLED', label: 'Cancelled' },
-  { key: 'EXPIRED', label: 'Expired' },
-];
-
 const LIVE_STATUSES: BookingStatus[] = ['RESERVED', 'ACTIVE'];
 
 const REFRESH_INTERVAL_MS = 30_000;
 
-function groupByStatus(bookings: Booking[]): Record<BookingStatus, Booking[]> {
-  const groups: Record<BookingStatus, Booking[]> = {
-    RESERVED: [],
-    ACTIVE: [],
-    COMPLETED: [],
-    CANCELLED: [],
-    EXPIRED: [],
-  };
+/**
+ * Bookings are grouped into three tabs rather than one list per status, so the
+ * booking a user is currently acting on is never buried under finished history.
+ */
+type TabKey = 'active' | 'upcoming' | 'past';
 
-  for (const booking of bookings) {
-    groups[booking.status]?.push(booking);
-  }
-
-  return groups;
-}
+const TABS: { key: TabKey; label: string; statuses: BookingStatus[] }[] = [
+  { key: 'active', label: 'Active', statuses: ['ACTIVE'] },
+  { key: 'upcoming', label: 'Upcoming', statuses: ['RESERVED'] },
+  { key: 'past', label: 'Past', statuses: ['COMPLETED', 'CANCELLED', 'EXPIRED'] },
+];
 
 export default function Bookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -45,6 +33,7 @@ export default function Bookings() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState<TabKey | null>(null);
 
   const loadBookings = useCallback(() => {
     let active = true;
@@ -100,7 +89,23 @@ export default function Bookings() {
     }
   };
 
-  const groups = groupByStatus(bookings);
+  const counts = TABS.reduce<Record<TabKey, number>>(
+    (acc, tab) => {
+      acc[tab.key] = bookings.filter((b) => tab.statuses.includes(b.status)).length;
+      return acc;
+    },
+    { active: 0, upcoming: 0, past: 0 },
+  );
+
+  // Until the user picks a tab, show the most relevant one (an in-progress
+  // session beats a reservation, which beats history) rather than defaulting to
+  // an empty "Active". Derived instead of stored so no effect has to sync it.
+  const activeTab = selectedTab ?? TABS.find((tab) => counts[tab.key] > 0)?.key ?? 'active';
+
+  const activeTabDef = TABS.find((tab) => tab.key === activeTab) ?? TABS[0];
+  const visibleBookings = bookings.filter((booking) =>
+    activeTabDef.statuses.includes(booking.status),
+  );
 
   return (
     <AppLayout>
@@ -116,7 +121,7 @@ export default function Bookings() {
 
         {loading ? (
           <div className="flex items-center justify-center py-24">
-            <Spinner className="h-8 w-8 text-blue-600" />
+            <Spinner className="h-8 w-8 text-emerald-600" />
           </div>
         ) : error ? (
           <div className="mt-5">
@@ -130,54 +135,90 @@ export default function Bookings() {
             </Link>
           </div>
         ) : (
-          <div className="mt-6 space-y-8">
-            {STATUS_GROUPS.map(({ key, label }) => {
-              const groupBookings = groups[key];
-              if (groupBookings.length === 0) return null;
+          <>
+            <div
+              role="tablist"
+              aria-label="Booking status"
+              className="mt-6 flex gap-1 rounded-xl bg-slate-100 p-1"
+            >
+              {TABS.map((tab) => {
+                const isActive = tab.key === activeTab;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setSelectedTab(tab.key)}
+                    className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                      isActive
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <span className="truncate">{tab.label}</span>
+                    {counts[tab.key] > 0 && (
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[11px] leading-none ${
+                          isActive
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-slate-200 text-slate-600'
+                        }`}
+                      >
+                        {counts[tab.key]}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-              return (
-                <section key={key}>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">
-                      {label}
-                    </h2>
-                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                      {groupBookings.length}
-                    </span>
-                  </div>
+            {visibleBookings.length === 0 ? (
+              <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+                <p className="text-sm text-slate-500">
+                  {activeTab === 'active'
+                    ? 'No parking session is running right now.'
+                    : activeTab === 'upcoming'
+                      ? 'You have no upcoming reservations.'
+                      : 'No past bookings yet.'}
+                </p>
+                {activeTab !== 'past' && (
+                  <Link to="/" className="mt-4 block">
+                    <Button className="mx-auto max-w-xs">Find a parking spot</Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="mt-5 space-y-4">
+                {visibleBookings.map((booking) => (
+                  <div key={booking.id}>
+                    {LIVE_STATUSES.includes(booking.status) ? (
+                      <ArrivalCard
+                        booking={booking}
+                        onBookingUpdated={handleBookingUpdated}
+                        onExpired={handleExpired}
+                      />
+                    ) : (
+                      <BookingSummary booking={booking} />
+                    )}
 
-                  <div className="mt-3 space-y-4">
-                    {groupBookings.map((booking) => (
-                      <div key={booking.id}>
-                        {LIVE_STATUSES.includes(booking.status) ? (
-                          <ArrivalCard
-                            booking={booking}
-                            onBookingUpdated={handleBookingUpdated}
-                            onExpired={handleExpired}
-                          />
-                        ) : (
-                          <BookingSummary booking={booking} />
-                        )}
-
-                        {booking.status === 'RESERVED' && (
-                          <div className="mt-3 flex justify-end">
-                            <Button
-                              variant="secondary"
-                              onClick={() => handleCancel(booking)}
-                              loading={cancellingId === booking.id}
-                              className="max-w-40"
-                            >
-                              Cancel booking
-                            </Button>
-                          </div>
-                        )}
+                    {booking.status === 'RESERVED' && (
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleCancel(booking)}
+                          loading={cancellingId === booking.id}
+                          fullWidth={false}
+                        >
+                          Cancel booking
+                        </Button>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </section>
-              );
-            })}
-          </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
     </AppLayout>

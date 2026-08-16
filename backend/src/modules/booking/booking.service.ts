@@ -172,6 +172,13 @@ export async function createBooking(
       throw new BookingError(404, 'Parking lot not found');
     }
 
+    // Serialize concurrent booking attempts on the same parking lot and the
+    // same user so the overlap check + space decrement + booking insert are
+    // atomic. Without these locks two parallel requests could both pass the
+    // availability checks (double-booking / overselling).
+    await tx.$queryRaw`SELECT id FROM "ParkingLot" WHERE id = ${parkingLot.id} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+
     if (parkingLot.ownerId === userId) {
       throw new BookingError(409, 'You cannot book your own parking spot');
     }

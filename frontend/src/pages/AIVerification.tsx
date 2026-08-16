@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -18,6 +18,7 @@ import AppLayout from '../components/layout/AppLayout';
 import Button from '../components/ui/Button';
 import Alert from '../components/ui/Alert';
 import Spinner from '../components/ui/Spinner';
+import { getErrorMessage } from '../services/api';
 import { fetchVehicles } from '../services/vehicles';
 import { verifyUploadedDocuments, type VerificationResultData } from '../services/verification';
 import type { Vehicle } from '../types/vehicle';
@@ -30,6 +31,11 @@ interface LocalFileItem {
   docTypeTag: string;
   base64: string;
 }
+
+// Mirrors the limits enforced by the backend (verification.service.ts) so the
+// user is told before a 15MB upload round-trips only to be rejected.
+const MAX_FILES = 10;
+const MAX_FILE_BYTES = 15 * 1024 * 1024;
 
 export function AIVerification() {
   const [searchParams] = useSearchParams();
@@ -46,11 +52,7 @@ export function AIVerification() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    loadUserVehicles();
-  }, []);
-
-  const loadUserVehicles = async () => {
+  const loadUserVehicles = useCallback(async () => {
     try {
       setLoadingVehicles(true);
       const list = await fetchVehicles();
@@ -69,7 +71,11 @@ export function AIVerification() {
     } finally {
       setLoadingVehicles(false);
     }
-  };
+  }, [targetVehicleParam]);
+
+  useEffect(() => {
+    void loadUserVehicles();
+  }, [loadUserVehicles]);
 
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
@@ -78,7 +84,11 @@ export function AIVerification() {
 
     fileList.forEach((file) => {
       if (!file.type.startsWith('image/')) {
-        notifyError(`File ${file.name} is not an image.`);
+        notifyError(`${file.name} is not an image. Upload a photo of the document.`);
+        return;
+      }
+      if (file.size > MAX_FILE_BYTES) {
+        notifyError(`${file.name} is larger than 15MB.`);
         return;
       }
       const reader = new FileReader();
@@ -90,23 +100,40 @@ export function AIVerification() {
         else if (lowerName.includes('id') || lowerName.includes('aadhaar')) tag = 'IDENTITY_PROOF';
         else if (lowerName.includes('pass') || lowerName.includes('permit')) tag = 'PARKING_PERMIT';
 
-        setFiles((prev) => [
-          ...prev,
-          {
-            id: Math.random().toString(36).substring(2, 9),
-            file,
-            previewUrl: URL.createObjectURL(file),
-            docTypeTag: tag,
-            base64: base64Str,
-          },
-        ]);
+        setFiles((prev) => {
+          if (prev.length >= MAX_FILES) {
+            notifyError(`You can verify at most ${MAX_FILES} documents at a time.`);
+            return prev;
+          }
+          return [
+            ...prev,
+            {
+              id: Math.random().toString(36).substring(2, 9),
+              file,
+              previewUrl: URL.createObjectURL(file),
+              docTypeTag: tag,
+              base64: base64Str,
+            },
+          ];
+        });
       };
       reader.readAsDataURL(file);
     });
   };
 
   const removeFile = (id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
+    setFiles((prev) => {
+      const target = prev.find((f) => f.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((f) => f.id !== id);
+    });
+  };
+
+  const clearFiles = () => {
+    setFiles((prev) => {
+      prev.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+      return [];
+    });
   };
 
   const handleStartVerification = async () => {
@@ -141,9 +168,9 @@ export function AIVerification() {
           notifyError(res.summary || 'Document verification failed. Image is not a valid RC Book.');
         }
       }, 400);
-    } catch (err: any) {
+    } catch (err) {
       setIsAnalyzing(false);
-      const msg = err?.response?.data?.message || err?.message || 'Verification service failed. Please try again.';
+      const msg = getErrorMessage(err);
       setErrorMsg(msg);
       notifyError(msg);
     } finally {
@@ -161,7 +188,7 @@ export function AIVerification() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <ShieldCheck className="h-6 w-6 text-blue-600" />
+              <ShieldCheck className="h-6 w-6 text-emerald-600" />
               AI Vehicle Verification
             </h1>
             <p className="mt-1 text-sm text-slate-500">
@@ -172,19 +199,25 @@ export function AIVerification() {
 
         {/* Pre-selected Vehicle Banner (if navigated from MyVehicles) */}
         {selectedVeh && targetVehicleParam && (
-          <div className="mt-4 rounded-xl bg-blue-50 border border-blue-200 p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-600 p-2 text-white">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="shrink-0 rounded-lg bg-emerald-600 p-2 text-white">
                 <Car className="h-5 w-5" />
               </div>
-              <div>
-                <p className="text-xs font-semibold text-blue-800 uppercase tracking-wider">Connected from My Vehicles</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5">
-                  Verifying RC for: {selectedVeh.registration} ({selectedVeh.make || ''} {selectedVeh.model || 'Vehicle'})
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
+                  Connected from My Vehicles
+                </p>
+                <p className="mt-0.5 truncate text-sm font-bold text-slate-900">
+                  Verifying RC for: {selectedVeh.registration} ({selectedVeh.make || ''}{' '}
+                  {selectedVeh.model || 'Vehicle'})
                 </p>
               </div>
             </div>
-            <Link to="/my-vehicles" className="text-xs font-semibold text-blue-700 hover:underline">
+            <Link
+              to="/my-vehicles"
+              className="shrink-0 text-xs font-semibold text-emerald-700 hover:underline"
+            >
               Change Vehicle
             </Link>
           </div>
@@ -202,14 +235,14 @@ export function AIVerification() {
               </label>
               {loadingVehicles ? (
                 <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
-                  <Spinner className="h-4 w-4 text-blue-600" /> Loading your vehicles...
+                  <Spinner className="h-4 w-4 text-emerald-600" /> Loading your vehicles...
                 </div>
               ) : (
                 <select
                   id="vehicle-select"
                   value={selectedVehicleId}
                   onChange={(e) => setSelectedVehicleId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="">-- Standalone Scan (No pre-selected vehicle) --</option>
                   {vehicles.map((v) => (
@@ -241,7 +274,7 @@ export function AIVerification() {
                 onClick={() => fileInputRef.current?.click()}
                 className={`rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${
                   isDragOver
-                    ? 'border-blue-500 bg-blue-50/50'
+                    ? 'border-emerald-500 bg-emerald-50/50'
                     : 'border-slate-300 bg-slate-50/50 hover:bg-slate-50'
                 }`}
               >
@@ -254,14 +287,14 @@ export function AIVerification() {
                   className="hidden"
                 />
                 <div className="flex flex-col items-center gap-2">
-                  <div className="rounded-full bg-blue-50 p-3 text-blue-600">
+                  <div className="rounded-full bg-emerald-50 p-3 text-emerald-600">
                     <Upload className="h-6 w-6" />
                   </div>
                   <p className="text-sm font-medium text-slate-700">
-                    <span className="font-semibold text-blue-600 hover:underline">Click to upload photo</span> or drag and drop
+                    <span className="font-semibold text-emerald-600 hover:underline">Click to upload photo</span> or drag and drop
                   </p>
                   <p className="text-xs text-slate-500">
-                    Supported: JPG, PNG, WEBP (Max 8MB each)
+                    Supported: JPG, PNG, WEBP · up to 15MB each · {MAX_FILES} documents max
                   </p>
                 </div>
               </div>
@@ -289,7 +322,7 @@ export function AIVerification() {
                         <p className="text-[11px] text-slate-500 mt-0.5">
                           {(item.file.size / 1024).toFixed(1)} KB
                         </p>
-                        <span className="inline-block mt-1 rounded bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200">
+                        <span className="inline-block mt-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
                           {item.docTypeTag}
                         </span>
                       </div>
@@ -332,7 +365,7 @@ export function AIVerification() {
         {isAnalyzing && (
           <div className="mt-6 rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200 text-center space-y-6">
             <div className="flex justify-center">
-              <Spinner className="h-10 w-10 text-blue-600" />
+              <Spinner className="h-10 w-10 text-emerald-600" />
             </div>
 
             <div className="space-y-1">
@@ -341,16 +374,16 @@ export function AIVerification() {
             </div>
 
             <div className="mx-auto max-w-sm space-y-2 text-left text-sm text-slate-600">
-              <div className={`flex items-center gap-2 ${analysisStep >= 1 ? 'text-blue-600 font-semibold' : ''}`}>
+              <div className={`flex items-center gap-2 ${analysisStep >= 1 ? 'text-emerald-600 font-semibold' : ''}`}>
                 <CheckCircle2 className="h-4 w-4 shrink-0" /> Preprocessing document image
               </div>
-              <div className={`flex items-center gap-2 ${analysisStep >= 2 ? 'text-blue-600 font-semibold' : ''}`}>
+              <div className={`flex items-center gap-2 ${analysisStep >= 2 ? 'text-emerald-600 font-semibold' : ''}`}>
                 <CheckCircle2 className="h-4 w-4 shrink-0" /> Groq Optical Character Recognition
               </div>
-              <div className={`flex items-center gap-2 ${analysisStep >= 3 ? 'text-blue-600 font-semibold' : ''}`}>
+              <div className={`flex items-center gap-2 ${analysisStep >= 3 ? 'text-emerald-600 font-semibold' : ''}`}>
                 <CheckCircle2 className="h-4 w-4 shrink-0" /> Verifying Registration Number & Validity
               </div>
-              <div className={`flex items-center gap-2 ${analysisStep >= 4 ? 'text-blue-600 font-semibold' : ''}`}>
+              <div className={`flex items-center gap-2 ${analysisStep >= 4 ? 'text-emerald-600 font-semibold' : ''}`}>
                 <CheckCircle2 className="h-4 w-4 shrink-0" /> Cross-referencing /my-vehicles records
               </div>
             </div>
@@ -419,14 +452,14 @@ export function AIVerification() {
             {result.targetVehicle && (
               <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 space-y-4">
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                  <Car className="h-4 w-4 text-blue-600" />
+                  <Car className="h-4 w-4 text-emerald-600" />
                   Vehicle Cross-Reference Match (/my-vehicles)
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="rounded-xl bg-slate-50 p-4 border border-slate-200">
                     <p className="text-xs text-slate-500 font-medium">Registered Garage Record</p>
-                    <p className="text-base font-bold text-blue-700 mt-1">{result.targetVehicle.registration}</p>
+                    <p className="text-base font-bold text-emerald-700 mt-1">{result.targetVehicle.registration}</p>
                     <p className="text-xs text-slate-600 mt-0.5">
                       {result.targetVehicle.make || ''} {result.targetVehicle.model || 'Vehicle'} ({result.targetVehicle.type})
                     </p>
@@ -450,7 +483,7 @@ export function AIVerification() {
               <div key={idx} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 space-y-5">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-blue-600" />
+                    <FileText className="h-5 w-5 text-emerald-600" />
                     <div>
                       <h4 className="text-sm font-bold text-slate-900">{doc.filename}</h4>
                       <p className="text-xs text-slate-500">Document Type: <strong className="text-slate-700">{doc.documentType}</strong></p>
@@ -459,6 +492,8 @@ export function AIVerification() {
                   <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
                     doc.status === 'VERIFIED'
                       ? 'bg-emerald-100 text-emerald-800'
+                      : doc.status === 'NEEDS_REVIEW'
+                      ? 'bg-amber-100 text-amber-800'
                       : 'bg-rose-100 text-rose-800'
                   }`}>
                     {doc.status}
@@ -468,7 +503,7 @@ export function AIVerification() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                   <div className="rounded-xl bg-slate-50 p-3 border border-slate-200">
                     <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
-                      <Car className="h-3.5 w-3.5 text-blue-600" /> Registration Number
+                      <Car className="h-3.5 w-3.5 text-emerald-600" /> Registration Number
                     </span>
                     <p className="font-bold text-slate-900 mt-1">
                       {doc.extractedFields.vehicleNumber || doc.extractedFields.documentNumber || 'N/A'}
@@ -477,7 +512,7 @@ export function AIVerification() {
 
                   <div className="rounded-xl bg-slate-50 p-3 border border-slate-200">
                     <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
-                      <UserCheck className="h-3.5 w-3.5 text-blue-600" /> Owner Name
+                      <UserCheck className="h-3.5 w-3.5 text-emerald-600" /> Owner Name
                     </span>
                     <p className="font-bold text-slate-900 mt-1">
                       {doc.extractedFields.ownerName || 'N/A'}
@@ -486,7 +521,7 @@ export function AIVerification() {
 
                   <div className="rounded-xl bg-slate-50 p-3 border border-slate-200">
                     <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
-                      <Calendar className="h-3.5 w-3.5 text-blue-600" /> Expiry Status
+                      <Calendar className="h-3.5 w-3.5 text-emerald-600" /> Expiry Status
                     </span>
                     <p className="font-bold text-slate-900 mt-1">
                       {doc.extractedFields.expiryDate || 'Valid'}
@@ -519,7 +554,7 @@ export function AIVerification() {
                 variant="secondary"
                 onClick={() => {
                   setResult(null);
-                  setFiles([]);
+                  clearFiles();
                 }}
                 className="sm:w-auto"
               >
@@ -529,7 +564,7 @@ export function AIVerification() {
 
               <Link
                 to="/my-vehicles"
-                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm"
+                className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors shadow-sm"
               >
                 <Car className="h-4 w-4" />
                 Go to My Vehicles

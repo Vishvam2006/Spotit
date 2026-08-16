@@ -134,6 +134,28 @@ print("Checks:", result.checks)
 
 ---
 
+## 🔌 Running the Service for ParkMitra
+
+The Node backend calls this engine over HTTP at `AI_VERIFICATION_URL`
+(default `http://127.0.0.1:8000/verify-documents`), which is served by
+**`main.py`**. Start it before using the `/verification` page:
+
+```bash
+cd ai-verification-engine
+python3 -m venv venv
+./venv/bin/pip install -r requirements.txt
+cp .env.example .env        # then fill in GROQ_API_KEY
+./venv/bin/python main.py   # serves http://127.0.0.1:8000
+```
+
+If the engine is unreachable, the backend automatically falls back to running
+`bridge.py` as a subprocess — it prefers `./venv/bin/python` and otherwise uses
+whatever `python3` is on `PATH`, so the venv above is what makes the fallback
+work too.
+
+> `server.py` is a **standalone browser tester** on port 8080 with its own
+> single-document `/api/verify` contract. The backend does not talk to it.
+
 ## 🤖 Groq API Configuration
 
 Groq acts strictly as an **AI assistance layer** for classification and field extraction.
@@ -144,6 +166,35 @@ GROQ_API_KEY=your_groq_api_key_here
 GROQ_MODEL=llama-3.3-70b-versatile
 NAME_MATCH_THRESHOLD=0.90
 ```
+
+`GROQ_MODEL` is a **text** model, used for OCR-text classification and field
+extraction. Document image analysis in `main.py` needs a **vision** model and is
+configured separately via `GROQ_VISION_MODELS` (comma-separated, tried in
+order):
+
+```env
+GROQ_VISION_MODELS=qwen/qwen3.6-27b
+```
+
+Groq's model catalog varies per account, and a wrong id fails with a 404 that is
+easy to miss. Check what your key can actually reach before changing this:
+
+```bash
+curl -s https://api.groq.com/openai/v1/models \
+  -H "Authorization: Bearer $GROQ_API_KEY" | python3 -m json.tool
+```
+
+Two things to know about the current default:
+
+- `qwen/qwen3.6-27b` is a **reasoning** model: it emits a `<think>` block before
+  the JSON answer. `max_tokens` must stay high enough (currently 2500) for the
+  JSON to survive, or the reply is truncated mid-reasoning and no result arrives.
+- The older `llama-3.2-*-vision-preview` models were decommissioned by Groq, and
+  `GROQ_MODEL` is text-only — neither can be used here.
+
+Without a working key or vision model, the engine reports `NEEDS_REVIEW` with an
+explanatory summary — it does **not** claim the uploaded image is an invalid
+document.
 
 ---
 

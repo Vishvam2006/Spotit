@@ -4,14 +4,15 @@
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
 
-  --color-park-50: #ecfdf7;
-  --color-park-100: #d1faeb;
-  --color-park-500: #12b981;
-  --color-park-600: #059669;
-  --color-park-700: #047857;
-  --color-ink-900: #111827;
-  --color-ink-700: #334155;
-  --color-ink-500: #64748b;
+  --color-park-50: #e0f2f1;
+  --color-park-100: #b2dfdb;
+  --color-park-500: #19c7b2;
+  --color-park-600: #14a08f;
+  --color-park-700: #0f7a6d;
+  --color-ink-900: #0b1220;
+  --color-ink-800: #1a2230;
+  --color-ink-700: #2a3342;
+  --color-ink-500: #a8b0bc;
 
   --animate-slide-up: slide-up 0.25s ease-out;
   --animate-fade-in: fade-in 0.18s ease-out;
@@ -36,21 +37,21 @@
 }
 
 :root {
-  color-scheme: light;
-  --pm-color-page: #f6f8fb;
-  --pm-color-surface: #ffffff;
-  --pm-color-surface-raised: #ffffff;
-  --pm-color-border: #e2e8f0;
-  --pm-color-border-strong: #cbd5e1;
-  --pm-color-text: #111827;
-  --pm-color-muted: #64748b;
-  --pm-color-action: #059669;
-  --pm-color-action-hover: #047857;
-  --pm-color-action-soft: #ecfdf7;
-  --pm-color-focus: #10b981;
-  --pm-shadow-card: 0 1px 2px rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.04);
-  --pm-shadow-sheet: 0 -12px 32px rgb(15 23 42 / 0.16);
-  --pm-bottom-nav-height: 64px;
+  color-scheme: dark;
+  --pm-color-page: #0b1220;
+  --pm-color-surface: #1a2230;
+  --pm-color-surface-raised: #2a3342;
+  --pm-color-border: #2a3342;
+  --pm-color-border-strong: #3b4657;
+  --pm-color-text: #ffffff;
+  --pm-color-muted: #a8b0bc;
+  --pm-color-action: #19c7b2;
+  --pm-color-action-hover: #14a08f;
+  --pm-color-action-soft: rgba(25, 199, 178, 0.15);
+  --pm-color-focus: #8de8d8;
+  --pm-shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --pm-shadow-sheet: 0 -12px 32px rgba(0, 0, 0, 0.5);
+  --pm-bottom-nav-height: 80px;
 }
 
 @layer base {
@@ -139,5 +140,35 @@
 
   .pm-scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Neumorphic styles for dark theme */
+  .pm-neumorphic {
+    box-shadow: 
+      -4px -4px 8px rgba(255, 255, 255, 0.03),
+      4px 4px 8px rgba(0, 0, 0, 0.3);
+    border: none;
+  }
+
+  .pm-neumorphic-active:active,
+  .pm-neumorphic-inset {
+    box-shadow: 
+      inset -2px -2px 4px rgba(255, 255, 255, 0.02),
+      inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+    border: none;
+  }
+
+  .pm-neumorphic-sm {
+    box-shadow: 
+      -2px -2px 4px rgba(255, 255, 255, 0.03),
+      2px 2px 4px rgba(0, 0, 0, 0.3);
+    border: none;
+  }
+
+  .pm-neumorphic-sm:active {
+    box-shadow: 
+      inset -1px -1px 2px rgba(255, 255, 255, 0.02),
+      inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+    border: none;
   }
 }

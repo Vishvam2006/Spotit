@@ -55,5 +55,6 @@ class VerificationResult(BaseModel):
     document_type: DocumentType
     confidence: float = Field(1.0, ge=0.0, le=1.0)
     checks: Optional[Dict[str, str]] = None
+    extracted_fields: Optional[Dict[str, Any]] = None
     explanation: Optional[str] = None
     message: Optional[str] = None

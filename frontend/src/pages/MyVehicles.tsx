@@ -178,7 +178,7 @@ export default function MyVehicles() {
         <div className="mt-6">
           {loading ? (
             <div className="flex items-center justify-center py-24">
-              <Spinner className="h-8 w-8 text-blue-600" />
+              <Spinner className="h-8 w-8 text-emerald-600" />
             </div>
           ) : loadError ? (
             <Alert variant="error" message={loadError} />

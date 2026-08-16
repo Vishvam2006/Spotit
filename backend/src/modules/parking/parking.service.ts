@@ -216,6 +216,8 @@ export async function updateParking(
   }
 
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "ParkingLot" WHERE id = ${id} FOR UPDATE`;
+
     const updated = await tx.parkingLot.updateMany({
       where: { id, status: "ACTIVE" },
       data: updateData,

@@ -54,7 +54,87 @@ export default function ParkingStatusTable({
           You have not created any parking lots yet.
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+          {/* Mobile: card per lot with the slot grid expanding inline. */}
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {parkings.map((parking) => {
+              const isExpanded = expandedIds.includes(parking.id);
+              const pill = STATUS_PILL[parking.status];
+              const detail = statuses[parking.id];
+
+              return (
+                <li key={parking.id} className="px-5 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-900">{parking.name}</p>
+                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                        {parking.location}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${pill.cls}`}
+                    >
+                      {pill.label}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-4 gap-2 rounded-xl bg-slate-50 p-3 text-center">
+                    <div>
+                      <p className="text-[11px] text-slate-400">Occupied</p>
+                      <p className="mt-0.5 font-semibold text-slate-900">
+                        {parking.occupiedSlots}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-slate-400">Free</p>
+                      <p className="mt-0.5 font-semibold text-slate-900">
+                        {parking.availableSlots}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-slate-400">Slots</p>
+                      <p className="mt-0.5 font-semibold text-slate-600">
+                        {parking.totalSlots}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-slate-400">Revenue</p>
+                      <p className="mt-0.5 truncate font-semibold text-slate-900">
+                        {formatINR(parking.revenueGenerated)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onToggle(parking.id)}
+                    aria-expanded={isExpanded}
+                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                  >
+                    {isExpanded ? (
+                      <>
+                        Hide slots
+                        <ChevronUp className="h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        View slots
+                        <ChevronDown className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="mt-3 rounded-xl bg-slate-50/60 p-3">
+                      <SlotGrid slots={detail?.slots ?? []} loading={!detail} />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-y border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -105,7 +185,7 @@ export default function ParkingStatusTable({
                         <button
                           type="button"
                           onClick={() => onToggle(parking.id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         >
                           {isExpanded ? (
                             <>
@@ -134,6 +214,7 @@ export default function ParkingStatusTable({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

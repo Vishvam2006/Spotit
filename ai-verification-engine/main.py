@@ -2,8 +2,9 @@ import os
 import base64
 import json
 import re
+import hmac
 from typing import List, Optional
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import dotenv
@@ -12,16 +13,56 @@ dotenv.load_dotenv()
 
 app = FastAPI(title="ParkMitra AI Verification Engine", version="1.0.0")
 
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "AI_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+AI_ENGINE_API_KEY = os.getenv("AI_ENGINE_API_KEY", "")
+
+# Document analysis needs a *vision* model. GROQ_MODEL is the text model used
+# elsewhere in the engine and cannot accept image input, so the vision models
+# are configured separately. The llama-3.2-*-vision-preview models this used to
+# call were decommissioned by Groq and always errored, which silently pushed
+# every upload into fallback_document_analysis() -> INVALID_DOCUMENT.
+GROQ_VISION_MODELS = [
+    model.strip()
+    for model in os.getenv(
+        "GROQ_VISION_MODELS",
+        "qwen/qwen3.6-27b",
+    ).split(",")
+    if model.strip()
+]
+
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+MAX_FILES = 10
+
+
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    """Require a shared secret when AI_ENGINE_API_KEY is configured."""
+    if AI_ENGINE_API_KEY:
+        provided = request.headers.get("X-API-Key", "")
+        if not provided or not hmac.compare_digest(provided, AI_ENGINE_API_KEY):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or missing API key.",
+            )
+    return await call_next(request)
 
 class ExtractedFields(BaseModel):
     documentType: str  # VEHICLE_RC, DRIVING_LICENSE, IDENTITY_PROOF, PARKING_PERMIT, INVALID_DOCUMENT
@@ -60,10 +101,78 @@ def get_groq_client():
         print(f"Error initializing Groq client: {e}")
         return None
 
+def extract_json_object(text: Optional[str]) -> Optional[dict]:
+    """
+    Pulls the JSON object out of a model reply.
+
+    Reasoning-capable vision models (the current default emits <think> blocks)
+    wrap the answer in prose that can itself contain braces, so a greedy
+    first-brace-to-last-brace match is unreliable. This scans for the first
+    brace-balanced object that parses, ignoring braces inside strings.
+    """
+    if not text:
+        return None
+
+    stripped = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+
+    for start, char in enumerate(stripped):
+        if char != "{":
+            continue
+        depth = 0
+        in_string = False
+        escaped = False
+        for end in range(start, len(stripped)):
+            current = stripped[end]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif current == "\\":
+                    escaped = True
+                elif current == '"':
+                    in_string = False
+                continue
+            if current == '"':
+                in_string = True
+            elif current == "{":
+                depth += 1
+            elif current == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        parsed = json.loads(stripped[start : end + 1])
+                    except json.JSONDecodeError:
+                        break
+                    if isinstance(parsed, dict):
+                        return parsed
+                    break
+    return None
+
+
+def detect_mime_type(content: bytes) -> str:
+    """Sniffs the upload's real type; the vision API rejects a wrong data: prefix."""
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+        return "image/webp"
+    if content.startswith(b"%PDF-"):
+        return "application/pdf"
+    return "image/jpeg"
+
+
 def analyze_image_with_groq(image_bytes: bytes, filename: str) -> dict:
     client = get_groq_client()
+    mime_type = detect_mime_type(image_bytes)
+
+    if mime_type == "application/pdf":
+        # The vision models take images only. Rather than send a PDF and get a
+        # generic failure, say so plainly so the caller can act on it.
+        return unavailable_document_analysis(
+            "PDF documents cannot be scanned by the vision model. "
+            "Please upload a photo (JPG, PNG, or WEBP) of the document."
+        )
+
     base64_image = base64.b64encode(image_bytes).decode('utf-8')
-    
+
     prompt = """
 You are an expert strict Document Verification AI for a Smart Parking System.
 Examine the provided image very carefully.
@@ -106,98 +215,66 @@ Return ONLY valid JSON matching this exact structure:
 }
 """
 
-    if client:
-        vision_models = ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview", GROQ_MODEL]
-        
-        for model in vision_models:
-            try:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": prompt},
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:image/jpeg;base64,{base64_image}"
-                                    }
+    if not client:
+        return unavailable_document_analysis(
+            "AI document analysis is not configured (GROQ_API_KEY is missing)."
+        )
+
+    for model in GROQ_VISION_MODELS:
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{mime_type};base64,{base64_image}"
                                 }
-                            ]
-                        }
-                    ],
-                    temperature=0.0,
-                    max_tokens=800,
-                )
-                text = response.choices[0].message.content.strip()
-                json_match = re.search(r'\{.*\}', text, re.DOTALL)
-                if json_match:
-                    return json.loads(json_match.group(0))
-            except Exception as ex:
-                print(f"Vision model {model} attempt failed: {ex}")
-                continue
+                            }
+                        ]
+                    }
+                ],
+                temperature=0.0,
+                # Reasoning-capable vision models spend a large part of the
+                # budget on a <think> block before emitting the JSON. At 800 the
+                # reply was truncated mid-reasoning and no JSON ever arrived.
+                max_tokens=2500,
+            )
+            parsed = extract_json_object(response.choices[0].message.content)
+            if parsed is not None:
+                return parsed
+        except Exception as ex:
+            print(f"Vision model {model} attempt failed: {ex}")
+            continue
 
-    # Fallback inspection if Groq API is offline/unreachable
-    return fallback_document_analysis(filename, image_bytes)
+    return unavailable_document_analysis(
+        "AI document analysis is temporarily unavailable; the document was not verified."
+    )
 
-def fallback_document_analysis(filename: str, image_bytes: bytes) -> dict:
-    fn_lower = filename.lower()
-    
-    # Strictly inspect filename & buffer size to reject non-documents
-    if "rc" in fn_lower or "reg" in fn_lower or "rc_book" in fn_lower or "vehicle_rc" in fn_lower:
-        doc_type = "VEHICLE_RC"
-        doc_num = "MH02CB4921"
-        owner = "Aryan Patel"
-        veh_num = "MH02CB4921"
-        v_class = "LMV / Private Passenger Car"
-        exp = "2037-11-20"
-        confidence = 0.95
-        summary = "Vehicle Registration Certificate (RC Book) parsed and verified."
-    elif "dl" in fn_lower or "license" in fn_lower or "driver" in fn_lower:
-        doc_type = "DRIVING_LICENSE"
-        doc_num = "MH02-20210048291"
-        owner = "Aryan Patel"
-        veh_num = None
-        v_class = "LMV-NT / MCWG"
-        exp = "2041-08-15"
-        confidence = 0.94
-        summary = "Valid Driving License document parsed."
-    elif "permit" in fn_lower or "pass" in fn_lower:
-        doc_type = "PARKING_PERMIT"
-        doc_num = "PM-PERMIT-8849"
-        owner = "Aryan Patel"
-        veh_num = "MH02CB4921"
-        v_class = "VIP Parking Pass"
-        exp = "2026-12-31"
-        confidence = 0.92
-        summary = "Authorized ParkMitra Resident Parking Permit parsed."
-    else:
-        # REJECT any non-RC / random photo / parking space picture
-        return {
-            "documentType": "INVALID_DOCUMENT",
-            "documentNumber": None,
-            "ownerName": None,
-            "vehicleNumber": None,
-            "vehicleClass": None,
-            "issueDate": None,
-            "expiryDate": None,
-            "issuingAuthority": None,
-            "confidenceScore": 0.05,
-            "summary": "Uploaded image is not a valid RC Book or official vehicle document."
-        }
-
+def unavailable_document_analysis(reason: str) -> dict:
+    """
+    Used when the engine could not inspect the document at all. This is NOT the
+    same as deciding the image is not a document, so it is flagged with
+    `analysisUnavailable` and routed to NEEDS_REVIEW rather than REJECTED —
+    telling a user their valid RC "is not a document" because the AI was down
+    is a wrong answer, not a strict one.
+    """
     return {
-        "documentType": doc_type,
-        "documentNumber": doc_num,
-        "ownerName": owner,
-        "vehicleNumber": veh_num,
-        "vehicleClass": v_class,
-        "issueDate": "2022-01-15",
-        "expiryDate": exp,
-        "issuingAuthority": "RTO Transport Department",
-        "confidenceScore": confidence,
-        "summary": summary
+        "documentType": "UNKNOWN",
+        "documentNumber": None,
+        "ownerName": None,
+        "vehicleNumber": None,
+        "vehicleClass": None,
+        "issueDate": None,
+        "expiryDate": None,
+        "issuingAuthority": None,
+        "confidenceScore": 0.0,
+        "analysisUnavailable": True,
+        "summary": reason,
     }
 
 @app.get("/")
@@ -213,15 +290,26 @@ async def verify_documents(
     if not files:
         raise HTTPException(status_code=400, detail="No document files provided")
 
+    if len(files) > MAX_FILES:
+        raise HTTPException(status_code=400, detail=f"At most {MAX_FILES} files per request.")
+
     results: List[DocumentResult] = []
     total_score = 0.0
 
     for index, file in enumerate(files):
         content = await file.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="Uploaded file is too large. Maximum allowed size is 15MB.",
+            )
         analysis = analyze_image_with_groq(content, file.filename or f"doc_{index+1}.jpg")
 
         doc_type = analysis.get("documentType", "INVALID_DOCUMENT")
         confidence = float(analysis.get("confidenceScore", 0.05))
+        analysis_unavailable = bool(analysis.get("analysisUnavailable"))
 
         veh_num = analysis.get("vehicleNumber")
         owner_name = analysis.get("ownerName")
@@ -249,7 +337,10 @@ async def verify_documents(
             "expiryCheck": True if is_valid_format else False
         }
 
-        if is_valid_format and all(checks.values()) and confidence >= 0.70:
+        if analysis_unavailable:
+            # The engine never saw the document, so it can neither pass nor fail it.
+            status = "NEEDS_REVIEW"
+        elif is_valid_format and all(checks.values()) and confidence >= 0.70:
             status = "VERIFIED"
         elif is_valid_format and confidence >= 0.50:
             status = "NEEDS_REVIEW"
@@ -288,7 +379,12 @@ async def verify_documents(
         overall_summary = "Document verification failed. The uploaded image is not a valid RC Book or registration does not match."
     elif has_review:
         overall_status = "NEEDS_REVIEW"
-        overall_summary = "Documents processed. Details require manual verification."
+        blocked = [r.summary for r in results if r.confidenceScore == 0.0]
+        overall_summary = (
+            blocked[0]
+            if blocked
+            else "Documents processed. Details require manual verification."
+        )
     else:
         overall_status = "VERIFIED"
         overall_summary = f"All document(s) verified successfully against vehicle registration record."

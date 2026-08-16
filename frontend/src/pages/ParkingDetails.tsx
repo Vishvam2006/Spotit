@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ChevronLeft, MapPin, AlertTriangle, Compass } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
-import Button from '../components/ui/Button';
 import Alert from '../components/ui/Alert';
 import Spinner from '../components/ui/Spinner';
 import VehicleSelector from '../components/vehicle/VehicleSelector';
@@ -123,9 +123,9 @@ export default function ParkingDetails() {
 
   if (loading) {
     return (
-      <AppLayout>
-        <div className="flex flex-1 items-center justify-center">
-          <Spinner className="h-8 w-8 text-blue-600" />
+      <AppLayout maxWidth="max-w-none">
+        <div className="flex flex-1 items-center justify-center min-h-screen bg-[var(--pm-color-page)]">
+          <Spinner className="h-8 w-8 text-[var(--pm-color-action)]" />
         </div>
       </AppLayout>
     );
@@ -133,12 +133,12 @@ export default function ParkingDetails() {
 
   if (error || !parking) {
     return (
-      <AppLayout>
-        <main className="mx-auto max-w-2xl px-4 pt-8 pb-24 sm:px-6 md:pb-8">
+      <AppLayout maxWidth="max-w-none">
+        <main className="mx-auto flex flex-col items-center justify-center px-4 pt-8 pb-24 sm:px-6 min-h-screen bg-[var(--pm-color-page)]">
           <Alert variant="error" message={error ?? 'Parking lot not found.'} />
-          <Button variant="secondary" className="mt-4 max-w-xs" onClick={() => navigate('/')}>
-            Back to map
-          </Button>
+          <button className="mt-6 rounded-xl bg-[var(--pm-color-surface-raised)] px-6 py-3 font-bold text-white transition-colors hover:bg-slate-700" onClick={() => navigate(-1)}>
+            Back
+          </button>
         </main>
       </AppLayout>
     );
@@ -146,134 +146,170 @@ export default function ParkingDetails() {
 
   const isOwner = user?.id === parking.ownerId;
   const imageUrl = parking.photos?.[0] ?? parking.imageUrl;
+  const canBook =
+    !isOwner && parking.status === 'ACTIVE' && parking.availableSpaces > 0;
 
   return (
-    <AppLayout>
-      <main className="mx-auto max-w-2xl px-4 pt-8 pb-24 sm:px-6 md:pb-8">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="text-sm font-semibold text-blue-600 hover:text-blue-700"
-        >
-          ← Back to map
-        </button>
-
-        <div className="mt-4 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-          {imageUrl && (
-            <div className="aspect-video bg-slate-100">
-              <img src={imageUrl} alt={parking.name} className="h-full w-full object-cover" />
-            </div>
-          )}
-
-          <div className="bg-slate-950 p-6 text-white">
-            <h1 className="text-2xl font-bold">{parking.name}</h1>
-            <p className="mt-1 text-sm text-slate-200">
-              {parking.address}, {parking.city}
-            </p>
-          </div>
-
-          <div className="grid gap-4 p-6 sm:grid-cols-3">
-            <InfoTile label="Price" value={`${formatINR(parking.pricePerHour)}/hr`} />
-            <InfoTile label="Available" value={String(parking.availableSpaces)} />
-            <InfoTile label="Total spaces" value={String(parking.totalSpaces)} />
-          </div>
+    <AppLayout maxWidth="max-w-none">
+      <main className="min-h-screen bg-[var(--pm-color-page)] pb-32">
+        {/* Header Strip */}
+        <div className="absolute top-0 z-10 w-full p-4 flex items-center justify-between pointer-events-none">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)] transition-all pm-neumorphic pm-neumorphic-active pointer-events-auto"
+          >
+            <ChevronLeft className="h-6 w-6" aria-hidden="true" />
+          </button>
         </div>
 
-        {isOwner ? (
-          <div className="mt-6">
-            <Alert
-              variant="error"
-              message="You own this parking spot, so you cannot book it."
-            />
-          </div>
-        ) : parking.status !== 'ACTIVE' ? (
-          <div className="mt-6">
-            <Alert variant="error" message="This parking lot is currently not accepting bookings." />
-          </div>
-        ) : parking.availableSpaces === 0 ? (
-          <div className="mt-6">
-            <Alert variant="error" message="No parking spaces are currently available." />
-          </div>
-        ) : (
-          <form onSubmit={handleBook} className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-bold text-slate-900">Reserve a spot</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Your spot is held until check-in. Cancel anytime while reserved.
-            </p>
+        {/* Hero Image */}
+        <div className="relative h-72 bg-[var(--pm-color-surface-raised)] rounded-b-[2rem] overflow-hidden shadow-xl">
+          {imageUrl ? (
+            <img src={imageUrl} alt={parking.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <Compass className="h-16 w-16 text-[var(--pm-color-muted)]" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0B1220] to-transparent pointer-events-none" />
+        </div>
 
-            {submitError && (
-              <div className="mt-4">
-                <Alert variant="error" message={submitError} />
+        <div className="mx-auto max-w-2xl px-4 sm:px-6 -mt-8 relative z-10">
+          {/* Title Card */}
+          <div className="rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-lg ring-1 ring-[var(--pm-color-border)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-2xl font-black text-white">{parking.name}</h1>
+                <p className="mt-1 flex items-start gap-1.5 text-sm text-[var(--pm-color-muted)]">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--pm-color-action)]" aria-hidden="true" />
+                  <span>
+                    {parking.address}, {parking.city}
+                  </span>
+                </p>
               </div>
-            )}
+              <span
+                className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
+                  canBook
+                    ? 'bg-[var(--pm-color-action-soft)] text-[var(--pm-color-action)] ring-1 ring-[var(--pm-color-action)]/30'
+                    : 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20'
+                }`}
+              >
+                {canBook ? 'Available' : 'Full'}
+              </span>
+            </div>
 
-            <div className="mt-5 space-y-5">
+            <div className="mt-5 grid grid-cols-3 gap-3 border-t border-[var(--pm-color-border-strong)] pt-5">
               <div>
-                <span className="block text-sm font-medium text-slate-700">Duration</span>
-                <div className="mt-1.5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <p className="text-xs font-medium text-[var(--pm-color-muted)]">Price</p>
+                <p className="mt-1 text-lg font-black text-white">₹{parking.pricePerHour}/hr</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-[var(--pm-color-muted)]">Available</p>
+                <p className="mt-1 text-lg font-black text-[var(--pm-color-action)]">{parking.availableSpaces}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-[var(--pm-color-muted)]">Total</p>
+                <p className="mt-1 text-lg font-black text-white">{parking.totalSpaces}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Booking Section */}
+          <div className="mt-6">
+            {isOwner ? (
+              <Alert
+                variant="error"
+                message="You own this parking spot, so you cannot book it."
+              />
+            ) : parking.status !== 'ACTIVE' ? (
+              <Alert variant="error" message="This parking lot is currently not accepting bookings." />
+            ) : parking.availableSpaces === 0 ? (
+              <Alert variant="error" message="No parking spaces are currently available." />
+            ) : (
+              <form onSubmit={handleBook} className="rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-lg ring-1 ring-[var(--pm-color-border)]">
+                <h2 className="text-lg font-bold text-white">Select Duration</h2>
+                
+                {submitError && (
+                  <div className="mt-4">
+                    <Alert variant="error" message={submitError} />
+                  </div>
+                )}
+
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {DURATION_OPTIONS.map((option) => (
                     <button
                       key={option.minutes}
                       type="button"
                       onClick={() => setDurationMinutes(option.minutes)}
-                      className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      aria-pressed={durationMinutes === option.minutes}
+                      className={`min-h-12 rounded-xl px-3 text-sm font-bold transition-all focus:outline-none ${
                         durationMinutes === option.minutes
-                          ? 'border-blue-600 bg-blue-600 text-white'
-                          : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                          ? 'bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-action)] pm-neumorphic-inset'
+                          : 'bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)] pm-neumorphic pm-neumorphic-active'
                       }`}
                     >
                       {option.label}
                     </button>
                   ))}
                 </div>
-              </div>
 
-              {vehiclesLoading ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <Spinner className="h-4 w-4 text-blue-600" />
-                  Loading your vehicles…
+                <div className="mt-6">
+                  <h2 className="text-lg font-bold text-white mb-3">Vehicle Details</h2>
+                  {vehiclesLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-[var(--pm-color-muted)]">
+                      <Spinner className="h-4 w-4 text-[var(--pm-color-action)]" />
+                      Loading your vehicles…
+                    </div>
+                  ) : vehiclesError ? (
+                    <Alert variant="error" message={vehiclesError} />
+                  ) : (
+                    <div className="rounded-xl border border-[var(--pm-color-border)] p-1 bg-[var(--pm-color-surface-raised)]">
+                      <VehicleSelector
+                        vehicles={vehicles}
+                        selectedId={selectedVehicleId}
+                        onChange={setSelectedVehicleId}
+                        onManage={() => navigate('/my-vehicles')}
+                        disabled={submitting}
+                      />
+                    </div>
+                  )}
                 </div>
-              ) : vehiclesError ? (
-                <Alert variant="error" message={vehiclesError} />
-              ) : (
-                <VehicleSelector
-                  vehicles={vehicles}
-                  selectedId={selectedVehicleId}
-                  onChange={setSelectedVehicleId}
-                  onManage={() => navigate('/my-vehicles')}
-                  disabled={submitting}
-                />
-              )}
-            </div>
 
-            <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-5">
-              <div>
-                <p className="text-sm text-slate-500">Estimated amount</p>
-                <p className="text-2xl font-bold text-slate-900">
+                {/* Report Issue Secondary Action */}
+                <button type="button" className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-[var(--pm-color-muted)] transition-colors hover:bg-[var(--pm-color-surface-raised)]">
+                  <AlertTriangle className="h-4 w-4" />
+                  Report an issue
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+
+        {/* Sticky Bottom Bar */}
+        {canBook && (
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface)]/95 px-4 py-4 shadow-[0_-8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[var(--pm-color-muted)]">
+                  {selectedOption.label} · Total Price
+                </p>
+                <p className="text-2xl font-black text-white">
                   {formatINR(estimatedAmount)}
                 </p>
               </div>
-              <Button
+              <button
                 type="submit"
-                loading={submitting}
-                disabled={vehicles.length === 0}
-                className="max-w-56"
+                onClick={handleBook}
+                disabled={submitting || vehicles.length === 0}
+                className="flex min-h-14 items-center justify-center rounded-2xl bg-[var(--pm-color-surface-raised)] px-8 text-base font-bold text-[var(--pm-color-action)] transition-all active:scale-[0.98] disabled:opacity-50 pm-neumorphic pm-neumorphic-active"
               >
-                Confirm booking
-              </Button>
+                {submitting ? <Spinner className="h-5 w-5 text-white" /> : 'Start parking'}
+              </button>
             </div>
-          </form>
+          </div>
         )}
       </main>
     </AppLayout>
-  );
-}
-
-function InfoTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-slate-50 p-4">
-      <p className="text-xs font-medium text-slate-400">{label}</p>
-      <p className="mt-1 text-lg font-bold text-slate-900">{value}</p>
-    </div>
   );
 }

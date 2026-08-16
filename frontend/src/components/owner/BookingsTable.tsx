@@ -10,7 +10,7 @@ interface BookingsTableProps {
 function PaymentBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     PAID: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    PENDING: 'bg-blue-50 text-blue-700 ring-blue-200',
+    PENDING: 'bg-amber-50 text-amber-700 ring-amber-200',
     NOT_CHARGED: 'bg-slate-100 text-slate-500 ring-slate-200',
   };
   const cls = styles[status] ?? 'bg-slate-100 text-slate-500 ring-slate-200';
@@ -57,7 +57,56 @@ export default function BookingsTable({ bookings, loading }: BookingsTableProps)
       ) : bookings.length === 0 ? (
         <p className="px-5 pb-6 text-sm text-slate-500">No bookings yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+          {/* Mobile: one card per booking. An 8-column table cannot be read on a
+              phone, and horizontal scrolling hides the amount and status. */}
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {bookings.map((booking) => (
+              <li key={booking.id} className="px-5 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-900">
+                      {booking.vehicleNumber}
+                    </p>
+                    <p className="mt-0.5 truncate text-sm text-slate-600">
+                      {booking.customerName}
+                    </p>
+                  </div>
+                  <p className="shrink-0 font-semibold text-slate-900">
+                    {booking.amount !== null ? formatINR(booking.amount) : '—'}
+                  </p>
+                </div>
+
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                  <div className="min-w-0">
+                    <dt className="text-slate-400">Start</dt>
+                    <dd className="truncate text-slate-600">
+                      {formatDateTime(booking.startTime)}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-slate-400">End</dt>
+                    <dd className="truncate text-slate-600">
+                      {booking.endTime ? formatDateTime(booking.endTime) : '—'}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-slate-400">Duration</dt>
+                    <dd className="text-slate-600">
+                      {formatDuration(booking.durationMinutes)}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <BookingStatusBadge status={booking.status} />
+                  <PaymentBadge status={booking.paymentStatus} />
+                </div>
+              </li>
+            ))}
+          </ul>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-y border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -101,6 +150,7 @@ export default function BookingsTable({ bookings, loading }: BookingsTableProps)
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

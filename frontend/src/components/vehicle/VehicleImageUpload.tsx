@@ -95,10 +95,10 @@ export default function VehicleImageUpload({
           type="button"
           disabled={disabled || uploading}
           onClick={() => inputRef.current?.click()}
-          className={`relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          className={`relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
             disabled || uploading
               ? 'cursor-not-allowed opacity-60'
-              : 'border-slate-300 hover:border-blue-400'
+              : 'border-slate-300 hover:border-emerald-400'
           }`}
           aria-label="Choose a vehicle photo"
         >
@@ -128,7 +128,7 @@ export default function VehicleImageUpload({
             <div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
                 <div
-                  className="h-full rounded-full bg-blue-600 transition-all"
+                  className="h-full rounded-full bg-emerald-600 transition-all"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -144,7 +144,7 @@ export default function VehicleImageUpload({
                 type="button"
                 disabled={disabled}
                 onClick={() => inputRef.current?.click()}
-                className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-60"
+                className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700 disabled:opacity-60"
               >
                 <Upload className="h-4 w-4" />
                 Replace photo
@@ -166,7 +166,7 @@ export default function VehicleImageUpload({
                 type="button"
                 disabled={disabled}
                 onClick={() => inputRef.current?.click()}
-                className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-60"
+                className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700 disabled:opacity-60"
               >
                 <Upload className="h-4 w-4" />
                 Choose a photo

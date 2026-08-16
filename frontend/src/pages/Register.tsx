@@ -57,7 +57,7 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-2">
       {/* Brand panel */}
-      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-blue-800 via-blue-600 to-emerald-600 lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-600 to-emerald-600 lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-emerald-300/20 blur-2xl" />
 
@@ -72,13 +72,13 @@ export default function Register() {
           <h1 className="text-4xl font-bold leading-tight tracking-tight text-white xl:text-5xl">
             Smart Parking Made Simple
           </h1>
-          <p className="mt-5 text-lg leading-relaxed text-blue-100">
+          <p className="mt-5 text-lg leading-relaxed text-emerald-100">
             Reserve parking, navigate seamlessly and manage your parking
             sessions in real time.
           </p>
         </div>
 
-        <p className="relative text-sm text-blue-200">
+        <p className="relative text-sm text-emerald-200">
           &copy; {new Date().getFullYear()} ParkMitra. All rights reserved.
         </p>
       </aside>
@@ -164,7 +164,7 @@ export default function Register() {
               Already have an account?{' '}
               <Link
                 to="/login"
-                className="font-semibold text-blue-600 hover:text-blue-700"
+                className="font-semibold text-emerald-600 hover:text-emerald-700"
               >
                 Login
               </Link>

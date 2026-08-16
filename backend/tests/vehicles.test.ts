@@ -26,6 +26,30 @@ vi.mock('../src/config/cloudinaryHelpers', async (importOriginal) => {
   };
 });
 
+vi.mock('cloudinary', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('cloudinary')>();
+  return {
+    ...actual,
+    v2: {
+      config: vi.fn(),
+      uploader: {
+        upload: vi
+          .fn()
+          .mockResolvedValue({
+            secure_url: 'https://res.cloudinary.com/parkmitra/image/upload/v1/vehicle.jpg',
+          }),
+        destroy: vi.fn().mockResolvedValue({ result: 'ok' }),
+      },
+      api: {
+        resource: vi.fn().mockResolvedValue({ public_id: 'x' }),
+      },
+      utils: {
+        api_sign_request: vi.fn(() => 'test-signature'),
+      },
+    },
+  };
+});
+
 const isCloudinaryConfiguredMock = vi.mocked(isCloudinaryConfigured);
 const verifyVehicleImageMock = vi.mocked(verifyVehicleImage);
 const deleteCloudinaryAssetMock = vi.mocked(deleteCloudinaryAsset);
@@ -319,6 +343,77 @@ describe('vehicle management', () => {
   });
 });
 
+describe('vehicle verification status', () => {
+  beforeEach(async () => {
+    await resetDb();
+    isCloudinaryConfiguredMock.mockReturnValue(true);
+    verifyVehicleImageMock.mockReset();
+    verifyVehicleImageMock.mockResolvedValue(undefined);
+    deleteCloudinaryAssetMock.mockClear();
+  });
+
+  it('starts unverified', async () => {
+    const { user } = await setup();
+    const res = await addVehicle(user.token, user.user.id).expect(201);
+
+    expect(res.body.data.verificationStatus).toBeNull();
+    expect(res.body.data.verifiedAt).toBeNull();
+  });
+
+  it('exposes the stored verification status to the garage', async () => {
+    const { user } = await setup();
+    const created = await addVehicle(user.token, user.user.id).expect(201);
+
+    await prisma.vehicle.update({
+      where: { id: created.body.data.id },
+      data: { verificationStatus: 'VERIFIED', verifiedAt: new Date() },
+    });
+
+    const list = await request(app).get('/api/vehicles').set(auth(user.token)).expect(200);
+    expect(list.body.data[0].verificationStatus).toBe('VERIFIED');
+    expect(list.body.data[0].verifiedAt).toBeTruthy();
+  });
+
+  it('clears verification when the registration changes', async () => {
+    const { user } = await setup();
+    const created = await addVehicle(user.token, user.user.id).expect(201);
+
+    await prisma.vehicle.update({
+      where: { id: created.body.data.id },
+      data: { verificationStatus: 'VERIFIED', verifiedAt: new Date() },
+    });
+
+    const updated = await request(app)
+      .patch(`/api/vehicles/${created.body.data.id}`)
+      .set(auth(user.token))
+      .send({ registration: 'MH12ZZ9999' })
+      .expect(200);
+
+    expect(updated.body.data.registration).toBe('MH12ZZ9999');
+    expect(updated.body.data.verificationStatus).toBeNull();
+    expect(updated.body.data.verifiedAt).toBeNull();
+  });
+
+  it('keeps verification when unrelated fields change', async () => {
+    const { user } = await setup();
+    const created = await addVehicle(user.token, user.user.id).expect(201);
+
+    await prisma.vehicle.update({
+      where: { id: created.body.data.id },
+      data: { verificationStatus: 'VERIFIED', verifiedAt: new Date() },
+    });
+
+    const updated = await request(app)
+      .patch(`/api/vehicles/${created.body.data.id}`)
+      .set(auth(user.token))
+      .send({ color: 'Black' })
+      .expect(200);
+
+    expect(updated.body.data.color).toBe('Black');
+    expect(updated.body.data.verificationStatus).toBe('VERIFIED');
+  });
+});
+
 describe('vehicle authorization', () => {
   beforeEach(resetDb);
 
@@ -516,6 +611,9 @@ describe('vehicle image upload signature', () => {
   });
 
   it('returns signed upload parameters scoped to the user folder', async () => {
+    process.env.CLOUDINARY_CLOUD_NAME = 'parkmitra';
+    process.env.CLOUDINARY_API_KEY = 'test-api-key';
+    process.env.CLOUDINARY_API_SECRET = 'test-api-secret';
     const { user } = await setup();
 
     const res = await request(app)
@@ -545,6 +643,9 @@ describe('parking photo upload signature', () => {
   });
 
   it('returns signed upload parameters scoped to the owner folder', async () => {
+    process.env.CLOUDINARY_CLOUD_NAME = 'parkmitra';
+    process.env.CLOUDINARY_API_KEY = 'test-api-key';
+    process.env.CLOUDINARY_API_SECRET = 'test-api-secret';
     const { owner } = await setup();
 
     const res = await request(app)

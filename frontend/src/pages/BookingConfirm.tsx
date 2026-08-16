@@ -39,7 +39,7 @@ export default function BookingConfirm() {
       <main className="mx-auto max-w-2xl px-4 pt-8 pb-24 sm:px-6 md:pb-8">
         {loading ? (
           <div className="flex items-center justify-center py-24">
-            <Spinner className="h-8 w-8 text-blue-600" />
+            <Spinner className="h-8 w-8 text-emerald-600" />
           </div>
         ) : error || !booking ? (
           <Alert variant="error" message={error ?? 'Booking not found.'} />
@@ -57,9 +57,9 @@ export default function BookingConfirm() {
               <BookingSummary booking={booking} />
             </div>
 
-            <div className="mt-6 rounded-2xl bg-blue-50 p-5 ring-1 ring-blue-200">
-              <h2 className="text-sm font-bold text-blue-900">What happens next</h2>
-              <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-blue-800">
+            <div className="mt-6 rounded-2xl bg-emerald-50 p-5 ring-1 ring-emerald-200">
+              <h2 className="text-sm font-bold text-emerald-900">What happens next</h2>
+              <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-emerald-800">
                 <li>Head to the parking lot before your check-in deadline.</li>
                 <li>Check in when you arrive — your paid session timer starts then.</li>
                 <li>Check out when you leave — your final amount is calculated on time used.</li>
