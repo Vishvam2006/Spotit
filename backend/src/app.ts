@@ -9,16 +9,18 @@ import bookingRoutes from './modules/booking/booking.routes';
 import ownerRoutes from './modules/owner/owner.routes';
 import vehicleRoutes from './modules/vehicle/vehicle.routes';
 import uploadsRoutes from './modules/uploads/uploads.routes';
+import verificationRoutes from './modules/verification/verification.routes';
 import { AuthError } from './services/auth.service';
 import { BookingError } from './modules/booking/booking.service';
 import { ParkingError } from './modules/parking/parking.service';
 import { OwnerError } from './modules/owner/owner.service';
 import { VehicleError } from './modules/vehicle/vehicle.service';
+import { VerificationError } from './modules/verification/verification.service';
 
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'ParkMitra API is running' });
@@ -30,6 +32,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/owner', ownerRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/uploads', uploadsRoutes);
+app.use('/api/verification', verificationRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({
@@ -109,6 +112,15 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       success: false,
       message: err.message,
       code: 'VEHICLE_ERROR',
+    });
+    return;
+  }
+
+  if (err instanceof VerificationError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      code: 'VERIFICATION_ERROR',
     });
     return;
   }

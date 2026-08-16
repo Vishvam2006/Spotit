@@ -1,4 +1,5 @@
-import { Car, Pencil, Star, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Car, Pencil, ShieldCheck, Star, Trash2 } from 'lucide-react';
 import type { Vehicle } from '../../types/vehicle';
 import { vehicleTypeLabel } from '../../utils/vehicle';
 
@@ -55,6 +56,13 @@ export default function VehicleCard({
       </div>
 
       <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+        <Link
+          to={`/verification?vehicleId=${vehicle.id}`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <ShieldCheck className="h-3.5 w-3.5" />
+          Verify RC
+        </Link>
         {!vehicle.isDefault && (
           <button
             type="button"

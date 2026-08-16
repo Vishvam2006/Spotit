@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Map,
+  ShieldCheck,
   SquareParking,
   User,
   X,
@@ -51,8 +52,13 @@ export default function Navbar() {
   const navItems: NavItem[] = [
     { to: '/', label: 'Map', icon: Map, end: true },
     { to: '/bookings', label: 'Bookings', icon: CalendarDays },
+
+
+    { to: '/verification', label: 'AI Verification', icon: ShieldCheck },
+
     { to: '/my-vehicles', label: 'My Vehicles', mobileLabel: 'Vehicles', icon: Car },
     { to: '/my-parkings', label: 'My Parkings', mobileLabel: 'Parkings', icon: SquareParking },
+
     ...(canViewDashboard
       ? [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }]
       : []),
@@ -134,9 +140,8 @@ export default function Navbar() {
               </span>
               <span className="hidden lg:inline">{user?.fullName}</span>
               <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${
-                  accountOpen ? 'rotate-180' : ''
-                }`}
+                className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${accountOpen ? 'rotate-180' : ''
+                  }`}
               />
             </button>
 
