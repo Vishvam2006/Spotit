@@ -9,6 +9,7 @@ import {
   Map,
   SquareParking,
   User,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import Logo from '../Logo';
@@ -18,6 +19,7 @@ import type { Role } from '../../types';
 interface NavItem {
   to: string;
   label: string;
+  mobileLabel?: string;
   icon: LucideIcon;
   end?: boolean;
 }
@@ -49,8 +51,8 @@ export default function Navbar() {
   const navItems: NavItem[] = [
     { to: '/', label: 'Map', icon: Map, end: true },
     { to: '/bookings', label: 'Bookings', icon: CalendarDays },
-    { to: '/my-vehicles', label: 'My Vehicles', icon: Car },
-    { to: '/my-parkings', label: 'My Parkings', icon: SquareParking },
+    { to: '/my-vehicles', label: 'My Vehicles', mobileLabel: 'Vehicles', icon: Car },
+    { to: '/my-parkings', label: 'My Parkings', mobileLabel: 'Parkings', icon: SquareParking },
     ...(canViewDashboard
       ? [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }]
       : []),
@@ -88,15 +90,15 @@ export default function Navbar() {
   const initials = getInitials(user?.fullName ?? '');
 
   const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+    `rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)] ${
       isActive
-        ? 'bg-blue-50 text-blue-700'
+        ? 'bg-emerald-50 text-emerald-700'
         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
     }`;
 
   const mobileTabClass = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-1 flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-semibold transition-colors ${
-      isActive ? 'text-blue-600' : 'text-slate-500'
+    `group relative flex min-h-16 flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 text-[11px] font-bold leading-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--pm-color-focus)] ${
+      isActive ? 'text-emerald-700' : 'text-slate-500 hover:text-slate-800'
     }`;
 
   return (
@@ -125,9 +127,9 @@ export default function Navbar() {
               onClick={() => setAccountOpen((open) => !open)}
               aria-expanded={accountOpen}
               aria-haspopup="menu"
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)]"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-emerald-500 text-xs font-bold text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
                 {initials}
               </span>
               <span className="hidden lg:inline">{user?.fullName}</span>
@@ -141,7 +143,7 @@ export default function Navbar() {
             {accountOpen && (
               <div className="absolute right-0 top-full mt-2 w-60 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-slate-200">
                 <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-emerald-500 text-sm font-bold text-white">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">
                     {initials}
                   </span>
                   <div className="min-w-0">
@@ -159,7 +161,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500"
+                  className="flex min-h-11 w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500"
                 >
                   <LogOut className="h-4 w-4" />
                   Sign out
@@ -181,7 +183,8 @@ export default function Navbar() {
             type="button"
             onClick={() => setAccountOpen(true)}
             aria-label="Open account menu"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-emerald-500 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-expanded={accountOpen}
+            className="pm-touch-target flex items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)] focus-visible:ring-offset-2"
           >
             {initials}
           </button>
@@ -190,22 +193,52 @@ export default function Navbar() {
 
       {/* Mobile bottom tab bar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(15_23_42_/_0.08)] backdrop-blur-xl md:hidden"
         aria-label="Mobile navigation"
       >
         <div className="flex">
-          {mobileNavItems.map(({ to, label, icon: Icon, end }) => (
+          {mobileNavItems.map(({ to, label, mobileLabel, icon: Icon, end }) => (
             <NavLink key={to} to={to} end={end} className={mobileTabClass}>
-              <Icon className="h-5 w-5" />
-              <span>{label}</span>
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`absolute top-0 h-0.5 w-8 rounded-full transition-opacity ${
+                      isActive ? 'bg-emerald-600 opacity-100' : 'opacity-0'
+                    }`}
+                  />
+                  <span
+                    className={`flex h-8 w-10 items-center justify-center rounded-full transition-colors ${
+                      isActive ? 'bg-emerald-50' : 'bg-transparent'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className="max-w-full truncate">{mobileLabel ?? label}</span>
+                </>
+              )}
             </NavLink>
           ))}
           <button
             type="button"
             onClick={() => setAccountOpen(true)}
-            className="flex flex-1 flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-semibold text-slate-500 transition-colors"
+            aria-label="Open account menu"
+            aria-expanded={accountOpen}
+            className={`relative flex min-h-16 flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 text-[11px] font-bold leading-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--pm-color-focus)] ${
+              accountOpen ? 'text-emerald-700' : 'text-slate-500 hover:text-slate-800'
+            }`}
           >
-            <User className="h-5 w-5" />
+            <span
+              className={`absolute top-0 h-0.5 w-8 rounded-full transition-opacity ${
+                accountOpen ? 'bg-emerald-600 opacity-100' : 'opacity-0'
+              }`}
+            />
+            <span
+              className={`flex h-8 w-10 items-center justify-center rounded-full transition-colors ${
+                accountOpen ? 'bg-emerald-50' : 'bg-transparent'
+              }`}
+            >
+              <User className="h-5 w-5" aria-hidden="true" />
+            </span>
             <span>Account</span>
           </button>
         </div>
@@ -222,43 +255,79 @@ export default function Navbar() {
           <div
             role="dialog"
             aria-label="Account"
-            className="absolute inset-x-0 bottom-0 animate-slide-up rounded-t-2xl bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-xl"
+            className="pm-sheet absolute inset-x-0 bottom-0 max-h-[85vh] animate-slide-up overflow-y-auto rounded-t-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] ring-1 ring-slate-200"
           >
-            <div className="flex items-center gap-3">
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-emerald-500 text-lg font-bold text-white">
-                {initials}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-base font-bold text-slate-900">
-                  {user?.fullName}
-                </p>
-                <p className="truncate text-sm text-slate-500">{user?.email}</p>
+            <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-slate-200" />
+
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-lg font-bold text-white shadow-sm">
+                  {initials}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-base font-bold text-slate-900">
+                    {user?.fullName}
+                  </p>
+                  <p className="truncate text-sm text-slate-500">{user?.email}</p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setAccountOpen(false)}
+                aria-label="Close account menu"
+                className="pm-touch-target -mr-2 -mt-2 flex shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)]"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
             </div>
 
-            <div className="mt-4">
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
                 {user ? ROLE_LABELS[user.role] : ''}
               </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                ParkMitra account
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-2 border-y border-slate-100 py-3">
+              {mobileNavItems.map(({ to, label, mobileLabel, icon: Icon, end }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  onClick={() => setAccountOpen(false)}
+                  className={({ isActive }) =>
+                    `flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)] ${
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`
+                  }
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  <span>{mobileLabel ?? label}</span>
+                </NavLink>
+              ))}
             </div>
 
             {canViewDashboard && (
               <NavLink
                 to="/dashboard"
                 onClick={() => setAccountOpen(false)}
-                className="mt-4 flex w-full items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-4 flex min-h-12 w-full items-center gap-3 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white transition-colors hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)] focus-visible:ring-offset-2"
               >
-                <LayoutDashboard className="h-4 w-4" />
-                Dashboard
+                <LayoutDashboard className="h-5 w-5" aria-hidden="true" />
+                Owner dashboard
               </NavLink>
             )}
 
             <button
               type="button"
               onClick={handleLogout}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4" aria-hidden="true" />
               Sign out
             </button>
           </div>

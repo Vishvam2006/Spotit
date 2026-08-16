@@ -2,6 +2,7 @@ import type { Booking } from '../../types/booking';
 import { formatDateTime, formatINR } from '../../utils/format';
 import { getBookingStatusStyles } from '../../utils/bookingStatus';
 import VehicleDetails from '../vehicle/VehicleDetails';
+import SmartSuggest from './SmartSuggest';
 
 interface BookingSummaryProps {
   booking: Booking;
@@ -12,10 +13,21 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
     booking.status === 'COMPLETED' && booking.finalAmount !== null
       ? booking.finalAmount
       : booking.estimatedAmount;
+  const parkingImageUrl = booking.parkingLot.photos?.[0] ?? booking.parkingLot.imageUrl;
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-      <div className="flex items-start justify-between gap-4">
+    <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+      {parkingImageUrl && (
+        <div className="aspect-video bg-slate-100">
+          <img
+            src={parkingImageUrl}
+            alt={booking.parkingLot.name}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
+
+      <div className="flex items-start justify-between gap-4 p-6 pb-0">
         <div>
           <h3 className="text-lg font-bold text-slate-900">{booking.parkingLot.name}</h3>
           <p className="mt-0.5 text-sm text-slate-500">{booking.parkingLot.address}</p>
@@ -29,7 +41,16 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
         </span>
       </div>
 
-      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+      {booking.status === 'CANCELLED' && booking.cancellationReason === 'PARKING_DEACTIVATED' && (
+        <div className="mx-6 mt-4 flex items-start gap-2 rounded-xl bg-red-50 p-4 text-sm text-red-700 ring-1 ring-red-100">
+          <span className="font-semibold">Booking cancelled.</span>
+          <span>
+            This booking was cancelled because the parking owner deactivated this location.
+          </span>
+        </div>
+      )}
+
+      <dl className="grid gap-3 p-6 text-sm sm:grid-cols-2">
         <div className="sm:col-span-2">
           <dt className="text-slate-400">Vehicle</dt>
           <dd className="mt-1.5">
@@ -79,6 +100,12 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
           <dd className="font-semibold text-slate-900">{formatINR(amount)}</dd>
         </div>
       </dl>
+
+      {booking.status === 'CANCELLED' && booking.cancellationReason === 'PARKING_DEACTIVATED' && (
+        <div className="px-6 pb-6">
+          <SmartSuggest booking={booking} />
+        </div>
+      )}
     </div>
   );
 }

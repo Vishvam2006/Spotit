@@ -25,7 +25,7 @@ export default function DistanceFilter({
           >
             Search radius
           </label>
-          <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
             {formatDistanceKm(radiusKm)}
           </span>
           <input
@@ -36,7 +36,7 @@ export default function DistanceFilter({
             step={1}
             value={radiusKm}
             onChange={(event) => onChange(Number(event.target.value))}
-            className="h-2 min-w-[140px] flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-blue-600 sm:min-w-[200px] lg:min-w-[280px]"
+            className="h-2 min-w-[140px] flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-emerald-600 sm:min-w-[200px] lg:min-w-[280px]"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={radiusKm}
@@ -57,7 +57,7 @@ export default function DistanceFilter({
         <label htmlFor="distance-slider-card" className="text-sm font-semibold text-slate-900">
           Search radius
         </label>
-        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
           {formatDistanceKm(radiusKm)}
         </span>
       </div>
@@ -70,7 +70,7 @@ export default function DistanceFilter({
         step={1}
         value={radiusKm}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-blue-600"
+        className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-emerald-600"
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={radiusKm}

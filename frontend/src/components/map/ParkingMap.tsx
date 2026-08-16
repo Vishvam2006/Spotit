@@ -7,7 +7,8 @@ import {
   APILoadingStatus,
 } from '@vis.gl/react-google-maps';
 import type { MapMouseEvent } from '@vis.gl/react-google-maps';
-import { AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
+import { AdvancedMarker } from '@vis.gl/react-google-maps';
+import { MapPin } from 'lucide-react';
 import type { ParkingLot } from '../../types/parking';
 import type { LatLng } from '../../utils/geolocation';
 import {
@@ -112,9 +113,18 @@ export default function ParkingMap({
             <AdvancedMarker
               position={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
               title="Selected parking location"
-              zIndex={2}
+              zIndex={30}
             >
-              <Pin background="#2563eb" borderColor="#1d4ed8" glyphColor="#ffffff" />
+              <div className="relative flex h-16 w-16 items-center justify-center">
+                <span className="absolute h-14 w-14 animate-ping rounded-full bg-emerald-500/25" />
+                <span className="absolute h-11 w-11 rounded-full bg-emerald-500/20 ring-2 ring-emerald-400/30" />
+                <span className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-white shadow-xl shadow-emerald-950/35">
+                  <MapPin className="h-5 w-5" strokeWidth={3} aria-hidden="true" />
+                </span>
+                <span className="absolute top-full mt-1 whitespace-nowrap rounded-full bg-slate-950 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg">
+                  New parking
+                </span>
+              </div>
             </AdvancedMarker>
           )}
 
@@ -198,7 +208,7 @@ function MapStatus({ loadError }: { loadError: boolean }) {
   if (status === APILoadingStatus.LOADING || status === APILoadingStatus.NOT_LOADED) {
     return (
       <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80">
-        <Spinner className="h-8 w-8 text-blue-600" />
+        <Spinner className="h-8 w-8 text-emerald-600" />
       </div>
     );
   }

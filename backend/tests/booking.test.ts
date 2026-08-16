@@ -321,6 +321,8 @@ describe('bookings', () => {
       .expect(200);
 
     expect(res.body.data.status).toBe('CANCELLED');
+    expect(res.body.data.cancellationReason).toBe('USER_CANCELLED');
+    expect(res.body.data.cancelledAt).toBeTruthy();
 
     const updated = await prisma.parkingLot.findUnique({ where: { id: lot.id } });
     expect(updated?.availableSpaces).toBe(2);

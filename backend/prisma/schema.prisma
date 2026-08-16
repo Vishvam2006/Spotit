@@ -93,6 +93,8 @@ model Booking {
   estimatedAmount   Float?
   finalAmount       Float?
   status            BookingStatus @default(RESERVED)
+  cancellationReason String?
+  cancelledAt        DateTime?
   lastLocationAt    DateTime?
   lastSeenAt        DateTime?
   createdAt         DateTime      @default(now())

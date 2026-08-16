@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import ParkingForm from '../components/parking/ParkingForm';
 import Alert from '../components/ui/Alert';
@@ -18,6 +19,7 @@ import { notifyError, notifySuccess } from '../utils/notify';
 type FormMode = 'create' | 'edit' | null;
 
 export default function MyParkings() {
+  const navigate = useNavigate();
   const [parkings, setParkings] = useState<Parking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,9 +50,7 @@ export default function MyParkings() {
   }, []);
 
   const openCreateForm = () => {
-    setActionError(null);
-    setEditingParking(undefined);
-    setFormMode('create');
+    navigate('/?addParking=1');
   };
 
   const openEditForm = (parking: Parking) => {
@@ -128,7 +128,7 @@ export default function MyParkings() {
               Create and manage the parking lots you own.
             </p>
           </div>
-          {!formMode && (
+          {!formMode && parkings.length > 0 && (
             <Button type="button" className="sm:w-auto" onClick={openCreateForm}>
               Add parking
             </Button>
@@ -178,6 +178,16 @@ export default function MyParkings() {
                 key={parking.id}
                 className="flex flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
               >
+                {parking.photos?.[0] && (
+                  <div className="-mx-5 -mt-5 mb-4 aspect-video overflow-hidden rounded-t-2xl bg-slate-100">
+                    <img
+                      src={parking.photos[0]}
+                      alt={parking.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                )}
+
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-bold text-slate-900">{parking.name}</h2>
