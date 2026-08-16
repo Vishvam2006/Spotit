@@ -1,11 +1,57 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../../config/prisma';
 import { execFile } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+import crypto from 'crypto';
 import { promisify } from 'util';
 
-const prisma = new PrismaClient();
 const execFileAsync = promisify(execFile);
+
+const MAX_FILES_PER_REQUEST = 10;
+const MAX_FILE_BYTES = 15 * 1024 * 1024;
+
+function isAllowedImageFormat(buffer: Buffer): boolean {
+  if (buffer.length < 12) return false;
+  if (buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))) return true; // JPEG
+  if (buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return true; // PNG
+  }
+  if (buffer.subarray(0, 4).equals(Buffer.from('RIFF')) && buffer.subarray(8, 12).equals(Buffer.from('WEBP'))) {
+    return true; // WEBP
+  }
+  if (buffer.subarray(0, 5).toString('ascii') === '%PDF-') {
+    return true; // PDF
+  }
+  return false;
+}
+
+function decodeVerificationFile(file: VerificationFile): Buffer {
+  let base64Content = file.data;
+  if (base64Content.includes(',')) {
+    base64Content = base64Content.split(',')[1];
+  }
+
+  const buffer = Buffer.from(base64Content, 'base64');
+
+  if (buffer.length === 0) {
+    throw new VerificationError(400, 'Uploaded document is empty.');
+  }
+
+  if (buffer.length > MAX_FILE_BYTES) {
+    throw new VerificationError(413, 'Uploaded document is too large. Maximum allowed size is 15MB.');
+  }
+
+  if (!isAllowedImageFormat(buffer)) {
+    throw new VerificationError(
+      400,
+      'Uploaded file is not a valid JPG, PNG, WEBP, or PDF document.',
+    );
+  }
+
+  return buffer;
+}
 
 export interface VerificationFile {
   name: string;
@@ -27,9 +73,66 @@ export class VerificationError extends Error {
   }
 }
 
+interface PersistVerificationInput {
+  userId: string;
+  vehicleId?: string;
+  overallStatus: string;
+  overallConfidence: number;
+  summary: string;
+  documents: unknown;
+}
+
+/**
+ * Persists an audit record of every document verification and stamps the
+ * outcome onto the vehicle it was run against, so the result is visible in
+ * the user's garage instead of being written and never read.
+ *
+ * Best-effort: a storage failure must never affect the verification response.
+ */
+function persistVerification(input: PersistVerificationInput): void {
+  prisma.verificationRequest
+    .create({
+      data: {
+        userId: input.userId,
+        vehicleId: input.vehicleId ?? null,
+        overallStatus: input.overallStatus,
+        overallConfidence: input.overallConfidence,
+        summary: input.summary,
+        documents: (input.documents ?? []) as Prisma.InputJsonValue,
+      },
+    })
+    .catch((error) => {
+      console.warn('[VerificationService] Failed to persist verification record:', error);
+    });
+
+  if (!input.vehicleId) return;
+
+  // Scoped by userId as well so a forged vehicleId cannot stamp another
+  // user's vehicle.
+  prisma.vehicle
+    .updateMany({
+      where: { id: input.vehicleId, userId: input.userId },
+      data: {
+        verificationStatus: input.overallStatus,
+        verifiedAt: new Date(),
+      },
+    })
+    .catch((error) => {
+      console.warn('[VerificationService] Failed to stamp vehicle verification:', error);
+    });
+}
+
 export async function processDocumentVerification(payload: VerifyPayload) {
   if (!payload.files || payload.files.length === 0) {
     throw new VerificationError(400, 'At least one document image must be uploaded.');
+  }
+
+  if (payload.files.length > MAX_FILES_PER_REQUEST) {
+    throw new VerificationError(400, `At most ${MAX_FILES_PER_REQUEST} documents can be verified per request.`);
+  }
+
+  for (const file of payload.files) {
+    decodeVerificationFile(file);
   }
 
   let selectedVehicle = null;
@@ -66,13 +169,27 @@ export async function processDocumentVerification(payload: VerifyPayload) {
       formData.append('files', blob, file.name || `document_${i + 1}.jpg`);
     }
 
+    const headers: Record<string, string> = {};
+    if (process.env.AI_ENGINE_API_KEY) {
+      headers['X-API-Key'] = process.env.AI_ENGINE_API_KEY;
+    }
+
     const aiRes = await fetch(aiEngineUrl, {
       method: 'POST',
+      headers,
       body: formData,
     });
 
     if (aiRes.ok) {
       const aiData = await aiRes.json();
+      void persistVerification({
+        userId: payload.userId,
+        vehicleId: payload.vehicleId,
+        overallStatus: aiData.overallStatus ?? 'NEEDS_REVIEW',
+        overallConfidence: Number(aiData.overallConfidence) || 0,
+        summary: aiData.summary ?? '',
+        documents: aiData.documents ?? [],
+      });
       return {
         ...aiData,
         targetVehicle: selectedVehicle
@@ -90,25 +207,36 @@ export async function processDocumentVerification(payload: VerifyPayload) {
     console.warn('[VerificationService] AI Engine HTTP call failed, using bridge script fallback:', error);
   }
 
-  // Fallback to python bridge execution or strict fallback evaluation
-  let hasRejection = false;
+  const docs = await Promise.all(payload.files.map(async (file, idx) => {
+    const filename = file.name || `Document_${idx + 1}`;
+    const originalName = sanitizeFilename(filename) || `document_${idx + 1}`;
+    const tempFilePath = path.join(os.tmpdir(), `verify_${crypto.randomBytes(8).toString('hex')}_${originalName}`);
 
-  const docs = payload.files.map((file, idx) => {
-    const fname = (file.name || '').toLowerCase();
-    const isRc = fname.includes('rc') || fname.includes('reg') || fname.includes('vehicle_rc');
-    const isDl = fname.includes('license') || fname.includes('dl') || fname.includes('driver');
-    const isPermit = fname.includes('permit') || fname.includes('pass');
-    const isId = fname.includes('aadhaar') || fname.includes('pan') || fname.includes('identity');
+    try {
+      fs.writeFileSync(tempFilePath, decodeVerificationFile(file));
+      const bridgeResult = await VerificationService.verifyDocument(
+        tempFilePath,
+        originalName,
+        {
+          name: targetName || '',
+          vehicle_registration_number: targetReg,
+        },
+      );
+      return normalizeBridgeDocument(bridgeResult, originalName, targetReg);
+    } catch (error) {
+      if (fs.existsSync(tempFilePath)) {
+        try {
+          fs.unlinkSync(tempFilePath);
+        } catch (cleanupError) {
+          console.warn('[VerificationService] Failed to cleanup fallback temp file:', cleanupError);
+        }
+      }
 
-    const isDoc = isRc || isDl || isPermit || isId;
-
-    if (!isDoc) {
-      hasRejection = true;
       return {
-        filename: file.name || `Document_${idx + 1}`,
+        filename: originalName,
         documentType: 'INVALID_DOCUMENT',
-        status: 'REJECTED',
-        confidenceScore: 0.05,
+        status: 'REJECTED' as const,
+        confidenceScore: 0,
         extractedFields: {
           documentType: 'INVALID_DOCUMENT',
           documentNumber: undefined,
@@ -125,48 +253,30 @@ export async function processDocumentVerification(payload: VerifyPayload) {
           nameMatch: false,
           expiryCheck: false,
         },
-        summary: 'Uploaded image is not a valid RC Book or official vehicle document.',
+        summary: 'Verification engine could not process this document.',
       };
     }
+  }));
 
-    const extractedReg = targetReg || 'MH02CB4921';
-    const regMatch = targetReg ? extractedReg.replace(/\s/g, '').toUpperCase() === targetReg.replace(/\s/g, '').toUpperCase() : true;
+  const hasRejection = docs.some((doc) => doc.status === 'REJECTED');
+  const hasReview = docs.some((doc) => doc.status === 'NEEDS_REVIEW');
+  const overallStatus = hasRejection ? 'REJECTED' : hasReview ? 'NEEDS_REVIEW' : 'VERIFIED';
+  const overallConfidence = docs.length
+    ? Number((docs.reduce((sum, doc) => sum + doc.confidenceScore, 0) / docs.length).toFixed(2))
+    : 0;
 
-    if (!regMatch) {
-      hasRejection = true;
-    }
-
-    const docStatus = regMatch ? 'VERIFIED' : 'REJECTED';
-
-    return {
-      filename: file.name || `Document_${idx + 1}`,
-      documentType: isRc ? 'VEHICLE_RC' : isDl ? 'DRIVING_LICENSE' : isPermit ? 'PARKING_PERMIT' : 'IDENTITY_PROOF',
-      status: docStatus,
-      confidenceScore: regMatch ? 0.96 : 0.40,
-      extractedFields: {
-        documentType: isRc ? 'VEHICLE_RC' : 'DRIVING_LICENSE',
-        documentNumber: extractedReg,
-        ownerName: targetName || 'Registered Owner',
-        vehicleNumber: extractedReg,
-        vehicleClass: selectedVehicle?.type === 'TWO_WHEELER' ? 'MCWG / Two Wheeler' : 'LMV / Private Passenger Vehicle',
-        issueDate: '2022-03-10',
-        expiryDate: '2037-03-09',
-        issuingAuthority: 'Transport Authority (RTO)',
-      },
-      checks: {
-        formatValid: true,
-        registrationMatch: regMatch,
-        nameMatch: true,
-        expiryCheck: true,
-      },
-      summary: regMatch
-        ? `Document verified. Match confirmed with ${extractedReg}.`
-        : `Registration mismatch. Extracted ${extractedReg} does not match expected ${targetReg}.`,
-    };
+  void persistVerification({
+    userId: payload.userId,
+    vehicleId: payload.vehicleId,
+    overallStatus,
+    overallConfidence,
+    summary: hasRejection
+      ? 'Verification failed. The uploaded image is not a valid RC Book or registration does not match.'
+      : hasReview
+        ? 'Documents processed. Details require manual verification.'
+        : `All document(s) verified successfully against vehicle registration record.`,
+    documents: docs,
   });
-
-  const overallStatus = hasRejection ? 'REJECTED' : 'VERIFIED';
-  const overallConfidence = hasRejection ? 0.20 : 0.96;
 
   return {
     success: true,
@@ -185,6 +295,8 @@ export async function processDocumentVerification(payload: VerifyPayload) {
       : null,
     summary: hasRejection
       ? 'Verification failed. The uploaded image is not a valid RC Book or registration does not match.'
+      : hasReview
+        ? 'Documents processed. Details require manual verification.'
       : `All document(s) verified successfully against vehicle registration record.`,
   };
 }
@@ -200,7 +312,85 @@ export interface VerificationResultResponse {
   document_type: 'DRIVING_LICENSE' | 'RC' | 'UNKNOWN';
   confidence: number;
   checks?: Record<string, string>;
+  extracted_fields?: Record<string, string | null | undefined>;
   message?: string;
+}
+
+function resolveEngineDir(): string {
+  const candidates = [
+    path.join(process.cwd(), 'ai-verification-engine'),
+    path.join(process.cwd(), '..', 'ai-verification-engine'),
+  ];
+
+  const engineDir = candidates.find((candidate) => fs.existsSync(path.join(candidate, 'bridge.py')));
+  return engineDir || candidates[0];
+}
+
+function cleanRegistration(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const cleaned = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  return cleaned || undefined;
+}
+
+function sanitizeFilename(name: string): string {
+  return path.basename(name).replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+}
+
+function bridgeStatusToDocumentStatus(
+  status: VerificationResultResponse['status'],
+): 'VERIFIED' | 'NEEDS_REVIEW' | 'REJECTED' {
+  if (status === 'VERIFIED') return 'VERIFIED';
+  if (status === 'PARTIALLY_MATCHED') return 'NEEDS_REVIEW';
+  return 'REJECTED';
+}
+
+function checkValue(checks: Record<string, string> | undefined, key: string): boolean {
+  const value = checks?.[key];
+  return value === 'MATCH' || value === 'VALID' || value === 'true';
+}
+
+function normalizeBridgeDocument(
+  result: VerificationResultResponse,
+  filename: string,
+  expectedRegistration?: string,
+) {
+  const extracted = result.extracted_fields || {};
+  const documentType = result.document_type === 'RC'
+    ? 'VEHICLE_RC'
+    : result.document_type === 'DRIVING_LICENSE'
+      ? 'DRIVING_LICENSE'
+      : 'INVALID_DOCUMENT';
+  const vehicleNumber = cleanRegistration(
+    typeof extracted.vehicle_registration_number === 'string'
+      ? extracted.vehicle_registration_number
+      : expectedRegistration,
+  );
+  const formatValid = result.document_type !== 'UNKNOWN'
+    && !['OCR_FAILED', 'UNKNOWN_DOCUMENT', 'PROCESSING_ERROR'].includes(result.status);
+
+  return {
+    filename,
+    documentType,
+    status: bridgeStatusToDocumentStatus(result.status),
+    confidenceScore: result.confidence,
+    extractedFields: {
+      documentType,
+      documentNumber: vehicleNumber,
+      ownerName: typeof extracted.name === 'string' ? extracted.name : undefined,
+      vehicleNumber,
+      vehicleClass: undefined,
+      issueDate: typeof extracted.valid_from === 'string' ? extracted.valid_from : undefined,
+      expiryDate: typeof extracted.valid_until === 'string' ? extracted.valid_until : undefined,
+      issuingAuthority: undefined,
+    },
+    checks: {
+      formatValid,
+      registrationMatch: checkValue(result.checks, 'vehicle_registration_number'),
+      nameMatch: checkValue(result.checks, 'name'),
+      expiryCheck: checkValue(result.checks, 'validity'),
+    },
+    summary: result.message || 'Document verification failed.',
+  };
 }
 
 export class VerificationService {
@@ -209,7 +399,7 @@ export class VerificationService {
     originalFilename: string,
     accountData: AccountDataPayload,
   ): Promise<VerificationResultResponse> {
-    const engineDir = path.join(process.cwd(), 'ai-verification-engine');
+    const engineDir = resolveEngineDir();
     const pythonExecutable = path.join(engineDir, 'venv', 'bin', 'python');
     const bridgeScript = path.join(engineDir, 'bridge.py');
 

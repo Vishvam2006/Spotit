@@ -50,7 +50,8 @@ export default function MyParkings() {
   }, []);
 
   const openCreateForm = () => {
-    navigate('/?addParking=1');
+    // Creating a lot requires pinning it on the map, which only /explore can do.
+    navigate('/explore?addParking=1');
   };
 
   const openEditForm = (parking: Parking) => {
@@ -155,7 +156,7 @@ export default function MyParkings() {
 
         {loading ? (
           <div className="flex items-center justify-center py-24">
-            <Spinner className="h-8 w-8 text-blue-600" />
+            <Spinner className="h-8 w-8 text-emerald-600" />
           </div>
         ) : error ? (
           <Alert variant="error" message={error} />
@@ -227,7 +228,7 @@ export default function MyParkings() {
                   <button
                     type="button"
                     onClick={() => openEditForm(parking)}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     Edit
                   </button>

@@ -134,6 +134,10 @@ export async function updateVehicle(
     }
   }
 
+  // A verification result is only meaningful for the plate it was run against,
+  // so changing the registration invalidates it.
+  const registrationChanged = registration !== vehicle.registration;
+
   let imageUrl = vehicle.imageUrl;
   let imagePublicId = vehicle.imagePublicId;
   let imageReplaced = false;
@@ -165,6 +169,9 @@ export async function updateVehicle(
           model: input.model !== undefined ? input.model : vehicle.model,
           color: input.color !== undefined ? input.color : vehicle.color,
           isDefault: input.isDefault ?? vehicle.isDefault,
+          ...(registrationChanged
+            ? { verificationStatus: null, verifiedAt: null }
+            : {}),
         },
       });
     });

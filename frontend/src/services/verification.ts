@@ -49,27 +49,25 @@ export interface VerifyPayload {
   expectedName?: string;
 }
 
+// Vision-model analysis runs per document and routinely takes far longer than
+// the 15s default in api.ts, which would abort a request the engine is still
+// working on. Scaled per document, with a floor for a single upload.
+const VERIFY_TIMEOUT_PER_FILE_MS = 45_000;
+const VERIFY_MIN_TIMEOUT_MS = 60_000;
+
 export async function verifyUploadedDocuments(payload: VerifyPayload): Promise<VerificationResultData> {
-  const { data } = await api.post<{ success: boolean; data: VerificationResultData }>('/verification/verify', payload);
+  const timeout = Math.max(
+    VERIFY_MIN_TIMEOUT_MS,
+    payload.files.length * VERIFY_TIMEOUT_PER_FILE_MS,
+  );
+
+  const { data } = await api.post<{ success: boolean; data: VerificationResultData }>(
+    '/verification/verify',
+    payload,
+    { timeout },
+  );
   if (!data.success || !data.data) {
     throw new Error('Verification request failed. Please check document images.');
   }
   return data.data;
-}
-
-export async function verifyDocumentApi(
-  file: File,
-  documentType: 'DRIVING_LICENSE' | 'RC',
-  dateOfBirth?: string,
-): Promise<VerificationResultData> {
-  const reader = new FileReader();
-  const base64: string = await new Promise((resolve, reject) => {
-    reader.onload = (e) => resolve(e.target?.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
-  return verifyUploadedDocuments({
-    files: [{ name: file.name, data: base64 }],
-  });
 }

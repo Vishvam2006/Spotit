@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   CalendarDays,
   Car,
   ChevronDown,
   LayoutDashboard,
   LogOut,
-  Map,
   ShieldCheck,
   SquareParking,
   User,
   X,
+  Home,
+  Compass,
   type LucideIcon,
 } from 'lucide-react';
 import Logo from '../Logo';
@@ -43,30 +44,32 @@ function getInitials(name: string): string {
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [accountOpen, setAccountOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const canViewDashboard =
     user?.role === 'OWNER' || user?.role === 'ADMIN';
 
+  // Desktop nav items
   const navItems: NavItem[] = [
-    { to: '/', label: 'Map', icon: Map, end: true },
+    { to: '/', label: 'Home', icon: Home, end: true },
+    { to: '/explore', label: 'Explore', icon: Compass },
     { to: '/bookings', label: 'Bookings', icon: CalendarDays },
-
-
     { to: '/verification', label: 'AI Verification', icon: ShieldCheck },
-
     { to: '/my-vehicles', label: 'My Vehicles', mobileLabel: 'Vehicles', icon: Car },
     { to: '/my-parkings', label: 'My Parkings', mobileLabel: 'Parkings', icon: SquareParking },
-
     ...(canViewDashboard
       ? [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }]
       : []),
   ];
 
-  const mobileNavItems: NavItem[] = navItems.filter(
-    (item) => item.to !== '/dashboard',
-  );
+  // Mobile primary nav items for bottom bar
+  const mobileNavItems: NavItem[] = [
+    { to: '/', label: 'Home', icon: Home, end: true },
+    { to: '/explore', label: 'Explore', icon: Compass },
+    { to: '/bookings', label: 'Bookings', icon: CalendarDays },
+  ];
 
   const handleLogout = () => {
     logout();
@@ -98,30 +101,31 @@ export default function Navbar() {
   const desktopLinkClass = ({ isActive }: { isActive: boolean }) =>
     `rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)] ${
       isActive
-        ? 'bg-emerald-50 text-emerald-700'
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+        ? 'bg-[var(--pm-color-action-soft)] text-[var(--pm-color-action)]'
+        : 'text-[var(--pm-color-muted)] hover:bg-[var(--pm-color-surface-raised)] hover:text-[var(--pm-color-text)]'
     }`;
 
+  // Pill-style dark bottom nav for mobile
   const mobileTabClass = ({ isActive }: { isActive: boolean }) =>
-    `group relative flex min-h-16 flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 text-[11px] font-bold leading-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--pm-color-focus)] ${
-      isActive ? 'text-emerald-700' : 'text-slate-500 hover:text-slate-800'
+    `group relative flex flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 py-2 rounded-xl text-[11px] font-bold leading-none transition-all duration-200 focus:outline-none ${
+      isActive ? 'text-[var(--pm-color-text)]' : 'text-[var(--pm-color-muted)] hover:text-slate-300'
     }`;
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur">
+      <header className="sticky top-0 z-40 bg-[var(--pm-color-page)]/90 backdrop-blur-md">
         {/* Desktop top bar */}
-        <div className="mx-auto hidden max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 md:flex">
+        <div className="mx-auto hidden max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 md:flex border-b border-[var(--pm-color-border)]">
           <div className="flex items-center gap-3">
             <Logo className="h-9 w-9" />
-            <span className="text-xl font-bold tracking-tight text-slate-900">
+            <span className="text-xl font-bold tracking-tight text-[var(--pm-color-text)]">
               ParkMitra
             </span>
           </div>
 
           <nav className="flex items-center gap-1" aria-label="Main navigation">
-            {navItems.map(({ to, label }) => (
-              <NavLink key={to} to={to} end={to === '/'} className={desktopLinkClass}>
+            {navItems.map(({ to, label, end }) => (
+              <NavLink key={to} to={to} end={end} className={desktopLinkClass}>
                 {label}
               </NavLink>
             ))}
@@ -133,40 +137,40 @@ export default function Navbar() {
               onClick={() => setAccountOpen((open) => !open)}
               aria-expanded={accountOpen}
               aria-haspopup="menu"
-              className="flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)]"
+              className="flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--pm-color-action)] text-xs font-bold text-white shadow-md">
                 {initials}
               </span>
               <span className="hidden lg:inline">{user?.fullName}</span>
               <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${accountOpen ? 'rotate-180' : ''
+                className={`h-4 w-4 text-[var(--pm-color-muted)] transition-transform duration-200 ${accountOpen ? 'rotate-180' : ''
                   }`}
               />
             </button>
 
             {accountOpen && (
-              <div className="absolute right-0 top-full mt-2 w-60 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-slate-200">
-                <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">
+              <div className="absolute right-0 top-full mt-2 w-60 overflow-hidden rounded-xl bg-[var(--pm-color-surface-raised)] shadow-2xl ring-1 ring-[var(--pm-color-border)]">
+                <div className="flex items-center gap-3 border-b border-[var(--pm-color-border)] px-4 py-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--pm-color-action)] text-sm font-bold text-white">
                     {initials}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900">
+                    <p className="truncate text-sm font-semibold text-[var(--pm-color-text)]">
                       {user?.fullName}
                     </p>
-                    <p className="truncate text-xs text-slate-500">{user?.email}</p>
+                    <p className="truncate text-xs text-[var(--pm-color-muted)]">{user?.email}</p>
                   </div>
                 </div>
                 <div className="px-4 py-2">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                  <span className="rounded-full bg-[var(--pm-color-action-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--pm-color-action)]">
                     {user ? ROLE_LABELS[user.role] : ''}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="flex min-h-11 w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500"
+                  className="flex min-h-11 w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-500 transition-colors hover:bg-red-500/10 focus:outline-none"
                 >
                   <LogOut className="h-4 w-4" />
                   Sign out
@@ -176,142 +180,121 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile top bar */}
-        <div className="flex items-center justify-between px-4 py-3 sm:px-6 md:hidden">
-          <NavLink to="/" className="flex items-center gap-3">
-            <Logo className="h-8 w-8" />
-            <span className="text-lg font-bold tracking-tight text-slate-900">
-              ParkMitra
-            </span>
-          </NavLink>
-          <button
-            type="button"
-            onClick={() => setAccountOpen(true)}
-            aria-label="Open account menu"
-            aria-expanded={accountOpen}
-            className="pm-touch-target flex items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)] focus-visible:ring-offset-2"
-          >
-            {initials}
-          </button>
-        </div>
+        {/* Mobile top header (hidden if no map/home, or we can make it part of Home) */}
+        {/* We keep it simple here */}
       </header>
 
-      {/* Mobile bottom tab bar */}
+      {/* Floating Pill Mobile bottom tab bar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(15_23_42_/_0.08)] backdrop-blur-xl md:hidden"
+        className="fixed inset-x-0 bottom-4 z-50 px-4 md:hidden pb-[env(safe-area-inset-bottom)] pointer-events-none"
         aria-label="Mobile navigation"
       >
-        <div className="flex">
-          {mobileNavItems.map(({ to, label, mobileLabel, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} className={mobileTabClass}>
-              {({ isActive }) => (
-                <>
-                  <span
-                    className={`absolute top-0 h-0.5 w-8 rounded-full transition-opacity ${
-                      isActive ? 'bg-emerald-600 opacity-100' : 'opacity-0'
-                    }`}
-                  />
-                  <span
-                    className={`flex h-8 w-10 items-center justify-center rounded-full transition-colors ${
-                      isActive ? 'bg-emerald-50' : 'bg-transparent'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <span className="max-w-full truncate">{mobileLabel ?? label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
+        <div className="mx-auto flex max-w-md items-center justify-between rounded-[2rem] bg-[#1a2230]/95 backdrop-blur-xl p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.4)] ring-1 ring-white/10 pointer-events-auto">
+          {mobileNavItems.map(({ to, label, mobileLabel, icon: Icon, end }) => {
+            const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+            return (
+              <NavLink key={to} to={to} end={end} className={mobileTabClass}>
+                <span
+                  className={`flex h-10 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
+                    isActive ? 'bg-[var(--pm-color-action)] text-white shadow-lg' : 'bg-transparent text-[var(--pm-color-muted)]'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className={`mt-1 max-w-full truncate transition-all duration-300 ${isActive ? 'opacity-100 scale-100 font-extrabold text-white' : 'opacity-80 scale-95 font-medium'}`}>
+                  {mobileLabel ?? label}
+                </span>
+              </NavLink>
+            );
+          })}
+          
           <button
             type="button"
             onClick={() => setAccountOpen(true)}
             aria-label="Open account menu"
             aria-expanded={accountOpen}
-            className={`relative flex min-h-16 flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 text-[11px] font-bold leading-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--pm-color-focus)] ${
-              accountOpen ? 'text-emerald-700' : 'text-slate-500 hover:text-slate-800'
+            className={`group relative flex flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 py-2 rounded-xl text-[11px] font-bold leading-none transition-all duration-200 focus:outline-none ${
+              accountOpen ? 'text-[var(--pm-color-text)]' : 'text-[var(--pm-color-muted)] hover:text-slate-300'
             }`}
           >
             <span
-              className={`absolute top-0 h-0.5 w-8 rounded-full transition-opacity ${
-                accountOpen ? 'bg-emerald-600 opacity-100' : 'opacity-0'
-              }`}
-            />
-            <span
-              className={`flex h-8 w-10 items-center justify-center rounded-full transition-colors ${
-                accountOpen ? 'bg-emerald-50' : 'bg-transparent'
+              className={`flex h-10 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
+                accountOpen ? 'bg-[var(--pm-color-action)] text-white shadow-lg' : 'bg-transparent text-[var(--pm-color-muted)]'
               }`}
             >
               <User className="h-5 w-5" aria-hidden="true" />
             </span>
-            <span>Account</span>
+            <span className={`mt-1 max-w-full truncate transition-all duration-300 ${accountOpen ? 'opacity-100 scale-100 font-extrabold text-white' : 'opacity-80 scale-95 font-medium'}`}>
+              Account
+            </span>
           </button>
         </div>
       </nav>
 
       {/* Mobile account sheet */}
       {accountOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-[60] md:hidden">
           <div
-            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
             onClick={() => setAccountOpen(false)}
             aria-hidden="true"
           />
           <div
             role="dialog"
             aria-label="Account"
-            className="pm-sheet absolute inset-x-0 bottom-0 max-h-[85vh] animate-slide-up overflow-y-auto rounded-t-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] ring-1 ring-slate-200"
+            className="pm-sheet absolute inset-x-0 bottom-0 max-h-[85vh] animate-slide-up overflow-y-auto rounded-t-3xl bg-[var(--pm-color-surface)] p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-2xl ring-1 ring-white/10"
           >
-            <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-slate-200" />
+            <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-[var(--pm-color-border-strong)]" />
 
             <div className="flex items-start justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-lg font-bold text-white shadow-sm">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--pm-color-action)] text-lg font-bold text-white shadow-lg">
                   {initials}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-base font-bold text-slate-900">
+                  <p className="truncate text-lg font-bold text-[var(--pm-color-text)]">
                     {user?.fullName}
                   </p>
-                  <p className="truncate text-sm text-slate-500">{user?.email}</p>
+                  <p className="truncate text-sm text-[var(--pm-color-muted)]">{user?.email}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setAccountOpen(false)}
                 aria-label="Close account menu"
-                className="pm-touch-target -mr-2 -mt-2 flex shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)]"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)] transition-colors hover:bg-slate-700 focus:outline-none"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-[var(--pm-color-action-soft)] px-3 py-1.5 text-xs font-bold text-[var(--pm-color-action)]">
                 {user ? ROLE_LABELS[user.role] : ''}
-              </span>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                ParkMitra account
               </span>
             </div>
 
-            <div className="mt-5 space-y-2 border-y border-slate-100 py-3">
-              {mobileNavItems.map(({ to, label, mobileLabel, icon: Icon, end }) => (
+            <div className="mt-6 space-y-1">
+              {/* Extra nav items inside the menu */}
+              {[
+                { to: '/verification', label: 'AI Verification', icon: ShieldCheck },
+                { to: '/my-vehicles', label: 'My Vehicles', icon: Car },
+                { to: '/my-parkings', label: 'My Parkings', icon: SquareParking },
+              ].map(({ to, label, icon: Icon }) => (
                 <NavLink
                   key={to}
                   to={to}
-                  end={end}
                   onClick={() => setAccountOpen(false)}
                   className={({ isActive }) =>
-                    `flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)] ${
+                    `flex min-h-12 w-full items-center gap-4 rounded-2xl px-4 text-sm font-semibold transition-colors focus:outline-none ${
                       isActive
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'text-slate-700 hover:bg-slate-50'
+                        ? 'bg-[var(--pm-color-action-soft)] text-[var(--pm-color-action)]'
+                        : 'text-[var(--pm-color-text)] hover:bg-[var(--pm-color-surface-raised)]'
                     }`
                   }
                 >
                   <Icon className="h-5 w-5" aria-hidden="true" />
-                  <span>{mobileLabel ?? label}</span>
+                  <span>{label}</span>
                 </NavLink>
               ))}
             </div>
@@ -320,19 +303,19 @@ export default function Navbar() {
               <NavLink
                 to="/dashboard"
                 onClick={() => setAccountOpen(false)}
-                className="mt-4 flex min-h-12 w-full items-center gap-3 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white transition-colors hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pm-color-focus)] focus-visible:ring-offset-2"
+                className="mt-6 flex min-h-14 w-full items-center gap-3 rounded-2xl bg-[var(--pm-color-surface-raised)] px-5 text-sm font-bold text-[var(--pm-color-text)] shadow-sm transition-colors hover:bg-slate-700 focus:outline-none"
               >
-                <LayoutDashboard className="h-5 w-5" aria-hidden="true" />
-                Owner dashboard
+                <LayoutDashboard className="h-5 w-5 text-[var(--pm-color-action)]" aria-hidden="true" />
+                Owner Dashboard
               </NavLink>
             )}
 
             <button
               type="button"
               onClick={handleLogout}
-              className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+              className="mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-red-500/10 px-4 text-sm font-bold text-red-500 transition-colors hover:bg-red-500/20 focus:outline-none"
             >
-              <LogOut className="h-4 w-4" aria-hidden="true" />
+              <LogOut className="h-5 w-5" aria-hidden="true" />
               Sign out
             </button>
           </div>

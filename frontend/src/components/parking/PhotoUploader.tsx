@@ -143,7 +143,7 @@ export default function PhotoUploader({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 px-4 py-6 text-sm font-medium text-slate-500 hover:border-blue-400 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 px-4 py-6 text-sm font-medium text-slate-500 hover:border-emerald-400 hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
           {uploading ? 'Uploading...' : '+ Add photo'}

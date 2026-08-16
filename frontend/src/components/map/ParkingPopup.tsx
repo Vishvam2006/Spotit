@@ -50,7 +50,7 @@ export default function ParkingPopup({
         <button
           type="button"
           onClick={() => onViewDetails(parking)}
-          className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+          className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
         >
           View Details
         </button>

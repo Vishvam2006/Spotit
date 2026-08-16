@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from main import analyze_image_with_groq
+from app.verification.engine import VerificationEngine
 
 def main():
     parser = argparse.ArgumentParser(description="Bridge runner for Node.js backend")
@@ -41,41 +41,24 @@ def main():
             doc_bytes = f.read()
 
         filename = args.filename or doc_path.name
-        analysis = analyze_image_with_groq(doc_bytes, filename)
-
-        doc_type = analysis.get("documentType", "INVALID_DOCUMENT")
-        confidence = float(analysis.get("confidenceScore", 0.05))
-
-        veh_num = analysis.get("vehicleNumber")
-        owner_name = analysis.get("ownerName")
-
-        is_valid_doc = doc_type in ["VEHICLE_RC", "DRIVING_LICENSE", "IDENTITY_PROOF", "PARKING_PERMIT"]
-
-        reg_match = True
-        if expected_reg:
-            if veh_num:
-                clean_exp = "".join(c for c in expected_reg.upper() if c.isalnum())
-                clean_act = "".join(c for c in veh_num.upper() if c.isalnum())
-                reg_match = (clean_exp in clean_act) or (clean_act in clean_exp)
-            else:
-                reg_match = False
-
-        if is_valid_doc and reg_match and confidence >= 0.70:
-            status = "VERIFIED"
-        elif is_valid_doc and confidence >= 0.50:
-            status = "PARTIALLY_MATCHED"
-        else:
-            status = "MISMATCH" if is_valid_doc else "UNKNOWN_DOCUMENT"
-
-        res_payload = {
-            "status": status,
-            "document_type": "RC" if doc_type == "VEHICLE_RC" else ("DRIVING_LICENSE" if doc_type == "DRIVING_LICENSE" else "UNKNOWN"),
-            "confidence": confidence,
-            "checks": {
-                "formatValid": str(is_valid_doc).lower(),
-                "registrationMatch": str(reg_match).lower()
+        engine = VerificationEngine(groq_api_key=args.groq_key or os.getenv("GROQ_API_KEY"))
+        result = engine.verify(
+            document=doc_bytes,
+            account_data={
+                "name": expected_name or "",
+                "vehicle_registration_number": expected_reg,
+                "date_of_birth": acc_dict.get("date_of_birth"),
             },
-            "message": analysis.get("summary", "Document analyzed.")
+            filename=filename,
+        )
+        extracted_fields = result.extracted_fields or {}
+        res_payload = {
+            "status": result.status.value,
+            "document_type": result.document_type.value,
+            "confidence": result.confidence,
+            "checks": result.checks or {},
+            "extracted_fields": extracted_fields,
+            "message": result.message or "Document analyzed."
         }
         print(json.dumps(res_payload))
     except Exception as e:

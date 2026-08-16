@@ -30,7 +30,7 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 const selectClassName =
-  'mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:border-blue-500 focus:ring-blue-500';
+  'mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:border-emerald-500 focus:ring-emerald-500';
 
 export default function SearchFilters({
   filters,
@@ -131,7 +131,7 @@ export default function SearchFilters({
               onChange={(event) =>
                 onChange({ availableOnly: event.target.checked || undefined })
               }
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
             />
             Available only
           </label>
@@ -162,7 +162,7 @@ export default function SearchFilters({
           <button
             type="button"
             onClick={handleClear}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             Clear Filters
           </button>

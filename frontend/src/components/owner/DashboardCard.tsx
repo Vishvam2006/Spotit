@@ -12,7 +12,9 @@ const ACCENTS: Record<
   NonNullable<DashboardCardProps['accent']>,
   { icon: string; ring: string }
 > = {
-  blue: { icon: 'bg-blue-50 text-blue-600', ring: 'ring-blue-100' },
+  // Categorical accents for stat tiles. These are not action colors — the
+  // single action color across the app is emerald.
+  blue: { icon: 'bg-sky-50 text-sky-600', ring: 'ring-sky-100' },
   emerald: { icon: 'bg-emerald-50 text-emerald-600', ring: 'ring-emerald-100' },
   violet: { icon: 'bg-violet-50 text-violet-600', ring: 'ring-violet-100' },
   amber: { icon: 'bg-amber-50 text-amber-600', ring: 'ring-amber-100' },

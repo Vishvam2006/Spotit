@@ -1,759 +1,217 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
 import {
-  CarFront,
-  ChevronLeft,
-  Clock3,
-  IndianRupee,
-  LocateFixed,
-  Map as MapIcon,
+  Car,
+  ChevronRight,
+  Clock,
+  Compass,
   MapPin,
-  Navigation,
-  Plus,
   Search,
   ShieldCheck,
-  SquareParking,
-  X,
-  type LucideIcon,
+  CalendarDays,
+  PlusCircle,
+  AlertTriangle,
+  Clock3,
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
-import ParkingMap from '../components/map/ParkingMap';
-import type { MapLocation } from '../components/map/ParkingMap';
-import SearchBar from '../components/map/SearchBar';
-import DistanceFilter from '../components/map/DistanceFilter';
-import ParkingCard from '../components/map/ParkingCard';
-import AddParkingForm from '../components/parking/AddParkingForm';
-import Spinner from '../components/ui/Spinner';
-import Alert from '../components/ui/Alert';
 import { fetchParkingLots } from '../services/parking';
-import { DEFAULT_MAP_CENTER } from '../config/map';
-import { geocodePlaceQuery } from '../utils/geocoding';
-import { getCurrentPositionDetailed } from '../utils/geolocation';
-import type { LatLng } from '../utils/geolocation';
-import { formatDistanceKm, haversineDistanceKm, isWithinRadiusKm } from '../utils/distance';
-import { notifyError, notifySuccess } from '../utils/notify';
 import type { ParkingLot } from '../types/parking';
-import { useAuth } from '../context/auth-context';
-
-const DEFAULT_RADIUS_KM = 25;
-
-function filterLotsByRadius(
-  lots: ParkingLot[],
-  center: LatLng,
-  radiusKm: number,
-): ParkingLot[] {
-  if (radiusKm <= 0) return [];
-  return lots.filter((lot) =>
-    isWithinRadiusKm(center.lat, center.lng, lot.latitude, lot.longitude, radiusKm),
-  );
-}
-
-function getParkingClusterCenter(lots: ParkingLot[]): LatLng | null {
-  if (lots.length === 0) return null;
-  const totals = lots.reduce(
-    (acc, lot) => ({
-      lat: acc.lat + lot.latitude,
-      lng: acc.lng + lot.longitude,
-    }),
-    { lat: 0, lng: 0 },
-  );
-
-  return {
-    lat: totals.lat / lots.length,
-    lng: totals.lng / lots.length,
-  };
-}
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
+import { getCurrentPositionDetailed, type LatLng } from '../utils/geolocation';
+import { haversineDistanceKm } from '../utils/distance';
 
 export default function Home() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
   const [allParkingLots, setAllParkingLots] = useState<ParkingLot[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [mapOpen, setMapOpen] = useState(false);
-  const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [submittedSearch, setSubmittedSearch] = useState('');
-  const [searchLocation, setSearchLocation] = useState<LatLng | null>(null);
-  const [searching, setSearching] = useState(false);
-  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
-  const [isAddingParking, setIsAddingParking] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
-  const [returnToMyParkings, setReturnToMyParkings] = useState(false);
-
-  const requestUserLocation = useCallback(async (): Promise<LatLng | null> => {
-    const result = await getCurrentPositionDetailed();
-    if (result.ok) {
-      setUserLocation(result.coords);
-      return result.coords;
-    }
-    return null;
-  }, []);
-
-  const reloadParkingLots = useCallback(() => {
-    fetchParkingLots()
-      .then((lots) => {
-        setAllParkingLots(lots);
-        setError(null);
-      })
-      .catch(() => {
-        setError('Failed to load parking lots. Please try again.');
-      });
-  }, []);
 
   useEffect(() => {
-    let active = true;
-
-    fetchParkingLots()
-      .then((lots) => {
-        if (active) {
-          setAllParkingLots(lots);
-          setError(null);
-        }
-      })
-      .catch(() => {
-        if (active) setError('Failed to load parking lots. Please try again.');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
+    fetchParkingLots().then((lots) => setAllParkingLots(lots)).catch(() => {});
+    getCurrentPositionDetailed().then((res) => {
+      if (res.ok) setUserLocation(res.coords);
+    });
   }, []);
 
-  useEffect(() => {
-    if (searchParams.get('addParking') !== '1') return;
+  const visibleParkingLots = useMemo(() => {
+    if (!userLocation) return allParkingLots.slice(0, 5);
+    return [...allParkingLots]
+      .map((lot) => ({
+        ...lot,
+        distanceKm: haversineDistanceKm(
+          userLocation.lat,
+          userLocation.lng,
+          lot.latitude,
+          lot.longitude,
+        ),
+      }))
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 5);
+  }, [allParkingLots, userLocation]);
 
-    setMapOpen(true);
-    setIsAddingParking(true);
-    setSelectedParkingId(null);
-    setSelectedLocation(null);
-    setReturnToMyParkings(true);
-    setSearchParams({}, { replace: true });
-    void requestUserLocation();
-  }, [requestUserLocation, searchParams, setSearchParams]);
+  const handleSearchClick = () => {
+    navigate('/explore');
+  };
 
-  useEffect(() => {
-    const latParam = searchParams.get('lat');
-    const lngParam = searchParams.get('lng');
-    if (latParam === null && lngParam === null) return;
-
-    const lat = Number.parseFloat(latParam);
-    const lng = Number.parseFloat(lngParam ?? '');
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
-
-    setSearchLocation({ lat, lng });
-    setSelectedParkingId(null);
-    setSelectedLocation(null);
-    setIsAddingParking(false);
-    setMapOpen(true);
-  }, [searchParams]);
-
-  useEffect(() => {
-    const trimmed = submittedSearch.trim();
-    if (!trimmed) return;
-
-    let active = true;
-
-    geocodePlaceQuery(trimmed)
-      .then((location) => {
-        if (!active) return;
-        if (location) {
-          setSearchLocation(location);
-          setMapOpen(true);
-        } else {
-          notifyError('Could not find that location. Try another search.');
-          setSearchLocation(null);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          notifyError('Search failed. Please try again.');
-          setSearchLocation(null);
-        }
-      })
-      .finally(() => {
-        if (active) setSearching(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [submittedSearch]);
-
-  const parkingClusterCenter = useMemo(
-    () => getParkingClusterCenter(allParkingLots),
-    [allParkingLots],
-  );
-
-  const mapCenter = useMemo(
-    () => searchLocation ?? userLocation ?? parkingClusterCenter ?? DEFAULT_MAP_CENTER,
-    [parkingClusterCenter, searchLocation, userLocation],
-  );
-
-  const filteredParkingLots = useMemo(
-    () => filterLotsByRadius(allParkingLots, mapCenter, radiusKm),
-    [allParkingLots, mapCenter, radiusKm],
-  );
-
-  const visibleParkingLots = useMemo(
-    () =>
-      filteredParkingLots
-        .map((lot) => ({
-          ...lot,
-          distanceKm: haversineDistanceKm(
-            mapCenter.lat,
-            mapCenter.lng,
-            lot.latitude,
-            lot.longitude,
-          ),
-        }))
-        .sort((a, b) => a.distanceKm - b.distanceKm),
-    [filteredParkingLots, mapCenter],
-  );
-
-  const availableLots = useMemo(
-    () => allParkingLots.filter((lot) => lot.status === 'ACTIVE' && lot.availableSpaces > 0),
-    [allParkingLots],
-  );
-
-  const forYouLots = useMemo(
-    () => visibleParkingLots.filter((lot) => lot.status === 'ACTIVE').slice(0, 4),
-    [visibleParkingLots],
-  );
-
-  const cheapestLot = useMemo(
-    () =>
-      [...availableLots].sort(
-        (a, b) => a.pricePerHour - b.pricePerHour || b.availableSpaces - a.availableSpaces,
-      )[0] ?? null,
-    [availableLots],
-  );
-
-  const highAvailabilityLot = useMemo(
-    () =>
-      [...availableLots].sort(
-        (a, b) => b.availableSpaces - a.availableSpaces || a.pricePerHour - b.pricePerHour,
-      )[0] ?? null,
-    [availableLots],
-  );
-
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchQuery(value);
-    setSelectedParkingId(null);
-    if (!value.trim()) {
-      setSubmittedSearch('');
-      setSearchLocation(null);
-      setSearching(false);
-    }
-  }, []);
-
-  const openMap = useCallback(() => {
-    setMapOpen(true);
-    void requestUserLocation();
-  }, [requestUserLocation]);
-
-  const handleSearchSubmit = useCallback(() => {
-    const trimmed = searchQuery.trim();
-    setSubmittedSearch(trimmed);
-    setSelectedParkingId(null);
-    setSelectedLocation(null);
-    setIsAddingParking(false);
-    setMapOpen(true);
-    setSearching(Boolean(trimmed));
-    if (!trimmed) {
-      setSearchLocation(null);
-      void requestUserLocation();
-    }
-  }, [requestUserLocation, searchQuery]);
-
-  const handleSearchClear = useCallback(() => {
-    setSearchQuery('');
-    setSubmittedSearch('');
-    setSearchLocation(null);
-    setSelectedParkingId(null);
-    setSearching(false);
-  }, []);
-
-  const handleViewDetails = useCallback(
-    (parking: ParkingLot) => navigate(`/parking/${parking.id}`),
-    [navigate],
-  );
-
-  const handlePickParking = useCallback((parking: ParkingLot) => {
-    setSelectedParkingId(parking.id);
-    setSearchLocation({ lat: parking.latitude, lng: parking.longitude });
-    setSelectedLocation(null);
-    setIsAddingParking(false);
-    setMapOpen(true);
-  }, []);
-
-  const startAddParking = useCallback(() => {
-    setMapOpen(true);
-    setIsAddingParking(true);
-    setSelectedParkingId(null);
-    setSelectedLocation(null);
-    setReturnToMyParkings(false);
-    void requestUserLocation();
-  }, [requestUserLocation]);
-
-  const cancelAddParking = useCallback(() => {
-    setIsAddingParking(false);
-    setSelectedLocation(null);
-    setReturnToMyParkings(false);
-  }, []);
-
-  const handleLocationSelect = useCallback((location: MapLocation) => {
-    setSelectedLocation(location);
-  }, []);
-
-  const handleParkingCreated = useCallback(() => {
-    setSelectedLocation(null);
-    setIsAddingParking(false);
-    reloadParkingLots();
-    if (returnToMyParkings) {
-      navigate('/my-parkings');
-      return;
-    }
-    notifySuccess('Parking lot created successfully.');
-  }, [navigate, reloadParkingLots, returnToMyParkings]);
-
-  if (!mapOpen) {
-    return (
-      <AppLayout>
-        <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-24 pt-5 sm:px-6 md:pb-8">
-          {loading ? (
-            <div className="flex flex-1 items-center justify-center py-24">
-              <Spinner className="h-8 w-8 text-emerald-600" />
-            </div>
-          ) : error ? (
-            <div className="mt-4">
-              <Alert variant="error" message={error} />
-            </div>
-          ) : (
-            <>
-              <section className="rounded-[2rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-900/15 sm:p-8">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-emerald-300">
-                      {getGreeting()}, {user?.fullName?.split(' ')[0] ?? 'there'}
-                    </p>
-                    <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
-                      Where to?
-                    </h1>
-                  </div>
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-emerald-200 ring-1 ring-white/10">
-                    <SquareParking className="h-6 w-6" aria-hidden="true" />
-                  </span>
-                </div>
-
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    handleSearchSubmit();
-                  }}
-                  className="mt-7"
-                >
-                  <label htmlFor="home-destination" className="sr-only">
-                    Where to?
-                  </label>
-                  <div className="flex items-center gap-3 rounded-2xl bg-white p-2 shadow-lg shadow-black/20">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                      <Search className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <input
-                      id="home-destination"
-                      type="search"
-                      value={searchQuery}
-                      onChange={(event) => handleSearchChange(event.target.value)}
-                      placeholder="Search destination or area"
-                      className="min-h-11 min-w-0 flex-1 bg-transparent text-base font-bold text-slate-950 outline-none placeholder:text-slate-400"
-                    />
-                    <button
-                      type="submit"
-                      disabled={searching}
-                      className="flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white transition-colors hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:opacity-60"
-                    >
-                      {searching ? 'Searching' : 'Go'}
-                    </button>
-                  </div>
-                </form>
-
-                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <QuickAction
-                    icon={LocateFixed}
-                    label="Near me"
-                    value={`${availableLots.length} active`}
-                    onClick={openMap}
-                  />
-                  <QuickAction
-                    icon={IndianRupee}
-                    label="Best price"
-                    value={cheapestLot ? `₹${cheapestLot.pricePerHour}/hr` : 'Check map'}
-                    onClick={() => (cheapestLot ? handlePickParking(cheapestLot) : openMap())}
-                  />
-                  <QuickAction
-                    icon={ShieldCheck}
-                    label="Most slots"
-                    value={highAvailabilityLot ? `${highAvailabilityLot.availableSpaces} free` : 'Check map'}
-                    onClick={() =>
-                      highAvailabilityLot ? handlePickParking(highAvailabilityLot) : openMap()
-                    }
-                  />
-                  <QuickAction
-                    icon={MapIcon}
-                    label="Open map"
-                    value="Browse all"
-                    onClick={openMap}
-                  />
-                </div>
-              </section>
-
-              <section className="mt-7">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <h2 className="text-xl font-black text-slate-950">For You</h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Smart picks based on available spaces and distance.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={openMap}
-                    className="hidden min-h-11 rounded-full bg-white px-4 text-sm font-bold text-slate-800 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:inline-flex sm:items-center"
-                  >
-                    View map
-                  </button>
-                </div>
-
-                <div className="pm-scrollbar-none mt-4 flex gap-4 overflow-x-auto pb-2">
-                  {forYouLots.map((parking) => (
-                    <ForYouParkingCard
-                      key={parking.id}
-                      parking={parking}
-                      onOpen={() => handlePickParking(parking)}
-                      onReserve={() => handleViewDetails(parking)}
-                    />
-                  ))}
-                </div>
-              </section>
-
-              <section className="mt-5 grid gap-4 md:grid-cols-3">
-                <InfoPanel
-                  icon={Clock3}
-                  title="Fast reservations"
-                  copy="Hold a spot quickly and manage live bookings from one place."
-                />
-                <InfoPanel
-                  icon={Navigation}
-                  title="Map-ready"
-                  copy="Open the map when you need exact location, distance, and slot context."
-                />
-                <InfoPanel
-                  icon={CarFront}
-                  title="Vehicle-aware"
-                  copy="Use your saved vehicles when confirming a parking reservation."
-                />
-              </section>
-
-              <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  onClick={openMap}
-                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition-colors hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:max-w-xs"
-                >
-                  <MapIcon className="h-5 w-5" aria-hidden="true" />
-                  Open map
-                </button>
-                <button
-                  type="button"
-                  onClick={startAddParking}
-                  className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-black text-slate-900 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:max-w-xs"
-                >
-                  <Plus className="h-5 w-5" aria-hidden="true" />
-                  Add parking
-                </button>
-              </div>
-            </>
-          )}
-        </main>
-      </AppLayout>
-    );
-  }
+  const handleQuickAction = (action: string) => {
+    if (action === 'explore') navigate('/explore');
+    else if (action === 'bookings') navigate('/bookings');
+    else if (action === 'vehicles') navigate('/my-vehicles');
+    // The add-parking flow lives on the map (you pin the location first), so
+    // `addParking=1` is only ever handled by /explore.
+    else if (action === 'list') navigate('/explore?addParking=1');
+  };
 
   return (
     <AppLayout maxWidth="max-w-none">
-      <div className="relative min-h-[calc(100svh-57px)] overflow-hidden bg-slate-100 md:min-h-[calc(100vh-65px)]">
-        {loading ? (
-          <div className="absolute inset-0 z-30 flex items-center justify-center bg-white">
-            <Spinner className="h-8 w-8 text-emerald-600" />
-          </div>
-        ) : error ? (
-          <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-50 p-6">
-            <Alert variant="error" message={error} />
-          </div>
-        ) : (
-          <>
-            <div className="absolute inset-0">
-              <ParkingMap
-                parkingLots={visibleParkingLots}
-                selectedParkingId={selectedParkingId}
-                onSelect={setSelectedParkingId}
-                mapCenter={mapCenter}
-                userLocation={userLocation}
-                isAddingParking={isAddingParking}
-                selectedLocation={selectedLocation}
-                onLocationSelect={handleLocationSelect}
-              />
+      <main className="min-h-screen bg-[var(--pm-color-page)] pb-32 pt-2 md:pt-6">
+        <div className="mx-auto max-w-lg px-4 sm:px-6 md:max-w-3xl">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6 md:hidden">
+            <div className="flex items-center gap-2">
+              <img src="/logo.jpg" alt="ParkMitra" className="h-8 w-8 rounded-lg object-cover" />
+              <span className="text-xl font-bold tracking-tight text-white">ParkMitra</span>
             </div>
+          </div>
 
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6">
-              <div className="pointer-events-auto mx-auto flex max-w-3xl gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMapOpen(false);
-                    setIsAddingParking(false);
-                    setSelectedLocation(null);
-                  }}
-                  aria-label="Back to Home"
-                  className="pm-touch-target flex shrink-0 items-center justify-center rounded-2xl bg-white/95 text-slate-800 shadow-lg shadow-slate-900/10 ring-1 ring-slate-200 backdrop-blur-xl transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-                >
-                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                </button>
-                <div className="min-w-0 flex-1 rounded-2xl bg-white/95 p-3 shadow-lg shadow-slate-900/10 ring-1 ring-slate-200 backdrop-blur-xl">
-                  <SearchBar
-                    value={searchQuery}
-                    onChange={handleSearchChange}
-                    onSubmit={handleSearchSubmit}
-                    onClear={handleSearchClear}
-                    searching={searching}
-                    compact
-                  />
-                </div>
+          {/* Main Search Area */}
+          <div 
+            onClick={handleSearchClick}
+            className="flex items-center justify-between gap-3 rounded-[2rem] bg-[var(--pm-color-surface-raised)] p-3 pl-5 pm-neumorphic cursor-text mb-4"
+          >
+            <div className="flex items-center gap-3">
+              <Search className="h-6 w-6 text-white font-bold" />
+              <span className="text-lg font-bold text-white">Where to?</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="flex items-center gap-1.5 rounded-full bg-[var(--pm-color-surface)] px-3 py-1.5 text-sm font-semibold text-[var(--pm-color-muted)] transition-colors pm-neumorphic-sm pm-neumorphic-active">
+                <Clock3 className="h-4 w-4" />
+                Later
+              </button>
+            </div>
+          </div>
+
+          {/* Recent Destination Card */}
+          <div 
+            onClick={handleSearchClick}
+            className="flex items-center justify-between rounded-2xl bg-[var(--pm-color-surface)] p-4 pm-neumorphic pm-neumorphic-active mb-8 cursor-pointer transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--pm-color-surface-raised)]">
+                <Clock className="h-5 w-5 text-[var(--pm-color-muted)]" />
               </div>
-
-              <div className="pointer-events-auto mx-auto mt-3 flex max-w-3xl justify-end">
-                {isAddingParking ? (
-                  <button
-                    type="button"
-                    onClick={cancelAddParking}
-                    className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-slate-300 bg-white/95 px-4 text-sm font-bold text-slate-700 shadow-lg shadow-slate-900/10 backdrop-blur-xl transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-                  >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                    Cancel
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={startAddParking}
-                    className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-slate-950 px-4 text-sm font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-                  >
-                    <Plus className="h-4 w-4" aria-hidden="true" />
-                    Add parking
-                  </button>
-                )}
+              <div>
+                <h3 className="text-base font-bold text-white">Central Mall Parking</h3>
+                <p className="text-sm text-[var(--pm-color-muted)]">MG Road, Bengaluru</p>
               </div>
             </div>
+            <ChevronRight className="h-5 w-5 text-[var(--pm-color-muted)]" />
+          </div>
 
-            <section
-              aria-label={isAddingParking ? 'Add parking' : 'Nearby parking'}
-              className="pm-sheet absolute inset-x-0 bottom-[calc(var(--pm-bottom-nav-height)+env(safe-area-inset-bottom))] z-20 rounded-t-3xl border-t border-slate-200 px-4 pb-4 pt-3 md:bottom-6 md:left-6 md:right-auto md:w-[420px] md:rounded-2xl md:border md:p-4"
-            >
-              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200 md:hidden" />
+          {/* Quick Actions */}
+          <div className="mb-8">
+            <h2 className="mb-4 text-xl font-bold text-white">Find parking quickly</h2>
+            {/* Grid of circular buttons */}
+            <div className="grid grid-cols-4 gap-y-6 gap-x-2">
+              <QuickActionButton icon={Search} label="Find Park" onClick={() => handleQuickAction('explore')} badge="Fast" />
+              <QuickActionButton icon={Compass} label="Nearby" onClick={() => handleQuickAction('explore')} />
+              <QuickActionButton icon={CalendarDays} label="Bookings" onClick={() => handleQuickAction('bookings')} />
+              
+              <QuickActionButton icon={Car} label="Vehicles" onClick={() => handleQuickAction('vehicles')} />
+              <QuickActionButton icon={MapPin} label="Saved" onClick={() => {}} />
+              <QuickActionButton icon={AlertTriangle} label="Report" onClick={() => {}} />
+              <QuickActionButton icon={PlusCircle} label="List Space" onClick={() => handleQuickAction('list')} badge="New" />
+            </div>
+          </div>
 
-              {isAddingParking ? (
-                <div>
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-950">Add parking</h2>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Tap the map to pin the parking location.
-                      </p>
-                    </div>
-                    <SquareParking
-                      className="mt-1 h-5 w-5 shrink-0 text-emerald-600"
-                      aria-hidden="true"
-                    />
-                  </div>
-                  <div className="pm-scrollbar-none max-h-[42vh] overflow-y-auto pb-1 pr-1 md:max-h-[60vh]">
-                    <AddParkingForm
-                      selectedLocation={selectedLocation}
-                      onCreated={handleParkingCreated}
-                      onCancel={cancelAddParking}
-                      embedded
-                    />
-                  </div>
+          {/* Nearby Parking Section */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">Nearby parking</h2>
+              <button onClick={() => handleSearchClick()} className="text-sm font-semibold text-[var(--pm-color-action)]">View Map</button>
+            </div>
+            <div className="pm-scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-4">
+              {visibleParkingLots.length === 0 ? (
+                <div className="w-full rounded-2xl border border-dashed border-[var(--pm-color-border)] p-6 text-center">
+                  <p className="text-[var(--pm-color-muted)]">No parking spots found nearby.</p>
                 </div>
               ) : (
-                <div>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-950">Nearby parking</h2>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {visibleParkingLots.length} of {allParkingLots.length} lots in range
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
-                      {radiusKm} km
-                    </span>
-                  </div>
-
-                  <div className="mt-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                    <DistanceFilter
-                      variant="inline"
-                      radiusKm={radiusKm}
-                      onChange={setRadiusKm}
-                      visibleCount={visibleParkingLots.length}
-                      totalCount={allParkingLots.length}
-                    />
-                  </div>
-
-                  {visibleParkingLots.length === 0 ? (
-                    <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
-                      <p className="text-sm font-semibold text-slate-800">
-                        No parking lots found here
-                      </p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Try another area or increase the search radius.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="pm-scrollbar-none mt-4 max-h-[34vh] space-y-3 overflow-y-auto pb-1 pr-1 md:max-h-[58vh]">
-                      {visibleParkingLots.map((parking) => (
-                        <ParkingCard
-                          key={parking.id}
-                          parking={parking}
-                          selected={parking.id === selectedParkingId}
-                          onSelect={(lot) => setSelectedParkingId(lot.id)}
-                          onViewDetails={handleViewDetails}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
+                visibleParkingLots.map((lot) => (
+                  <NearbyParkingCard key={lot.id} lot={lot} onClick={() => navigate(`/parking/${lot.id}`)} />
+                ))
               )}
-            </section>
-          </>
-        )}
-      </div>
+            </div>
+          </div>
+
+          {/* Trust and Availability Card */}
+          <div className="flex items-start gap-4 rounded-2xl bg-[var(--pm-color-surface)] p-5 pm-neumorphic mb-8">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--pm-color-action-soft)]">
+              <ShieldCheck className="h-5 w-5 text-[var(--pm-color-action)]" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Parking availability you can trust</h3>
+              <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
+                Live availability updates from verified parking partners.
+              </p>
+              <button className="mt-2 text-sm font-semibold text-[var(--pm-color-action)]">Learn more</button>
+            </div>
+          </div>
+
+        </div>
+      </main>
     </AppLayout>
   );
 }
 
-function QuickAction({
-  icon: Icon,
-  label,
-  value,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  onClick: () => void;
-}) {
+function QuickActionButton({ icon: Icon, label, onClick, badge }: { icon: LucideIcon, label: string, onClick: () => void, badge?: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="min-h-24 rounded-2xl bg-white/10 p-3 text-left ring-1 ring-white/10 transition-colors hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
-    >
-      <Icon className="h-5 w-5 text-emerald-300" aria-hidden="true" />
-      <span className="mt-3 block text-sm font-black text-white">{label}</span>
-      <span className="mt-1 block text-xs font-semibold text-slate-300">{value}</span>
+    <button onClick={onClick} className="group relative flex flex-col items-center gap-2 focus:outline-none">
+      {badge && (
+        <span className="absolute -top-2 -right-1 z-10 rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">
+          {badge}
+        </span>
+      )}
+      <div className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[var(--pm-color-surface-raised)] transition-all pm-neumorphic pm-neumorphic-active">
+        <Icon className="h-6 w-6 text-white" />
+      </div>
+      <span className="text-xs font-semibold text-white">{label}</span>
     </button>
   );
 }
 
-function ForYouParkingCard({
-  parking,
-  onOpen,
-  onReserve,
-}: {
-  parking: ParkingLot;
-  onOpen: () => void;
-  onReserve: () => void;
-}) {
+function NearbyParkingCard({ lot, onClick }: { lot: ParkingLot, onClick: () => void }) {
   return (
-    <article className="w-[280px] shrink-0 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate text-base font-black text-slate-950">{parking.name}</h3>
-          <p className="mt-1 flex items-center gap-1 truncate text-sm text-slate-500">
-            <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="truncate">{parking.address}</span>
-          </p>
-        </div>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-          {parking.distanceKm === undefined ? 'Near' : formatDistanceKm(parking.distanceKm)}
-        </span>
+    <article 
+      onClick={onClick}
+      className="w-[280px] shrink-0 rounded-2xl bg-[var(--pm-color-surface)] overflow-hidden pm-neumorphic pm-neumorphic-active cursor-pointer transition-all"
+    >
+      <div className="h-32 bg-[var(--pm-color-surface-raised)]">
+        {lot.photos?.[0] ? (
+          <img src={lot.photos[0]} alt={lot.name} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-[var(--pm-color-surface-raised)]">
+            <Compass className="h-8 w-8 text-[var(--pm-color-muted)]" />
+          </div>
+        )}
       </div>
-
-      <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-slate-500">
-        <div>
-          <p>Price</p>
-          <p className="mt-1 text-sm font-black text-slate-950">₹{parking.pricePerHour}/hr</p>
+      <div className="p-4">
+        <h3 className="truncate text-base font-bold text-white">{lot.name}</h3>
+        <p className="text-sm text-[var(--pm-color-muted)]">
+          {lot.distanceKm !== undefined ? `${lot.distanceKm.toFixed(1)} km away` : lot.address}
+        </p>
+        <div className="mt-3 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-[var(--pm-color-muted)]">Price</p>
+            <p className="text-sm font-bold text-white">₹{lot.pricePerHour}/hr</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-[var(--pm-color-muted)]">Spaces</p>
+            <p className="text-sm font-bold text-[var(--pm-color-action)]">{lot.availableSpaces} available</p>
+          </div>
         </div>
-        <div>
-          <p>Slots</p>
-          <p className="mt-1 text-sm font-black text-slate-950">
-            {parking.availableSpaces}/{parking.totalSpaces}
-          </p>
-        </div>
-        <div>
-          <p>Status</p>
-          <p className="mt-1 text-sm font-black text-emerald-700">Open</p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          onClick={onOpen}
-          className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 px-3 text-sm font-black text-slate-900 transition-colors hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-        >
-          Map
-        </button>
-        <button
-          type="button"
-          onClick={onReserve}
-          className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-950 px-3 text-sm font-black text-white transition-colors hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-        >
-          Reserve
+        <button className="mt-4 w-full rounded-xl bg-[var(--pm-color-surface-raised)] py-2 text-sm font-bold text-[var(--pm-color-action)] transition-all pm-neumorphic-sm pm-neumorphic-active">
+          Book Now
         </button>
       </div>
-    </article>
-  );
-}
-
-function InfoPanel({
-  icon: Icon,
-  title,
-  copy,
-}: {
-  icon: LucideIcon;
-  title: string;
-  copy: string;
-}) {
-  return (
-    <article className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-        <Icon className="h-5 w-5" aria-hidden="true" />
-      </div>
-      <h3 className="mt-4 text-base font-black text-slate-950">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-slate-500">{copy}</p>
     </article>
   );
 }

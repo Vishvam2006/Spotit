@@ -38,7 +38,7 @@ function OccupancyBar({
       </p>
       <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-100">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500"
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />
       </div>
@@ -84,7 +84,7 @@ export default function OwnerDashboard() {
               type="button"
               onClick={() => manualRefresh()}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
@@ -100,7 +100,7 @@ export default function OwnerDashboard() {
 
         {loading && !dashboard ? (
           <div className="flex items-center justify-center py-24">
-            <Spinner className="h-8 w-8 text-blue-600" />
+            <Spinner className="h-8 w-8 text-emerald-600" />
           </div>
         ) : (
           <>

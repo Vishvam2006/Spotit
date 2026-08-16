@@ -247,7 +247,7 @@ describe('QA Audit — Check-in verification', () => {
 
     await prisma.booking.update({
       where: { id: booking.id },
-      data: { reservedUntil: new Date(Date.now() - 1000) },
+      data: { checkInDeadline: new Date(Date.now() - 1000) },
     });
 
     const res = await checkIn(user.token, booking.id, atLot());
@@ -360,7 +360,8 @@ describe('QA Audit — Check-out verification', () => {
       ?.availableSpaces;
 
     await completeCheckOut(user.token, booking.id);
-    await checkOut(user.token, booking.id, farFromLot(500)).expect(200);
+    const repeated = await checkOut(user.token, booking.id, farFromLot(500));
+    expect(repeated.status).toBe(200);
 
     const spacesAfter = (await prisma.parkingLot.findUnique({ where: { id: lot.id } }))
       ?.availableSpaces;

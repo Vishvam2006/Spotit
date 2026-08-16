@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
 import authRoutes from './routes/auth.routes';
@@ -19,7 +20,23 @@ import { VerificationError } from './modules/verification/verification.service';
 
 const app = express();
 
-app.use(cors());
+app.use(helmet());
+
+const allowedOrigins = (
+  process.env.CORS_ORIGINS ??
+  'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174'
+)
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }),
+);
 app.use(express.json({ limit: '50mb' }));
 
 app.get('/', (_req: Request, res: Response) => {
@@ -48,6 +65,25 @@ function isBodyParseError(err: unknown): err is SyntaxError & { status: number; 
     (err as { status?: number }).status === 400 &&
     (err as { type?: string }).type === 'entity.parse.failed'
   );
+}
+
+function sanitizeErrorForLog(err: Error): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    name: err.name,
+    message: err.message,
+  };
+  if (process.env.NODE_ENV !== 'production') {
+    out.stack = err.stack;
+  }
+  return out;
+}
+
+function logError(where: string, err: unknown): void {
+  if (!(err instanceof Error)) {
+    console.error(`[App] Unhandled error in ${where}:`, err);
+    return;
+  }
+  console.error(`[App] Unhandled error in ${where}:`, sanitizeErrorForLog(err));
 }
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
@@ -162,7 +198,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       return;
     }
 
-    console.error('[App] Prisma error:', err.code, err.meta, err.message);
+    console.error('[App] Prisma error:', err.code, err.meta?.target, err.message);
     res.status(500).json({
       success: false,
       message: 'A database error occurred. Please try again.',
@@ -190,7 +226,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     return;
   }
 
-  console.error('[App] Unhandled error:', err);
+  logError('error middleware', err);
   res.status(500).json({
     success: false,
     message: 'Something went wrong on our end. Please try again.',

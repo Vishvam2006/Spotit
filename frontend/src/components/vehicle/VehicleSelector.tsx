@@ -28,7 +28,7 @@ export default function VehicleSelector({
           <button
             type="button"
             onClick={onManage}
-            className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <Plus className="h-4 w-4" />
             Add vehicle
@@ -45,7 +45,7 @@ export default function VehicleSelector({
         <button
           type="button"
           onClick={onManage}
-          className="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
         >
           Manage vehicles
         </button>
@@ -59,9 +59,9 @@ export default function VehicleSelector({
               type="button"
               disabled={disabled}
               onClick={() => onChange(vehicle.id)}
-              className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 ${
+              className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 ${
                 selected
-                  ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600'
+                  ? 'border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600'
                   : 'border-slate-300 bg-white hover:bg-slate-50'
               }`}
             >
