@@ -149,7 +149,7 @@ export default function MyVehicles() {
               Add the vehicles you park with — one photo is required for each.
             </p>
           </div>
-          {!adding && !editing && (
+          {!adding && !editing && vehicles.length > 0 && (
             <Button className="max-w-48" onClick={openAdd}>
               + Add vehicle
             </Button>

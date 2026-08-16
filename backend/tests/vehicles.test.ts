@@ -533,3 +533,32 @@ describe('vehicle image upload signature', () => {
     expect(JSON.stringify(data)).not.toContain('api_secret');
   });
 });
+
+describe('parking photo upload signature', () => {
+  beforeEach(async () => {
+    await resetDb();
+    isCloudinaryConfiguredMock.mockReturnValue(true);
+  });
+
+  it('requires authentication', async () => {
+    await request(app).post('/api/uploads/parking-photo-signature').expect(401);
+  });
+
+  it('returns signed upload parameters scoped to the owner folder', async () => {
+    const { owner } = await setup();
+
+    const res = await request(app)
+      .post('/api/uploads/parking-photo-signature')
+      .set(auth(owner.token))
+      .expect(200);
+
+    const { data } = res.body;
+    expect(data.cloudName).toBeTruthy();
+    expect(data.apiKey).toBeTruthy();
+    expect(data.signature).toBeTruthy();
+    expect(data.timestamp).toBeTypeOf('number');
+    expect(data.folder).toBe(`parkmitra/parking-lots/${owner.user.id}`);
+    expect(data.resourceType).toBe('image');
+    expect(JSON.stringify(data)).not.toContain('api_secret');
+  });
+});

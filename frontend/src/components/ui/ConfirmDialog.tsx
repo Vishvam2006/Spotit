@@ -21,7 +21,7 @@ export default function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      className="fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="presentation"
       onClick={onCancel}
     >
@@ -29,7 +29,7 @@ export default function ConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-slate-200"
+        className="pm-sheet w-full rounded-t-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] ring-1 ring-slate-200 sm:max-w-md sm:rounded-2xl sm:pb-6"
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id="confirm-dialog-title" className="text-lg font-bold text-slate-900">
@@ -40,7 +40,8 @@ export default function ConfirmDialog({
           <Button
             type="button"
             variant="secondary"
-            className="sm:w-auto"
+            fullWidth={false}
+            className="w-full sm:w-auto"
             onClick={onCancel}
             disabled={loading}
           >
@@ -48,7 +49,8 @@ export default function ConfirmDialog({
           </Button>
           <Button
             type="button"
-            className="sm:w-auto"
+            fullWidth={false}
+            className="w-full sm:w-auto"
             loading={loading}
             onClick={onConfirm}
           >

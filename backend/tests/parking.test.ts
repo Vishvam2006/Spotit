@@ -26,7 +26,7 @@ describe('parking lots', () => {
     expect(res.body.data.ownerId).toBe(user.user.id);
   });
 
-  it('requires at least 2 photos when creating a lot', async () => {
+  it('requires at least 1 photo when creating a lot', async () => {
     const user = await createUser('user@example.com', 'USER');
 
     const res = await request(app)
@@ -38,11 +38,11 @@ describe('parking lots', () => {
         city: 'Bengaluru',
         latitude: 12.9756,
         longitude: 77.6068,
-        pricePerHour: 40,
-        totalSpaces: 10,
-        availableSpaces: 5,
-        photos: [testPhotos[0]],
-      })
+      pricePerHour: 40,
+      totalSpaces: 10,
+      availableSpaces: 5,
+      photos: [],
+    })
       .expect(400);
 
     expect(res.body.errors.fieldErrors.photos).toBeDefined();

@@ -12,12 +12,21 @@ export default function ParkingPopup({
   onClose,
   onViewDetails,
 }: ParkingPopupProps) {
+  const imageUrl = parking.photos?.[0] ?? parking.imageUrl;
+
   return (
     <InfoWindow
       position={{ lat: parking.latitude, lng: parking.longitude }}
       onCloseClick={onClose}
     >
       <div className="min-w-56">
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt={parking.name}
+            className="mb-2 h-24 w-full rounded-md object-cover"
+          />
+        )}
         <h3 className="text-sm font-semibold text-slate-900">{parking.name}</h3>
         <p className="mt-0.5 text-xs text-slate-500">{parking.address}</p>
         <dl className="mt-2 space-y-1 text-xs text-slate-700">
