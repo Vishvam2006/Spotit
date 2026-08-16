@@ -32,6 +32,8 @@ export interface Booking {
   estimatedAmount: number;
   finalAmount: number | null;
   status: BookingStatus;
+  cancellationReason: string | null;
+  cancelledAt: string | null;
   lastLocationAt: string | null;
   lastSeenAt: string | null;
   createdAt: string;

@@ -91,7 +91,7 @@ export async function updateParkingLot(req: Request, res: Response) {
   const id = String(req.params.id);
 
   try {
-    const parkingLot = await parkingService.updateParking(
+    const updated = await parkingService.updateParking(
       id,
       ownerId,
       result.data,
@@ -100,7 +100,10 @@ export async function updateParkingLot(req: Request, res: Response) {
 
     res.json({
       success: true,
-      data: parkingLot,
+      data: updated.parking,
+      ...(updated.cancelledBookings > 0
+        ? { cancelledBookings: updated.cancelledBookings }
+        : {}),
     });
   } catch (error) {
     if (error instanceof ParkingError) {

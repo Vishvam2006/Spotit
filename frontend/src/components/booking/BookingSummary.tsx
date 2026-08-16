@@ -2,6 +2,7 @@ import type { Booking } from '../../types/booking';
 import { formatDateTime, formatINR } from '../../utils/format';
 import { getBookingStatusStyles } from '../../utils/bookingStatus';
 import VehicleDetails from '../vehicle/VehicleDetails';
+import SmartSuggest from './SmartSuggest';
 
 interface BookingSummaryProps {
   booking: Booking;
@@ -39,6 +40,15 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
           {booking.status}
         </span>
       </div>
+
+      {booking.status === 'CANCELLED' && booking.cancellationReason === 'PARKING_DEACTIVATED' && (
+        <div className="mx-6 mt-4 flex items-start gap-2 rounded-xl bg-red-50 p-4 text-sm text-red-700 ring-1 ring-red-100">
+          <span className="font-semibold">Booking cancelled.</span>
+          <span>
+            This booking was cancelled because the parking owner deactivated this location.
+          </span>
+        </div>
+      )}
 
       <dl className="grid gap-3 p-6 text-sm sm:grid-cols-2">
         <div className="sm:col-span-2">
@@ -90,6 +100,12 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
           <dd className="font-semibold text-slate-900">{formatINR(amount)}</dd>
         </div>
       </dl>
+
+      {booking.status === 'CANCELLED' && booking.cancellationReason === 'PARKING_DEACTIVATED' && (
+        <div className="px-6 pb-6">
+          <SmartSuggest booking={booking} />
+        </div>
+      )}
     </div>
   );
 }

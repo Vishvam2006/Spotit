@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type ParkingLot } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { cloudinary } from "../../config/cloudinary";
 import { isCloudinaryConfigured } from "../../config/cloudinaryHelpers";
@@ -163,7 +163,7 @@ export async function updateParking(
   ownerId: string,
   data: UpdateParkingInput,
   isAdmin = false
-) {
+): Promise<{ parking: ParkingLot; cancelledBookings: number }> {
   const parking = await prisma.parkingLot.findUnique({
     where: { id },
   });
@@ -204,10 +204,73 @@ export async function updateParking(
     updateData = { ...updateData, photos: resolved.photos, imageUrl: resolved.imageUrl };
   }
 
-  return prisma.parkingLot.update({
-    where: { id },
-    data: updateData,
+  const deactivating = updateData.status === "INACTIVE" && parking.status === "ACTIVE";
+
+  if (!deactivating) {
+    const updatedParking = await prisma.parkingLot.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return { parking: updatedParking, cancelledBookings: 0 };
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.parkingLot.updateMany({
+      where: { id, status: "ACTIVE" },
+      data: updateData,
+    });
+
+    if (updated.count !== 1) {
+      // A concurrent deactivation already flipped the lot to INACTIVE.
+      // Idempotent: do not cancel bookings again or touch counters again.
+      const current = await tx.parkingLot.findUniqueOrThrow({ where: { id } });
+      return { parking: current, cancelledBookings: 0 };
+    }
+
+    const cancelledBookings = await cancelUpcomingBookingsForDeactivation(tx, id);
+
+    const current = await tx.parkingLot.findUniqueOrThrow({ where: { id } });
+    return { parking: current, cancelledBookings };
   });
+}
+
+async function cancelUpcomingBookingsForDeactivation(
+  tx: Prisma.TransactionClient,
+  parkingId: string,
+): Promise<number> {
+  const now = new Date();
+
+  const affected = await tx.booking.findMany({
+    where: {
+      parkingLotId: parkingId,
+      status: "RESERVED",
+      checkInDeadline: { gt: now },
+    },
+    select: { id: true },
+  });
+
+  let cancelled = 0;
+  for (const booking of affected) {
+    const result = await tx.booking.updateMany({
+      where: { id: booking.id, status: "RESERVED" },
+      data: {
+        status: "CANCELLED",
+        cancellationReason: "PARKING_DEACTIVATED",
+        cancelledAt: now,
+      },
+    });
+
+    if (result.count !== 1) continue;
+
+    cancelled += 1;
+    await tx.parkingLot.update({
+      where: { id: parkingId },
+      data: { availableSpaces: { increment: 1 } },
+    });
+  }
+
+  return cancelled;
 }
 
 export async function deleteParking(

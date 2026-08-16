@@ -243,6 +243,8 @@ export interface DirectBookingInput {
   checkOutTime?: Date | null;
   estimatedAmount?: number;
   finalAmount?: number | null;
+  cancellationReason?: string | null;
+  cancelledAt?: Date | null;
   vehicleId?: string | null;
   vehicleRegistration?: string;
   vehicleType?: 'TWO_WHEELER' | 'FOUR_WHEELER';
@@ -283,6 +285,9 @@ export async function createBooking(
       checkOutTime: data.checkOutTime ?? null,
       estimatedAmount,
       finalAmount: data.finalAmount ?? null,
+      cancellationReason:
+        data.cancellationReason === undefined ? null : data.cancellationReason,
+      cancelledAt: data.cancelledAt === undefined ? null : data.cancelledAt,
     },
     select: { id: true, status: true },
   });

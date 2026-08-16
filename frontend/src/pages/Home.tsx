@@ -145,6 +145,23 @@ export default function Home() {
   }, [requestUserLocation, searchParams, setSearchParams]);
 
   useEffect(() => {
+    const latParam = searchParams.get('lat');
+    const lngParam = searchParams.get('lng');
+    if (latParam === null && lngParam === null) return;
+
+    const lat = Number.parseFloat(latParam);
+    const lng = Number.parseFloat(lngParam ?? '');
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+
+    setSearchLocation({ lat, lng });
+    setSelectedParkingId(null);
+    setSelectedLocation(null);
+    setIsAddingParking(false);
+    setMapOpen(true);
+  }, [searchParams]);
+
+  useEffect(() => {
     const trimmed = submittedSearch.trim();
     if (!trimmed) return;
 

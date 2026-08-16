@@ -713,9 +713,10 @@ export async function cancelBooking(
   bookingId: string,
 ): Promise<BookingWithLot> {
   return prisma.$transaction(async (tx) => {
+    const now = new Date();
     const updated = await tx.booking.updateMany({
       where: { id: bookingId, userId, status: 'RESERVED' },
-      data: { status: 'CANCELLED' },
+      data: { status: 'CANCELLED', cancellationReason: 'USER_CANCELLED', cancelledAt: now },
     });
 
     if (updated.count === 0) {
