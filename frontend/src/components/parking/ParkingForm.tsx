@@ -166,13 +166,13 @@ export default function ParkingForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+      className="rounded-2xl bg-[var(--pm-color-surface)] p-6 shadow-sm ring-1 ring-[var(--pm-color-border)]"
     >
       <div>
-        <h2 className="text-lg font-bold text-slate-900">
+        <h2 className="text-lg font-bold text-[var(--pm-color-text)]">
           {mode === 'create' ? 'Add parking' : 'Edit parking'}
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
           {mode === 'create'
             ? 'Create a new parking lot for your account.'
             : 'Update the details for this parking lot.'}
@@ -199,7 +199,7 @@ export default function ParkingForm({
         <div className="sm:col-span-2">
           <label
             htmlFor="parking-description"
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-medium text-[var(--pm-color-text)]"
           >
             Description
           </label>
@@ -209,7 +209,7 @@ export default function ParkingForm({
             onChange={(event) => updateField('description', event.target.value)}
             rows={3}
             placeholder="Optional description"
-            className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="mt-1.5 w-full rounded-lg border border-[var(--pm-color-border)] px-3.5 py-2.5 text-sm text-[var(--pm-color-text)] placeholder:text-[var(--pm-color-muted)] focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
@@ -286,13 +286,13 @@ export default function ParkingForm({
         />
 
         <div className="flex items-end">
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <label className="flex items-center gap-2 text-sm font-medium text-[var(--pm-color-text)]">
             <input
               id="parking-is-active"
               type="checkbox"
               checked={form.isActive}
               onChange={(event) => updateField('isActive', event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-[var(--pm-color-border)] text-emerald-600 focus:ring-emerald-500"
             />
             Active parking lot
           </label>

@@ -110,8 +110,8 @@ export default function Bookings() {
   return (
     <AppLayout>
       <main className="mx-auto max-w-4xl px-4 pt-8 pb-24 sm:px-6 md:pb-8">
-        <h1 className="text-2xl font-bold text-slate-900">My Bookings</h1>
-        <p className="mt-1 text-sm text-slate-500">Reserve, check in, and manage your parking.</p>
+        <h1 className="text-2xl font-bold text-[var(--pm-color-text)]">My Bookings</h1>
+        <p className="mt-1 text-sm text-[var(--pm-color-muted)]">Reserve, check in, and manage your parking.</p>
 
         {actionError && (
           <div className="mt-5">
@@ -128,8 +128,8 @@ export default function Bookings() {
             <Alert variant="error" message={error} />
           </div>
         ) : bookings.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-            <p className="text-sm text-slate-500">You have no bookings yet.</p>
+          <div className="mt-6 rounded-2xl border border-dashed border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface)] p-10 text-center">
+            <p className="text-sm text-[var(--pm-color-muted)]">You have no bookings yet.</p>
             <Link to="/" className="mt-4 block">
               <Button className="mx-auto max-w-xs">Find a parking spot</Button>
             </Link>
@@ -139,7 +139,7 @@ export default function Bookings() {
             <div
               role="tablist"
               aria-label="Booking status"
-              className="mt-6 flex gap-1 rounded-xl bg-slate-100 p-1"
+              className="mt-6 flex gap-1 rounded-xl bg-[var(--pm-color-surface-raised)] p-1"
             >
               {TABS.map((tab) => {
                 const isActive = tab.key === activeTab;
@@ -152,8 +152,8 @@ export default function Bookings() {
                     onClick={() => setSelectedTab(tab.key)}
                     className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                       isActive
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-800'
+                        ? 'bg-[var(--pm-color-surface)] text-[var(--pm-color-text)] shadow-sm'
+                        : 'text-[var(--pm-color-muted)] hover:text-[var(--pm-color-text)]'
                     }`}
                   >
                     <span className="truncate">{tab.label}</span>
@@ -162,7 +162,7 @@ export default function Bookings() {
                         className={`rounded-full px-1.5 py-0.5 text-[11px] leading-none ${
                           isActive
                             ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-slate-200 text-slate-600'
+                            : 'bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)]'
                         }`}
                       >
                         {counts[tab.key]}
@@ -174,8 +174,8 @@ export default function Bookings() {
             </div>
 
             {visibleBookings.length === 0 ? (
-              <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-                <p className="text-sm text-slate-500">
+              <div className="mt-6 rounded-2xl border border-dashed border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface)] p-10 text-center">
+                <p className="text-sm text-[var(--pm-color-muted)]">
                   {activeTab === 'active'
                     ? 'No parking session is running right now.'
                     : activeTab === 'upcoming'

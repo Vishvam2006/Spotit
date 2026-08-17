@@ -187,11 +187,11 @@ export function AIVerification() {
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-[var(--pm-color-text)] flex items-center gap-2">
               <ShieldCheck className="h-6 w-6 text-emerald-600" />
               AI Vehicle Verification
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
               Upload photos of your Vehicle Registration Certificate (RC Book) to match details against your garage in /my-vehicles.
             </p>
           </div>
@@ -208,7 +208,7 @@ export function AIVerification() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
                   Connected from My Vehicles
                 </p>
-                <p className="mt-0.5 truncate text-sm font-bold text-slate-900">
+                <p className="mt-0.5 truncate text-sm font-bold text-[var(--pm-color-text)]">
                   Verifying RC for: {selectedVeh.registration} ({selectedVeh.make || ''}{' '}
                   {selectedVeh.model || 'Vehicle'})
                 </p>
@@ -225,16 +225,16 @@ export function AIVerification() {
 
         {/* Verification Input Form Card */}
         {!result && (
-          <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 space-y-6">
-            <h2 className="text-lg font-bold text-slate-900">Document Upload & Matching</h2>
+          <div className="mt-6 rounded-2xl bg-[var(--pm-color-surface)] p-6 shadow-sm ring-1 ring-[var(--pm-color-border)] space-y-6">
+            <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Document Upload & Matching</h2>
 
             {/* Target Vehicle Selector */}
             <div className="space-y-2">
-              <label htmlFor="vehicle-select" className="block text-sm font-semibold text-slate-700">
+              <label htmlFor="vehicle-select" className="block text-sm font-semibold text-[var(--pm-color-text)]">
                 Select Vehicle from /my-vehicles
               </label>
               {loadingVehicles ? (
-                <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
+                <div className="flex items-center gap-2 py-2 text-sm text-[var(--pm-color-muted)]">
                   <Spinner className="h-4 w-4 text-emerald-600" /> Loading your vehicles...
                 </div>
               ) : (
@@ -242,7 +242,7 @@ export function AIVerification() {
                   id="vehicle-select"
                   value={selectedVehicleId}
                   onChange={(e) => setSelectedVehicleId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3.5 py-2.5 text-sm text-[var(--pm-color-text)] focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="">-- Standalone Scan (No pre-selected vehicle) --</option>
                   {vehicles.map((v) => (
@@ -256,7 +256,7 @@ export function AIVerification() {
 
             {/* File Drag-and-Drop Area */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">
+              <label className="block text-sm font-semibold text-[var(--pm-color-text)]">
                 RC Book / Vehicle Document Photo
               </label>
 
@@ -275,7 +275,7 @@ export function AIVerification() {
                 className={`rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${
                   isDragOver
                     ? 'border-emerald-500 bg-emerald-50/50'
-                    : 'border-slate-300 bg-slate-50/50 hover:bg-slate-50'
+                    : 'border-[var(--pm-color-border)] bg-[var(--pm-color-surface-raised)]/50 hover:bg-[var(--pm-color-surface-raised)]'
                 }`}
               >
                 <input
@@ -290,10 +290,10 @@ export function AIVerification() {
                   <div className="rounded-full bg-emerald-50 p-3 text-emerald-600">
                     <Upload className="h-6 w-6" />
                   </div>
-                  <p className="text-sm font-medium text-slate-700">
+                  <p className="text-sm font-medium text-[var(--pm-color-text)]">
                     <span className="font-semibold text-emerald-600 hover:underline">Click to upload photo</span> or drag and drop
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--pm-color-muted)]">
                     Supported: JPG, PNG, WEBP · up to 15MB each · {MAX_FILES} documents max
                   </p>
                 </div>
@@ -303,23 +303,23 @@ export function AIVerification() {
             {/* Uploaded File Previews */}
             {files.length > 0 && (
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--pm-color-muted)]">
                   Uploaded Documents ({files.length})
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {files.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
+                      className="flex items-center gap-3 rounded-xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface-raised)] p-3"
                     >
                       <img
                         src={item.previewUrl}
                         alt={item.file.name}
-                        className="h-14 w-14 rounded-lg object-cover border border-slate-200"
+                        className="h-14 w-14 rounded-lg object-cover border border-[var(--pm-color-border)]"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-slate-800">{item.file.name}</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
+                        <p className="truncate text-xs font-semibold text-[var(--pm-color-text)]">{item.file.name}</p>
+                        <p className="text-[11px] text-[var(--pm-color-muted)] mt-0.5">
                           {(item.file.size / 1024).toFixed(1)} KB
                         </p>
                         <span className="inline-block mt-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
@@ -332,7 +332,7 @@ export function AIVerification() {
                           e.stopPropagation();
                           removeFile(item.id);
                         }}
-                        className="rounded-lg p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        className="rounded-lg p-1 text-[var(--pm-color-muted)] hover:bg-red-50 hover:text-red-600 transition-colors"
                         title="Remove photo"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -363,17 +363,17 @@ export function AIVerification() {
 
         {/* Loading Progress State */}
         {isAnalyzing && (
-          <div className="mt-6 rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200 text-center space-y-6">
+          <div className="mt-6 rounded-2xl bg-[var(--pm-color-surface)] p-8 shadow-sm ring-1 ring-[var(--pm-color-border)] text-center space-y-6">
             <div className="flex justify-center">
               <Spinner className="h-10 w-10 text-emerald-600" />
             </div>
 
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-slate-900">Scanning & Extracting RC Book Details</h3>
-              <p className="text-sm text-slate-500">Groq AI Vision is parsing image text and validating vehicle registration.</p>
+              <h3 className="text-lg font-bold text-[var(--pm-color-text)]">Scanning & Extracting RC Book Details</h3>
+              <p className="text-sm text-[var(--pm-color-muted)]">Groq AI Vision is parsing image text and validating vehicle registration.</p>
             </div>
 
-            <div className="mx-auto max-w-sm space-y-2 text-left text-sm text-slate-600">
+            <div className="mx-auto max-w-sm space-y-2 text-left text-sm text-[var(--pm-color-muted)]">
               <div className={`flex items-center gap-2 ${analysisStep >= 1 ? 'text-emerald-600 font-semibold' : ''}`}>
                 <CheckCircle2 className="h-4 w-4 shrink-0" /> Preprocessing document image
               </div>
@@ -429,48 +429,48 @@ export function AIVerification() {
                     </span>
                     <span className="text-xs opacity-75">• Verification ID: {result.verificationId}</span>
                   </div>
-                  <h2 className="text-xl font-bold text-slate-900 mt-0.5">
+                  <h2 className="text-xl font-bold text-[var(--pm-color-text)] mt-0.5">
                     {result.overallStatus === 'VERIFIED'
                       ? 'Vehicle RC Document Verified'
                       : result.overallStatus === 'NEEDS_REVIEW'
                       ? 'Manual Review Recommended'
                       : 'Document Rejected (Invalid / Non-RC Image)'}
                   </h2>
-                  <p className="text-sm mt-1 text-slate-600">{result.summary}</p>
+                  <p className="text-sm mt-1 text-[var(--pm-color-muted)]">{result.summary}</p>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-white p-3 text-center ring-1 ring-slate-200 shrink-0">
-                <div className="text-xl font-extrabold text-slate-900">
+              <div className="rounded-xl bg-[var(--pm-color-surface)] p-3 text-center ring-1 ring-[var(--pm-color-border)] shrink-0">
+                <div className="text-xl font-extrabold text-[var(--pm-color-text)]">
                   {Math.round(result.overallConfidence * 100)}%
                 </div>
-                <div className="text-[10px] font-semibold text-slate-500 uppercase">AI Score</div>
+                <div className="text-[10px] font-semibold text-[var(--pm-color-muted)] uppercase">AI Score</div>
               </div>
             </div>
 
             {/* Target Vehicle Match Card (If vehicle selected) */}
             {result.targetVehicle && (
-              <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <div className="rounded-2xl bg-[var(--pm-color-surface)] p-6 shadow-sm ring-1 ring-[var(--pm-color-border)] space-y-4">
+                <h3 className="text-sm font-bold text-[var(--pm-color-text)] uppercase tracking-wider flex items-center gap-2">
                   <Car className="h-4 w-4 text-emerald-600" />
                   Vehicle Cross-Reference Match (/my-vehicles)
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="rounded-xl bg-slate-50 p-4 border border-slate-200">
-                    <p className="text-xs text-slate-500 font-medium">Registered Garage Record</p>
+                  <div className="rounded-xl bg-[var(--pm-color-surface-raised)] p-4 border border-[var(--pm-color-border)]">
+                    <p className="text-xs text-[var(--pm-color-muted)] font-medium">Registered Garage Record</p>
                     <p className="text-base font-bold text-emerald-700 mt-1">{result.targetVehicle.registration}</p>
-                    <p className="text-xs text-slate-600 mt-0.5">
+                    <p className="text-xs text-[var(--pm-color-muted)] mt-0.5">
                       {result.targetVehicle.make || ''} {result.targetVehicle.model || 'Vehicle'} ({result.targetVehicle.type})
                     </p>
                   </div>
 
-                  <div className="rounded-xl bg-slate-50 p-4 border border-slate-200">
-                    <p className="text-xs text-slate-500 font-medium">Extracted RC Book Document</p>
-                    <p className="text-base font-bold text-slate-900 mt-1">
+                  <div className="rounded-xl bg-[var(--pm-color-surface-raised)] p-4 border border-[var(--pm-color-border)]">
+                    <p className="text-xs text-[var(--pm-color-muted)] font-medium">Extracted RC Book Document</p>
+                    <p className="text-base font-bold text-[var(--pm-color-text)] mt-1">
                       {result.documents[0]?.extractedFields.vehicleNumber || 'NO MATCH / UNREADABLE'}
                     </p>
-                    <p className="text-xs text-slate-600 mt-0.5">
+                    <p className="text-xs text-[var(--pm-color-muted)] mt-0.5">
                       {result.documents[0]?.extractedFields.vehicleClass || 'N/A'}
                     </p>
                   </div>
@@ -480,13 +480,13 @@ export function AIVerification() {
 
             {/* Extracted Details */}
             {result.documents.map((doc, idx) => (
-              <div key={idx} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 space-y-5">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div key={idx} className="rounded-2xl bg-[var(--pm-color-surface)] p-6 shadow-sm ring-1 ring-[var(--pm-color-border)] space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-[var(--pm-color-border)]">
                   <div className="flex items-center gap-2">
                     <FileText className="h-5 w-5 text-emerald-600" />
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">{doc.filename}</h4>
-                      <p className="text-xs text-slate-500">Document Type: <strong className="text-slate-700">{doc.documentType}</strong></p>
+                      <h4 className="text-sm font-bold text-[var(--pm-color-text)]">{doc.filename}</h4>
+                      <p className="text-xs text-[var(--pm-color-muted)]">Document Type: <strong className="text-[var(--pm-color-text)]">{doc.documentType}</strong></p>
                     </div>
                   </div>
                   <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
@@ -501,29 +501,29 @@ export function AIVerification() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                  <div className="rounded-xl bg-slate-50 p-3 border border-slate-200">
-                    <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
+                  <div className="rounded-xl bg-[var(--pm-color-surface-raised)] p-3 border border-[var(--pm-color-border)]">
+                    <span className="text-xs text-[var(--pm-color-muted)] flex items-center gap-1 font-medium">
                       <Car className="h-3.5 w-3.5 text-emerald-600" /> Registration Number
                     </span>
-                    <p className="font-bold text-slate-900 mt-1">
+                    <p className="font-bold text-[var(--pm-color-text)] mt-1">
                       {doc.extractedFields.vehicleNumber || doc.extractedFields.documentNumber || 'N/A'}
                     </p>
                   </div>
 
-                  <div className="rounded-xl bg-slate-50 p-3 border border-slate-200">
-                    <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
+                  <div className="rounded-xl bg-[var(--pm-color-surface-raised)] p-3 border border-[var(--pm-color-border)]">
+                    <span className="text-xs text-[var(--pm-color-muted)] flex items-center gap-1 font-medium">
                       <UserCheck className="h-3.5 w-3.5 text-emerald-600" /> Owner Name
                     </span>
-                    <p className="font-bold text-slate-900 mt-1">
+                    <p className="font-bold text-[var(--pm-color-text)] mt-1">
                       {doc.extractedFields.ownerName || 'N/A'}
                     </p>
                   </div>
 
-                  <div className="rounded-xl bg-slate-50 p-3 border border-slate-200">
-                    <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
+                  <div className="rounded-xl bg-[var(--pm-color-surface-raised)] p-3 border border-[var(--pm-color-border)]">
+                    <span className="text-xs text-[var(--pm-color-muted)] flex items-center gap-1 font-medium">
                       <Calendar className="h-3.5 w-3.5 text-emerald-600" /> Expiry Status
                     </span>
-                    <p className="font-bold text-slate-900 mt-1">
+                    <p className="font-bold text-[var(--pm-color-text)] mt-1">
                       {doc.extractedFields.expiryDate || 'Valid'}
                     </p>
                   </div>

@@ -5,6 +5,7 @@ import AppLayout from '../components/layout/AppLayout';
 import Alert from '../components/ui/Alert';
 import Spinner from '../components/ui/Spinner';
 import VehicleSelector from '../components/vehicle/VehicleSelector';
+import ComplaintForm from '../components/complaint/ComplaintForm';
 import { getErrorMessage } from '../services/api';
 import { fetchParkingLot } from '../services/parking';
 import { fetchVehicles } from '../services/vehicles';
@@ -36,6 +37,7 @@ export default function ParkingDetails() {
   const [durationMinutes, setDurationMinutes] = useState(120);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -136,7 +138,7 @@ export default function ParkingDetails() {
       <AppLayout maxWidth="max-w-none">
         <main className="mx-auto flex flex-col items-center justify-center px-4 pt-8 pb-24 sm:px-6 min-h-screen bg-[var(--pm-color-page)]">
           <Alert variant="error" message={error ?? 'Parking lot not found.'} />
-          <button className="mt-6 rounded-xl bg-[var(--pm-color-surface-raised)] px-6 py-3 font-bold text-white transition-colors hover:bg-slate-700" onClick={() => navigate(-1)}>
+          <button className="mt-6 rounded-xl bg-[var(--pm-color-surface-raised)] px-6 py-3 font-bold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-border-strong)]" onClick={() => navigate(-1)}>
             Back
           </button>
         </main>
@@ -180,7 +182,7 @@ export default function ParkingDetails() {
           <div className="rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-lg ring-1 ring-[var(--pm-color-border)]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-2xl font-black text-white">{parking.name}</h1>
+                <h1 className="text-2xl font-black text-[var(--pm-color-text)]">{parking.name}</h1>
                 <p className="mt-1 flex items-start gap-1.5 text-sm text-[var(--pm-color-muted)]">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--pm-color-action)]" aria-hidden="true" />
                   <span>
@@ -202,7 +204,7 @@ export default function ParkingDetails() {
             <div className="mt-5 grid grid-cols-3 gap-3 border-t border-[var(--pm-color-border-strong)] pt-5">
               <div>
                 <p className="text-xs font-medium text-[var(--pm-color-muted)]">Price</p>
-                <p className="mt-1 text-lg font-black text-white">₹{parking.pricePerHour}/hr</p>
+                <p className="mt-1 text-lg font-black text-[var(--pm-color-text)]">₹{parking.pricePerHour}/hr</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-[var(--pm-color-muted)]">Available</p>
@@ -210,7 +212,7 @@ export default function ParkingDetails() {
               </div>
               <div>
                 <p className="text-xs font-medium text-[var(--pm-color-muted)]">Total</p>
-                <p className="mt-1 text-lg font-black text-white">{parking.totalSpaces}</p>
+                <p className="mt-1 text-lg font-black text-[var(--pm-color-text)]">{parking.totalSpaces}</p>
               </div>
             </div>
           </div>
@@ -228,7 +230,7 @@ export default function ParkingDetails() {
               <Alert variant="error" message="No parking spaces are currently available." />
             ) : (
               <form onSubmit={handleBook} className="rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-lg ring-1 ring-[var(--pm-color-border)]">
-                <h2 className="text-lg font-bold text-white">Select Duration</h2>
+                <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Select Duration</h2>
                 
                 {submitError && (
                   <div className="mt-4">
@@ -255,7 +257,7 @@ export default function ParkingDetails() {
                 </div>
 
                 <div className="mt-6">
-                  <h2 className="text-lg font-bold text-white mb-3">Vehicle Details</h2>
+                  <h2 className="text-lg font-bold text-[var(--pm-color-text)] mb-3">Vehicle Details</h2>
                   {vehiclesLoading ? (
                     <div className="flex items-center gap-2 text-sm text-[var(--pm-color-muted)]">
                       <Spinner className="h-4 w-4 text-[var(--pm-color-action)]" />
@@ -277,7 +279,11 @@ export default function ParkingDetails() {
                 </div>
 
                 {/* Report Issue Secondary Action */}
-                <button type="button" className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-[var(--pm-color-muted)] transition-colors hover:bg-[var(--pm-color-surface-raised)]">
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(true)}
+                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-[var(--pm-color-muted)] transition-colors hover:bg-[var(--pm-color-surface-raised)]"
+                >
                   <AlertTriangle className="h-4 w-4" />
                   Report an issue
                 </button>
@@ -294,7 +300,7 @@ export default function ParkingDetails() {
                 <p className="text-xs font-semibold text-[var(--pm-color-muted)]">
                   {selectedOption.label} · Total Price
                 </p>
-                <p className="text-2xl font-black text-white">
+                <p className="text-2xl font-black text-[var(--pm-color-text)]">
                   {formatINR(estimatedAmount)}
                 </p>
               </div>
@@ -304,12 +310,15 @@ export default function ParkingDetails() {
                 disabled={submitting || vehicles.length === 0}
                 className="flex min-h-14 items-center justify-center rounded-2xl bg-[var(--pm-color-surface-raised)] px-8 text-base font-bold text-[var(--pm-color-action)] transition-all active:scale-[0.98] disabled:opacity-50 pm-neumorphic pm-neumorphic-active"
               >
-                {submitting ? <Spinner className="h-5 w-5 text-white" /> : 'Start parking'}
+                {submitting ? <Spinner className="h-5 w-5 text-[var(--pm-color-text)]" /> : 'Start parking'}
               </button>
             </div>
           </div>
         )}
       </main>
+      {reportOpen && (
+        <ComplaintForm parkingLotId={id} onClose={() => setReportOpen(false)} />
+      )}
     </AppLayout>
   );
 }

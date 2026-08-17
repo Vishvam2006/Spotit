@@ -82,7 +82,7 @@ export default function VehicleForm({
           error={registrationError}
         />
         <div>
-          <span className="block text-sm font-medium text-slate-700">Vehicle type</span>
+          <span className="block text-sm font-medium text-[var(--pm-color-text)]">Vehicle type</span>
           <div className="mt-1.5 grid grid-cols-2 gap-3">
             {(
               [
@@ -97,7 +97,7 @@ export default function VehicleForm({
                 className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                   type === option.value
                     ? 'border-emerald-600 bg-emerald-600 text-white'
-                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                    : 'border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] text-[var(--pm-color-text)] hover:bg-[var(--pm-color-surface-raised)]'
                 }`}
               >
                 {option.label}

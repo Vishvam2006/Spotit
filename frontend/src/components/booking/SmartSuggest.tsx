@@ -103,34 +103,34 @@ export default function SmartSuggest({ booking }: SmartSuggestProps) {
   };
 
   return (
-    <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+    <div className="mt-6 rounded-2xl bg-[var(--pm-color-surface)] p-6 shadow-sm ring-1 ring-[var(--pm-color-border)]">
       <div className="flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-emerald-600" aria-hidden="true" />
-        <h4 className="text-base font-bold text-slate-900">Smart Suggest</h4>
+        <h4 className="text-base font-bold text-[var(--pm-color-text)]">Smart Suggest</h4>
       </div>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
         We found nearby parking alternatives around your cancelled parking.
       </p>
 
       <div className="mt-4">
         {loading ? (
-          <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
+          <div className="flex items-center gap-2 rounded-xl bg-[var(--pm-color-surface-raised)] p-4 text-sm text-[var(--pm-color-muted)]">
             <Spinner className="h-4 w-4 text-emerald-600" />
             Finding nearby parking for you...
           </div>
         ) : error ? (
-          <div className="rounded-xl bg-slate-50 p-4">
-            <p className="text-sm text-slate-600">Unable to load nearby parking suggestions.</p>
+          <div className="rounded-xl bg-[var(--pm-color-surface-raised)] p-4">
+            <p className="text-sm text-[var(--pm-color-muted)]">Unable to load nearby parking suggestions.</p>
             <Button variant="secondary" size="sm" className="mt-3 max-w-40" onClick={handleRetry}>
               Try Again
             </Button>
           </div>
         ) : suggestions.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
-            <p className="text-sm font-semibold text-slate-800">
+          <div className="rounded-xl border border-dashed border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface-raised)] p-5 text-center">
+            <p className="text-sm font-semibold text-[var(--pm-color-text)]">
               No nearby parking is currently available
             </p>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
               Try expanding your search area to find more options.
             </p>
             <Button className="mx-auto mt-4 max-w-xs" onClick={() => navigate('/')}>

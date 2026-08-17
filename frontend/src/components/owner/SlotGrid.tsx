@@ -32,8 +32,8 @@ const LEGEND: { status: SlotStatus; label: string }[] = [
 export default function SlotGrid({ slots, loading }: SlotGridProps) {
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-        <span className="font-semibold uppercase tracking-wide text-slate-400">Live slots</span>
+<div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-[var(--pm-color-muted)]">
+          <span className="font-semibold uppercase tracking-wide text-[var(--pm-color-muted)]">Live slots</span>
         {LEGEND.map((entry) => (
           <span key={entry.status} className="inline-flex items-center gap-1.5">
             <span className={`h-2.5 w-2.5 rounded-full ${STATUS_STYLES[entry.status].dot}`} />
@@ -47,7 +47,7 @@ export default function SlotGrid({ slots, loading }: SlotGridProps) {
           {Array.from({ length: 12 }, (_, index) => (
             <div
               key={index}
-              className="h-10 animate-pulse rounded-lg bg-slate-100"
+              className="h-10 animate-pulse rounded-lg bg-[var(--pm-color-surface-raised)]"
             />
           ))}
         </div>

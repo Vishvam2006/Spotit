@@ -7,6 +7,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 import Logo from '../components/Logo';
+import ThemeToggle from '../components/ui/ThemeToggle';
 
 export default function Login() {
   const { login } = useAuth();
@@ -32,9 +33,15 @@ export default function Login() {
 
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      const user = await login(email.trim(), password);
       notifySuccess('Welcome back!');
-      navigate(from, { replace: true });
+      if (user.role === 'ADMIN') {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (user.role === 'OWNER') {
+        navigate('/dashboard', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err) {
       setError(getErrorMessage(err));
       notifyError(err);
@@ -44,7 +51,10 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-2">
+    <div className="min-h-screen bg-[var(--pm-color-page)] lg:grid lg:grid-cols-2">
+      <div className="fixed right-4 top-4 z-20">
+        <ThemeToggle compact />
+      </div>
       {/* Brand panel */}
       <aside className="relative hidden overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-600 to-emerald-600 lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-2xl" />
@@ -78,20 +88,20 @@ export default function Login() {
           <div className="mb-8 flex flex-col items-center gap-4 lg:hidden">
             <Logo className="h-14 w-14" />
             <div className="text-center">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--pm-color-text)]">
                 ParkMitra
               </h1>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-[var(--pm-color-muted)]">
                 Smart Parking Made Simple
               </p>
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200 sm:p-10">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+          <div className="rounded-2xl bg-[var(--pm-color-surface)] p-8 shadow-sm ring-1 ring-[var(--pm-color-border)] sm:p-10">
+            <h2 className="text-2xl font-bold tracking-tight text-[var(--pm-color-text)]">
               Welcome back
             </h2>
-            <p className="mt-1.5 text-sm text-slate-500">
+            <p className="mt-1.5 text-sm text-[var(--pm-color-muted)]">
               Sign in to your ParkMitra account to continue.
             </p>
 
@@ -124,7 +134,7 @@ export default function Login() {
               </Button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-slate-600">
+            <p className="mt-6 text-center text-sm text-[var(--pm-color-muted)]">
               Don&apos;t have an account?{' '}
               <Link
                 to="/register"

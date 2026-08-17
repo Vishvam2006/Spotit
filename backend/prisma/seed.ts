@@ -22,6 +22,26 @@ interface ParkingLotSeed {
 async function main() {
   const passwordHash = await passwordHashPromise;
 
+  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@example.com";
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "Admin@12345";
+  const adminName = process.env.ADMIN_NAME ?? "ParkMitra Admin";
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      role: Role.ADMIN,
+      fullName: adminName,
+      passwordHash: bcrypt.hashSync(adminPassword, 10),
+    },
+    create: {
+      fullName: adminName,
+      email: adminEmail,
+      passwordHash: bcrypt.hashSync(adminPassword, 10),
+      role: Role.ADMIN,
+    },
+  });
+
+  await prisma.complaint.deleteMany({});
   await prisma.booking.deleteMany({});
 
   const owner = await prisma.user.upsert({
@@ -164,7 +184,11 @@ async function main() {
     });
   }
 
-  console.log(`Seed completed: ${parkingLots.length} parking lots for ${owner.email}, no bookings.`);
+  console.log(
+    `Seed completed: ${parkingLots.length} parking lots for ${owner.email}, no bookings. ` +
+      `Admin: ${admin.email} (role=${admin.role}).`,
+  );
+}
 }
 
 main()

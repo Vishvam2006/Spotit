@@ -35,10 +35,10 @@ export default function ParkingStatusTable({
   loading,
 }: ParkingStatusTableProps) {
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+    <div className="overflow-hidden rounded-2xl bg-[var(--pm-color-surface)] shadow-sm ring-1 ring-[var(--pm-color-border)]">
       <div className="px-5 py-4">
-        <h2 className="text-base font-bold text-slate-900">Parking locations</h2>
-        <p className="mt-0.5 text-sm text-slate-500">
+        <h2 className="text-base font-bold text-[var(--pm-color-text)]">Parking locations</h2>
+        <p className="mt-0.5 text-sm text-[var(--pm-color-muted)]">
           Live status of every parking you own. Expand to see each slot.
         </p>
       </div>
@@ -46,17 +46,17 @@ export default function ParkingStatusTable({
       {loading ? (
         <div className="space-y-3 px-5 pb-5">
           {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="h-16 animate-pulse rounded-lg bg-slate-100" />
+            <div key={index} className="h-16 animate-pulse rounded-lg bg-[var(--pm-color-surface-raised)]" />
           ))}
         </div>
       ) : parkings.length === 0 ? (
-        <p className="px-5 pb-6 text-sm text-slate-500">
+        <p className="px-5 pb-6 text-sm text-[var(--pm-color-muted)]">
           You have not created any parking lots yet.
         </p>
       ) : (
         <>
           {/* Mobile: card per lot with the slot grid expanding inline. */}
-          <ul className="divide-y divide-slate-100 md:hidden">
+          <ul className="divide-y divide-[var(--pm-color-border)] md:hidden">
             {parkings.map((parking) => {
               const isExpanded = expandedIds.includes(parking.id);
               const pill = STATUS_PILL[parking.status];
@@ -66,8 +66,8 @@ export default function ParkingStatusTable({
                 <li key={parking.id} className="px-5 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-900">{parking.name}</p>
-                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                      <p className="truncate font-semibold text-[var(--pm-color-text)]">{parking.name}</p>
+                      <p className="mt-0.5 truncate text-xs text-[var(--pm-color-muted)]">
                         {parking.location}
                       </p>
                     </div>
@@ -78,28 +78,28 @@ export default function ParkingStatusTable({
                     </span>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-4 gap-2 rounded-xl bg-slate-50 p-3 text-center">
+                  <div className="mt-3 grid grid-cols-4 gap-2 rounded-xl bg-[var(--pm-color-surface-raised)] p-3 text-center">
                     <div>
-                      <p className="text-[11px] text-slate-400">Occupied</p>
-                      <p className="mt-0.5 font-semibold text-slate-900">
+                      <p className="text-[11px] text-[var(--pm-color-muted)]">Occupied</p>
+                      <p className="mt-0.5 font-semibold text-[var(--pm-color-text)]">
                         {parking.occupiedSlots}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[11px] text-slate-400">Free</p>
-                      <p className="mt-0.5 font-semibold text-slate-900">
+                      <p className="text-[11px] text-[var(--pm-color-muted)]">Free</p>
+                      <p className="mt-0.5 font-semibold text-[var(--pm-color-text)]">
                         {parking.availableSlots}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[11px] text-slate-400">Slots</p>
-                      <p className="mt-0.5 font-semibold text-slate-600">
+                      <p className="text-[11px] text-[var(--pm-color-muted)]">Slots</p>
+                      <p className="mt-0.5 font-semibold text-[var(--pm-color-muted)]">
                         {parking.totalSlots}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[11px] text-slate-400">Revenue</p>
-                      <p className="mt-0.5 truncate font-semibold text-slate-900">
+                      <p className="text-[11px] text-[var(--pm-color-muted)]">Revenue</p>
+                      <p className="mt-0.5 truncate font-semibold text-[var(--pm-color-text)]">
                         {formatINR(parking.revenueGenerated)}
                       </p>
                     </div>
@@ -109,7 +109,7 @@ export default function ParkingStatusTable({
                     type="button"
                     onClick={() => onToggle(parking.id)}
                     aria-expanded={isExpanded}
-                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3 text-sm font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                   >
                     {isExpanded ? (
                       <>
@@ -125,7 +125,7 @@ export default function ParkingStatusTable({
                   </button>
 
                   {isExpanded && (
-                    <div className="mt-3 rounded-xl bg-slate-50/60 p-3">
+                    <div className="mt-3 rounded-xl bg-[var(--pm-color-surface-raised)]/60 p-3">
                       <SlotGrid slots={detail?.slots ?? []} loading={!detail} />
                     </div>
                   )}
@@ -137,7 +137,7 @@ export default function ParkingStatusTable({
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-y border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <tr className="border-y border-[var(--pm-color-border)] bg-[var(--pm-color-surface-raised)] text-xs font-semibold uppercase tracking-wide text-[var(--pm-color-muted)]">
                 <th className="px-5 py-3">Parking</th>
                 <th className="px-4 py-3">Location</th>
                 <th className="px-4 py-3 text-center">Occupied</th>
@@ -148,7 +148,7 @@ export default function ParkingStatusTable({
                 <th className="px-5 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-[var(--pm-color-border)]">
               {parkings.map((parking) => {
                 const isExpanded = expandedIds.includes(parking.id);
                 const pill = STATUS_PILL[parking.status];
@@ -156,22 +156,22 @@ export default function ParkingStatusTable({
 
                 return (
                   <Fragment key={parking.id}>
-                    <tr className="hover:bg-slate-50">
+                    <tr className="hover:bg-[var(--pm-color-surface-raised)]">
                       <td className="px-5 py-3">
-                        <p className="font-semibold text-slate-900">{parking.name}</p>
-                        <p className="text-xs text-slate-500">{parking.city}</p>
+                        <p className="font-semibold text-[var(--pm-color-text)]">{parking.name}</p>
+                        <p className="text-xs text-[var(--pm-color-muted)]">{parking.city}</p>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{parking.location}</td>
-                      <td className="px-4 py-3 text-center font-semibold text-slate-900">
+                      <td className="px-4 py-3 text-[var(--pm-color-muted)]">{parking.location}</td>
+                      <td className="px-4 py-3 text-center font-semibold text-[var(--pm-color-text)]">
                         {parking.occupiedSlots}
                       </td>
-                      <td className="px-4 py-3 text-center font-semibold text-slate-900">
+                      <td className="px-4 py-3 text-center font-semibold text-[var(--pm-color-text)]">
                         {parking.availableSlots}
                       </td>
-                      <td className="px-4 py-3 text-center text-slate-500">
+                      <td className="px-4 py-3 text-center text-[var(--pm-color-muted)]">
                         {parking.totalSlots}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                      <td className="px-4 py-3 text-right font-semibold text-[var(--pm-color-text)]">
                         {formatINR(parking.revenueGenerated)}
                       </td>
                       <td className="px-4 py-3">
@@ -185,7 +185,7 @@ export default function ParkingStatusTable({
                         <button
                           type="button"
                           onClick={() => onToggle(parking.id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="inline-flex items-center gap-1 rounded-lg border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         >
                           {isExpanded ? (
                             <>
@@ -203,7 +203,7 @@ export default function ParkingStatusTable({
                     </tr>
                     {isExpanded && (
                       <tr key={`${parking.id}-slots`}>
-                        <td colSpan={8} className="bg-slate-50/60 px-5 py-4">
+                        <td colSpan={8} className="bg-[var(--pm-color-surface-raised)]/60 px-5 py-4">
                           <SlotGrid slots={detail?.slots ?? []} loading={!detail} />
                         </td>
                       </tr>

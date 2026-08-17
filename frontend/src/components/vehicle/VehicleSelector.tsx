@@ -20,9 +20,9 @@ export default function VehicleSelector({
   if (vehicles.length === 0) {
     return (
       <div>
-        <span className="block text-sm font-medium text-slate-700">Vehicle</span>
-        <div className="mt-1.5 flex flex-col gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-600">
+        <span className="block text-sm font-medium text-[var(--pm-color-text)]">Vehicle</span>
+        <div className="mt-1.5 flex flex-col gap-3 rounded-xl border border-dashed border-[var(--pm-color-border)] bg-[var(--pm-color-surface-raised)] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-[var(--pm-color-text)]">
             Add a vehicle with a photo before booking a spot.
           </p>
           <button
@@ -41,7 +41,7 @@ export default function VehicleSelector({
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="block text-sm font-medium text-slate-700">Vehicle</span>
+        <span className="block text-sm font-medium text-[var(--pm-color-text)]">Vehicle</span>
         <button
           type="button"
           onClick={onManage}
@@ -62,10 +62,10 @@ export default function VehicleSelector({
               className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60 ${
                 selected
                   ? 'border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600'
-                  : 'border-slate-300 bg-white hover:bg-slate-50'
+                  : 'border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] hover:bg-[var(--pm-color-surface-raised)]'
               }`}
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--pm-color-surface-raised)]">
                 {vehicle.imageUrl ? (
                   <img
                     src={vehicle.imageUrl}
@@ -73,14 +73,14 @@ export default function VehicleSelector({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <Car className="h-5 w-5 text-slate-400" />
+                  <Car className="h-5 w-5 text-[var(--pm-color-muted)]" />
                 )}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-slate-900">
+                <p className="truncate text-sm font-bold text-[var(--pm-color-text)]">
                   {vehicle.registration}
                 </p>
-                <p className="truncate text-xs text-slate-500">
+                <p className="truncate text-xs text-[var(--pm-color-muted)]">
                   {vehicleTypeLabel(vehicle.type)}
                   {vehicle.make
                     ? ` · ${vehicle.make}${vehicle.model ? ` ${vehicle.model}` : ''}`

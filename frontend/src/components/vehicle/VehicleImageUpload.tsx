@@ -89,7 +89,7 @@ export default function VehicleImageUpload({
 
   return (
     <div>
-      <span className="block text-sm font-medium text-slate-700">Vehicle photo</span>
+      <span className="block text-sm font-medium text-[var(--pm-color-text)]">Vehicle photo</span>
       <div className="mt-1.5 flex items-start gap-4">
         <button
           type="button"
@@ -98,7 +98,7 @@ export default function VehicleImageUpload({
           className={`relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
             disabled || uploading
               ? 'cursor-not-allowed opacity-60'
-              : 'border-slate-300 hover:border-emerald-400'
+              : 'border-[var(--pm-color-border)] hover:border-emerald-400'
           }`}
           aria-label="Choose a vehicle photo"
         >
@@ -109,7 +109,7 @@ export default function VehicleImageUpload({
               className="h-full w-full object-cover"
             />
           ) : (
-            <span className="flex flex-col items-center gap-1 text-slate-400">
+            <span className="flex flex-col items-center gap-1 text-[var(--pm-color-muted)]">
               <ImagePlus className="h-7 w-7" />
               <span className="px-2 text-[11px] font-medium leading-tight">
                 Add photo
@@ -126,20 +126,20 @@ export default function VehicleImageUpload({
         <div className="flex-1">
           {uploading ? (
             <div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--pm-color-border-strong)]">
                 <div
                   className="h-full rounded-full bg-emerald-600 transition-all"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
+              <p className="mt-2 flex items-center gap-1.5 text-sm text-[var(--pm-color-muted)]">
                 <Upload className="h-4 w-4" />
                 Uploading {progress}%
               </p>
             </div>
           ) : value ? (
             <div className="flex flex-col gap-2">
-              <p className="text-sm text-slate-600">Photo added.</p>
+              <p className="text-sm text-[var(--pm-color-muted)]">Photo added.</p>
               <button
                 type="button"
                 disabled={disabled}
@@ -161,7 +161,7 @@ export default function VehicleImageUpload({
             </div>
           ) : (
             <div>
-              <p className="text-sm text-slate-600">JPG, PNG or WebP up to 5 MB.</p>
+              <p className="text-sm text-[var(--pm-color-muted)]">JPG, PNG or WebP up to 5 MB.</p>
               <button
                 type="button"
                 disabled={disabled}

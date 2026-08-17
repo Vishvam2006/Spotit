@@ -52,7 +52,7 @@ export default function SearchBar({
             type="button"
             onClick={onClear}
             aria-label="Clear search"
-            className="pm-touch-target inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+            className="pm-touch-target inline-flex items-center justify-center rounded-xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3 text-[var(--pm-color-muted)] shadow-sm transition-colors hover:bg-[var(--pm-color-surface-raised)] hover:text-[var(--pm-color-text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>

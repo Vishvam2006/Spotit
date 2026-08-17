@@ -15,6 +15,7 @@ import {
   Clock3,
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
+import ComplaintForm from '../components/complaint/ComplaintForm';
 import { fetchParkingLots } from '../services/parking';
 import type { ParkingLot } from '../types/parking';
 import { getCurrentPositionDetailed, type LatLng } from '../utils/geolocation';
@@ -24,6 +25,7 @@ export default function Home() {
   const navigate = useNavigate();
   const [allParkingLots, setAllParkingLots] = useState<ParkingLot[]>([]);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     fetchParkingLots().then((lots) => setAllParkingLots(lots)).catch(() => {});
@@ -69,7 +71,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-6 md:hidden">
             <div className="flex items-center gap-2">
               <img src="/logo.jpg" alt="ParkMitra" className="h-8 w-8 rounded-lg object-cover" />
-              <span className="text-xl font-bold tracking-tight text-white">ParkMitra</span>
+              <span className="text-xl font-bold tracking-tight text-[var(--pm-color-text)]">ParkMitra</span>
             </div>
           </div>
 
@@ -79,8 +81,8 @@ export default function Home() {
             className="flex items-center justify-between gap-3 rounded-[2rem] bg-[var(--pm-color-surface-raised)] p-3 pl-5 pm-neumorphic cursor-text mb-4"
           >
             <div className="flex items-center gap-3">
-              <Search className="h-6 w-6 text-white font-bold" />
-              <span className="text-lg font-bold text-white">Where to?</span>
+              <Search className="h-6 w-6 text-[var(--pm-color-text)] font-bold" />
+              <span className="text-lg font-bold text-[var(--pm-color-text)]">Where to?</span>
             </div>
             <div className="flex items-center gap-2">
               <button className="flex items-center gap-1.5 rounded-full bg-[var(--pm-color-surface)] px-3 py-1.5 text-sm font-semibold text-[var(--pm-color-muted)] transition-colors pm-neumorphic-sm pm-neumorphic-active">
@@ -100,7 +102,7 @@ export default function Home() {
                 <Clock className="h-5 w-5 text-[var(--pm-color-muted)]" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Central Mall Parking</h3>
+                <h3 className="text-base font-bold text-[var(--pm-color-text)]">Central Mall Parking</h3>
                 <p className="text-sm text-[var(--pm-color-muted)]">MG Road, Bengaluru</p>
               </div>
             </div>
@@ -109,7 +111,7 @@ export default function Home() {
 
           {/* Quick Actions */}
           <div className="mb-8">
-            <h2 className="mb-4 text-xl font-bold text-white">Find parking quickly</h2>
+            <h2 className="mb-4 text-xl font-bold text-[var(--pm-color-text)]">Find parking quickly</h2>
             {/* Grid of circular buttons */}
             <div className="grid grid-cols-4 gap-y-6 gap-x-2">
               <QuickActionButton icon={Search} label="Find Park" onClick={() => handleQuickAction('explore')} badge="Fast" />
@@ -118,7 +120,7 @@ export default function Home() {
               
               <QuickActionButton icon={Car} label="Vehicles" onClick={() => handleQuickAction('vehicles')} />
               <QuickActionButton icon={MapPin} label="Saved" onClick={() => {}} />
-              <QuickActionButton icon={AlertTriangle} label="Report" onClick={() => {}} />
+              <QuickActionButton icon={AlertTriangle} label="Report" onClick={() => setReportOpen(true)} />
               <QuickActionButton icon={PlusCircle} label="List Space" onClick={() => handleQuickAction('list')} badge="New" />
             </div>
           </div>
@@ -126,7 +128,7 @@ export default function Home() {
           {/* Nearby Parking Section */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Nearby parking</h2>
+              <h2 className="text-xl font-bold text-[var(--pm-color-text)]">Nearby parking</h2>
               <button onClick={() => handleSearchClick()} className="text-sm font-semibold text-[var(--pm-color-action)]">View Map</button>
             </div>
             <div className="pm-scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-4">
@@ -148,7 +150,7 @@ export default function Home() {
               <ShieldCheck className="h-5 w-5 text-[var(--pm-color-action)]" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Parking availability you can trust</h3>
+              <h3 className="text-base font-bold text-[var(--pm-color-text)]">Parking availability you can trust</h3>
               <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
                 Live availability updates from verified parking partners.
               </p>
@@ -158,6 +160,9 @@ export default function Home() {
 
         </div>
       </main>
+      {reportOpen && (
+        <ComplaintForm onClose={() => setReportOpen(false)} />
+      )}
     </AppLayout>
   );
 }
@@ -171,9 +176,9 @@ function QuickActionButton({ icon: Icon, label, onClick, badge }: { icon: Lucide
         </span>
       )}
       <div className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[var(--pm-color-surface-raised)] transition-all pm-neumorphic pm-neumorphic-active">
-        <Icon className="h-6 w-6 text-white" />
+        <Icon className="h-6 w-6 text-[var(--pm-color-text)]" />
       </div>
-      <span className="text-xs font-semibold text-white">{label}</span>
+      <span className="text-xs font-semibold text-[var(--pm-color-text)]">{label}</span>
     </button>
   );
 }
@@ -194,14 +199,14 @@ function NearbyParkingCard({ lot, onClick }: { lot: ParkingLot, onClick: () => v
         )}
       </div>
       <div className="p-4">
-        <h3 className="truncate text-base font-bold text-white">{lot.name}</h3>
+        <h3 className="truncate text-base font-bold text-[var(--pm-color-text)]">{lot.name}</h3>
         <p className="text-sm text-[var(--pm-color-muted)]">
           {lot.distanceKm !== undefined ? `${lot.distanceKm.toFixed(1)} km away` : lot.address}
         </p>
         <div className="mt-3 flex items-center justify-between">
           <div>
             <p className="text-xs text-[var(--pm-color-muted)]">Price</p>
-            <p className="text-sm font-bold text-white">₹{lot.pricePerHour}/hr</p>
+            <p className="text-sm font-bold text-[var(--pm-color-text)]">₹{lot.pricePerHour}/hr</p>
           </div>
           <div className="text-right">
             <p className="text-xs text-[var(--pm-color-muted)]">Spaces</p>

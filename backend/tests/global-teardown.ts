@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 export default async function teardown() {
   try {
     // Clean up after all tests
+    await prisma.complaint.deleteMany();
     await prisma.booking.deleteMany();
     await prisma.parkingLot.deleteMany();
     await prisma.user.deleteMany();

@@ -36,7 +36,7 @@ type FormErrors = Partial<Record<keyof FormState, string>> & { photos?: string }
 
 function SectionLabel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={`text-xs font-bold uppercase tracking-widest text-slate-400 ${className}`}>
+    <p className={`text-xs font-bold uppercase tracking-widest text-[var(--pm-color-muted)] ${className}`}>
       {children}
     </p>
   );
@@ -130,7 +130,7 @@ export default function AddParkingDrawer({ selectedLocation, onCreated, onCancel
         // z-[80] keeps the drawer above the floating mobile bottom nav (z-50),
         // which otherwise sat on top of the footer and swallowed taps on Save.
         // `invisible` when closed so the off-screen panel can't capture touches.
-        className={`fixed inset-x-0 bottom-0 z-[80] flex flex-col rounded-t-3xl bg-white shadow-2xl transition-transform duration-300 ease-out md:hidden ${open ? 'translate-y-0' : 'invisible translate-y-full'}`}
+        className={`fixed inset-x-0 bottom-0 z-[80] flex flex-col rounded-t-3xl bg-[var(--pm-color-surface)] shadow-2xl transition-transform duration-300 ease-out md:hidden ${open ? 'translate-y-0' : 'invisible translate-y-full'}`}
         style={{ maxHeight: 'calc(100dvh - 56px)', willChange: 'transform' }}
       >
         {/* Drag handle */}
@@ -140,23 +140,23 @@ export default function AddParkingDrawer({ selectedLocation, onCreated, onCancel
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          <div className="mx-auto h-1 w-10 rounded-full bg-slate-200" />
+          <div className="mx-auto h-1 w-10 rounded-full bg-[var(--pm-color-border-strong)]" />
         </div>
 
         {/* Header */}
-        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 pb-4">
+        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-[var(--pm-color-border)] px-5 pb-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Add Parking</h2>
+            <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Add Parking</h2>
             {selectedLocation ? (
               <p className="mt-0.5 flex items-center gap-1.5 text-sm font-medium text-emerald-600">
                 <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 Location pinned — fill in the details
               </p>
             ) : (
-              <p className="mt-0.5 text-sm text-slate-500">Tap the map first to pin a location</p>
+              <p className="mt-0.5 text-sm text-[var(--pm-color-muted)]">Tap the map first to pin a location</p>
             )}
           </div>
-          <button type="button" onClick={onCancel} aria-label="Close" className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+          <button type="button" onClick={onCancel} aria-label="Close" className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)] hover:bg-[var(--pm-color-border-strong)] transition-colors">
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
@@ -179,8 +179,8 @@ export default function AddParkingDrawer({ selectedLocation, onCreated, onCancel
             <div className="mt-3 space-y-3">
               <Input id="mob-name" label="Parking Name" value={form.name} onChange={e => updateField('name', e.target.value)} error={errors.name} />
               <div>
-                <label htmlFor="mob-desc" className="block text-sm font-medium text-slate-700">Description <span className="text-slate-400">(optional)</span></label>
-                <textarea id="mob-desc" value={form.description} onChange={e => updateField('description', e.target.value)} rows={2} placeholder="Describe the parking…" className="mt-1.5 min-h-[72px] w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-base text-slate-950 shadow-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                <label htmlFor="mob-desc" className="block text-sm font-medium text-[var(--pm-color-text)]">Description <span className="text-[var(--pm-color-muted)]">(optional)</span></label>
+                <textarea id="mob-desc" value={form.description} onChange={e => updateField('description', e.target.value)} rows={2} placeholder="Describe the parking…" className="mt-1.5 min-h-[72px] w-full rounded-xl border border-[var(--pm-color-border)] px-3.5 py-2.5 text-base text-[var(--pm-color-text)] shadow-sm placeholder:text-[var(--pm-color-muted)] focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
               </div>
             </div>
 
@@ -196,8 +196,8 @@ export default function AddParkingDrawer({ selectedLocation, onCreated, onCancel
             <div className="mt-3 grid grid-cols-2 gap-3">
               <Input id="mob-price" label="Price / Hour (₹)" type="number" min={0} step="0.01" value={form.pricePerHour} onChange={e => updateField('pricePerHour', e.target.value)} error={errors.pricePerHour} />
               <div>
-                <label htmlFor="mob-status" className="block text-sm font-medium text-slate-700">Status</label>
-                <select id="mob-status" value={form.status} onChange={e => updateField('status', e.target.value as ParkingLotStatus)} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-950 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <label htmlFor="mob-status" className="block text-sm font-medium text-[var(--pm-color-text)]">Status</label>
+                <select id="mob-status" value={form.status} onChange={e => updateField('status', e.target.value as ParkingLotStatus)} className="mt-1.5 min-h-11 w-full rounded-xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3.5 py-2.5 text-base text-[var(--pm-color-text)] shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <option value="ACTIVE">Active</option>
                   <option value="INACTIVE">Inactive</option>
                   <option value="CLOSED">Closed</option>
@@ -216,8 +216,8 @@ export default function AddParkingDrawer({ selectedLocation, onCreated, onCancel
         </div>
 
         {/* Sticky footer */}
-        <div className="flex flex-shrink-0 gap-3 border-t border-slate-100 bg-white px-5 py-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-          <button type="button" onClick={onCancel} disabled={submitting} className="flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50">
+        <div className="flex flex-shrink-0 gap-3 border-t border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-5 py-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          <button type="button" onClick={onCancel} disabled={submitting} className="flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface-raised)] text-sm font-bold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-border)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50">
             Back to map
           </button>
           <button type="submit" form="add-parking-mobile-form" disabled={submitting} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-colors hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60">

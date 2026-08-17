@@ -134,14 +134,14 @@ export default function AddParkingForm({
       className={
         embedded
           ? ''
-          : 'rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200'
+          : 'rounded-2xl bg-[var(--pm-color-surface)] p-6 shadow-sm ring-1 ring-[var(--pm-color-border)]'
       }
     >
       {!embedded && (
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Add Parking</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Add Parking</h2>
+            <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
               Click anywhere on the map to choose the parking location.
             </p>
           </div>
@@ -166,7 +166,7 @@ export default function AddParkingForm({
         <div className="sm:col-span-2">
           <label
             htmlFor="parking-description"
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-medium text-[var(--pm-color-text)]"
           >
             Description
           </label>
@@ -176,7 +176,7 @@ export default function AddParkingForm({
             onChange={(event) => updateField('description', event.target.value)}
             rows={3}
             placeholder="Describe the parking (optional)"
-            className="mt-1.5 min-h-24 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-base text-slate-950 shadow-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:text-sm"
+            className="mt-1.5 min-h-24 w-full rounded-xl border border-[var(--pm-color-border)] px-3.5 py-2.5 text-base text-[var(--pm-color-text)] shadow-sm placeholder:text-[var(--pm-color-muted)] focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:text-sm"
           />
         </div>
         <Input
@@ -226,7 +226,7 @@ export default function AddParkingForm({
         <div>
           <label
             htmlFor="parking-status"
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-medium text-[var(--pm-color-text)]"
           >
             Status
           </label>
@@ -236,7 +236,7 @@ export default function AddParkingForm({
             onChange={(event) =>
               updateField('status', event.target.value as ParkingLotStatus)
             }
-            className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-base text-slate-950 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:text-sm"
+            className="mt-1.5 min-h-11 w-full rounded-xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3.5 py-2.5 text-base text-[var(--pm-color-text)] shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:text-sm"
           >
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>
@@ -246,11 +246,11 @@ export default function AddParkingForm({
         <div className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm">
           <span
             className={`h-3 w-3 shrink-0 rounded-full ${
-              selectedLocation ? 'bg-emerald-500 ring-4 ring-emerald-500/20' : 'bg-slate-300'
+              selectedLocation ? 'bg-emerald-500 ring-4 ring-emerald-500/20' : 'bg-[var(--pm-color-border-strong)]'
             }`}
             aria-hidden="true"
           />
-          <span className="font-semibold text-slate-800">
+          <span className="font-semibold text-[var(--pm-color-text)]">
             {selectedLocation ? 'Parking location pinned on the map' : 'Choose the parking location on the map'}
           </span>
         </div>

@@ -6,6 +6,7 @@ export default async function setup() {
   try {
     // Just clean the tables - assume migrations have already been run
     // This avoids lock contention issues with prisma migrate commands
+    await prisma.complaint.deleteMany();
     await prisma.booking.deleteMany();
     await prisma.parkingLot.deleteMany();
     await prisma.user.deleteMany();

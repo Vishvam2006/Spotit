@@ -197,8 +197,8 @@ function MapStatus({ loadError }: { loadError: boolean }) {
     status === APILoadingStatus.AUTH_FAILURE
   ) {
     return (
-      <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-50 p-6">
-        <p className="text-center text-sm font-medium text-slate-600">
+      <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--pm-color-surface-raised)] p-6">
+        <p className="text-center text-sm font-medium text-[var(--pm-color-muted)]">
           We couldn't load the map. Please try refreshing the page.
         </p>
       </div>
@@ -207,7 +207,7 @@ function MapStatus({ loadError }: { loadError: boolean }) {
 
   if (status === APILoadingStatus.LOADING || status === APILoadingStatus.NOT_LOADED) {
     return (
-      <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80">
+      <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--pm-color-surface)]/80">
         <Spinner className="h-8 w-8 text-emerald-600" />
       </div>
     );
@@ -218,8 +218,8 @@ function MapStatus({ loadError }: { loadError: boolean }) {
 
 function MapFallback({ message }: { message: string }) {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-slate-50 p-6">
-      <p className="text-center text-sm font-medium text-slate-600">{message}</p>
+    <div className="flex h-full w-full items-center justify-center bg-[var(--pm-color-surface-raised)] p-6">
+      <p className="text-center text-sm font-medium text-[var(--pm-color-muted)]">{message}</p>
     </div>
   );
 }

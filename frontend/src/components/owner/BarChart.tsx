@@ -48,7 +48,7 @@ export default function BarChart({
               x2={WIDTH - PADDING_X}
               y1={y}
               y2={y}
-              stroke="#e2e8f0"
+              stroke="var(--pm-color-border)"
               strokeWidth="1"
             />
             <text
@@ -56,7 +56,7 @@ export default function BarChart({
               y={y + 3}
               textAnchor="end"
               fontSize="10"
-              fill="#94a3b8"
+              fill="var(--pm-color-muted)"
             >
               {formatValue(Math.round(value))}
             </text>
@@ -77,7 +77,7 @@ export default function BarChart({
               width={barWidth}
               height={Math.max(barHeight, point.value > 0 ? 2 : 0)}
               rx="3"
-              fill={point.value > 0 ? '#6366f1' : '#e2e8f0'}
+              fill={point.value > 0 ? '#6366f1' : 'var(--pm-color-border)'}
             >
               <title>{`${point.label}: ${formatValue(point.value)}`}</title>
             </rect>
@@ -86,7 +86,7 @@ export default function BarChart({
               y={height - 8}
               textAnchor="middle"
               fontSize="10"
-              fill="#94a3b8"
+              fill="var(--pm-color-muted)"
             >
               {point.label}
             </text>

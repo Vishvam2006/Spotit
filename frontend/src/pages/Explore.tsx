@@ -302,11 +302,11 @@ export default function Explore() {
                   type="button"
                   onClick={() => navigate(-1)}
                   aria-label="Back to Home"
-                  className="pm-touch-target flex shrink-0 items-center justify-center rounded-2xl bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] shadow-lg shadow-black/30 ring-1 ring-white/10 backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
+                  className="pm-touch-target flex shrink-0 items-center justify-center rounded-2xl bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] shadow-lg shadow-black/30 ring-1 ring-[var(--pm-color-border)] backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
                 >
                   <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                 </button>
-                <div className="min-w-0 flex-1 rounded-2xl bg-[var(--pm-color-surface)]/95 p-3 shadow-lg shadow-black/30 ring-1 ring-white/10 backdrop-blur-xl">
+                <div className="min-w-0 flex-1 rounded-2xl bg-[var(--pm-color-surface)]/95 p-3 shadow-lg shadow-black/30 ring-1 ring-[var(--pm-color-border)] backdrop-blur-xl">
                   <SearchBar
                     value={searchQuery}
                     onChange={handleSearchChange}
@@ -322,7 +322,7 @@ export default function Explore() {
               {!isAddingParking && (
                  <div className="pointer-events-auto mx-auto mt-3 flex max-w-3xl items-center gap-2 overflow-x-auto pm-scrollbar-none">
                    {['Price', 'Distance', 'Available now', 'Covered', 'EV charging'].map(chip => (
-                     <button key={chip} className="whitespace-nowrap rounded-full bg-[var(--pm-color-surface)]/90 px-3 py-1.5 text-xs font-bold text-white shadow-sm ring-1 ring-white/10 backdrop-blur-md">
+                     <button key={chip} className="whitespace-nowrap rounded-full bg-[var(--pm-color-surface)]/90 px-3 py-1.5 text-xs font-bold text-[var(--pm-color-text)] shadow-sm ring-1 ring-[var(--pm-color-border)] backdrop-blur-md">
                         {chip}
                      </button>
                    ))}
@@ -334,7 +334,7 @@ export default function Explore() {
                   <button
                     type="button"
                     onClick={cancelAddParking}
-                    className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-slate-700 bg-[var(--pm-color-surface)]/95 px-4 text-sm font-bold text-white shadow-lg shadow-black/30 backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)]/95 px-4 text-sm font-bold text-[var(--pm-color-text)] shadow-lg shadow-black/30 backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                   >
                     <X className="h-4 w-4" aria-hidden="true" />
                     Cancel
@@ -343,7 +343,7 @@ export default function Explore() {
                   <button
                     type="button"
                     onClick={startAddParking}
-                    className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--pm-color-text)] px-4 text-sm font-bold text-[var(--pm-color-page)] shadow-lg shadow-black/40 transition-colors hover:bg-slate-200 focus:outline-none"
+                    className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--pm-color-text)] px-4 text-sm font-bold text-[var(--pm-color-page)] shadow-lg shadow-black/40 transition-colors hover:bg-[var(--pm-color-muted)] focus:outline-none"
                   >
                     <Plus className="h-4 w-4" aria-hidden="true" />
                     Add parking
@@ -355,7 +355,7 @@ export default function Explore() {
             {/* Mobile instruction strip */}
             {isAddingParking && (
               <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--pm-bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] z-20 flex justify-center px-4 md:hidden">
-                <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-[#0b1220]/95 px-5 py-3.5 text-sm text-white shadow-xl backdrop-blur-md ring-1 ring-white/10">
+                <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-[var(--pm-color-page)]/95 px-5 py-3.5 text-sm text-[var(--pm-color-text)] shadow-xl backdrop-blur-md ring-1 ring-[var(--pm-color-border)]">
                   <span
                     className={`h-2.5 w-2.5 shrink-0 rounded-full ${
                       selectedLocation
@@ -376,7 +376,7 @@ export default function Explore() {
                       </button>
                     </span>
                   ) : (
-                    <span className="font-semibold text-white">Tap the map to pin the parking location</span>
+                    <span className="font-semibold text-[var(--pm-color-text)]">Tap the map to pin the parking location</span>
                   )}
                 </div>
               </div>
@@ -399,7 +399,7 @@ export default function Explore() {
                 <div className="hidden md:block">
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-lg font-bold text-white">Add parking</h2>
+                      <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Add parking</h2>
                       <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
                         Click the map to pin the parking location.
                       </p>
@@ -418,7 +418,7 @@ export default function Explore() {
                 <div>
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-lg font-bold text-white">Nearby parking</h2>
+                      <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Nearby parking</h2>
                       <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
                         {visibleParkingLots.length} of {allParkingLots.length} lots in range
                       </p>
@@ -428,7 +428,7 @@ export default function Explore() {
                     </span>
                   </div>
 
-                  <div className="mt-3 rounded-xl bg-[var(--pm-color-surface-raised)] p-3 ring-1 ring-white/5">
+                  <div className="mt-3 rounded-xl bg-[var(--pm-color-surface-raised)] p-3 ring-1 ring-[var(--pm-color-border)]">
                     <DistanceFilter
                       variant="inline"
                       radiusKm={radiusKm}
@@ -439,8 +439,8 @@ export default function Explore() {
                   </div>
 
                   {visibleParkingLots.length === 0 ? (
-                    <div className="mt-4 rounded-xl border border-dashed border-slate-700 bg-[var(--pm-color-surface-raised)] p-5 text-center">
-                      <p className="text-sm font-semibold text-white">No parking lots found here</p>
+                    <div className="mt-4 rounded-xl border border-dashed border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface-raised)] p-5 text-center">
+                      <p className="text-sm font-semibold text-[var(--pm-color-text)]">No parking lots found here</p>
                       <p className="mt-1 text-sm text-[var(--pm-color-muted)]">Try another area or increase the search radius.</p>
                     </div>
                   ) : (

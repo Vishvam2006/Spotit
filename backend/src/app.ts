@@ -11,12 +11,16 @@ import ownerRoutes from './modules/owner/owner.routes';
 import vehicleRoutes from './modules/vehicle/vehicle.routes';
 import uploadsRoutes from './modules/uploads/uploads.routes';
 import verificationRoutes from './modules/verification/verification.routes';
+import adminRoutes from './modules/admin/admin.routes';
+import complaintRoutes from './modules/complaints/complaint.routes';
 import { AuthError } from './services/auth.service';
 import { BookingError } from './modules/booking/booking.service';
 import { ParkingError } from './modules/parking/parking.service';
 import { OwnerError } from './modules/owner/owner.service';
 import { VehicleError } from './modules/vehicle/vehicle.service';
 import { VerificationError } from './modules/verification/verification.service';
+import { AdminError } from './modules/admin/admin.service';
+import { ComplaintError } from './modules/complaints/complaint.service';
 
 const app = express();
 
@@ -50,6 +54,8 @@ app.use('/api/owner', ownerRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/verification', verificationRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/complaints', complaintRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({
@@ -157,6 +163,24 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       success: false,
       message: err.message,
       code: 'VERIFICATION_ERROR',
+    });
+    return;
+  }
+
+  if (err instanceof AdminError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      code: 'ADMIN_ERROR',
+    });
+    return;
+  }
+
+  if (err instanceof ComplaintError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      code: 'COMPLAINT_ERROR',
     });
     return;
   }

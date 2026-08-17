@@ -30,7 +30,7 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 const selectClassName =
-  'mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:border-emerald-500 focus:ring-emerald-500';
+  'mt-1.5 w-full rounded-lg border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3.5 py-2.5 text-sm text-[var(--pm-color-text)] focus:outline-none focus:ring-2 focus:border-emerald-500 focus:ring-emerald-500';
 
 export default function SearchFilters({
   filters,
@@ -75,7 +75,7 @@ export default function SearchFilters({
   };
 
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+    <div className="rounded-2xl bg-[var(--pm-color-surface)] p-4 shadow-sm ring-1 ring-[var(--pm-color-border)]">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <div className="sm:col-span-2">
           <Input
@@ -91,7 +91,7 @@ export default function SearchFilters({
         <div>
           <label
             htmlFor="filter-city"
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-medium text-[var(--pm-color-text)]"
           >
             City
           </label>
@@ -124,14 +124,14 @@ export default function SearchFilters({
         </div>
 
         <div className="flex items-end pb-1">
-          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[var(--pm-color-text)]">
             <input
               type="checkbox"
               checked={filters.availableOnly ?? false}
               onChange={(event) =>
                 onChange({ availableOnly: event.target.checked || undefined })
               }
-              className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-[var(--pm-color-border)] text-emerald-600 focus:ring-emerald-500"
             />
             Available only
           </label>
@@ -140,7 +140,7 @@ export default function SearchFilters({
         <div>
           <label
             htmlFor="filter-sort"
-            className="block text-sm font-medium text-slate-700"
+            className="block text-sm font-medium text-[var(--pm-color-text)]"
           >
             Sort
           </label>
@@ -162,7 +162,7 @@ export default function SearchFilters({
           <button
             type="button"
             onClick={handleClear}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="rounded-lg border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             Clear Filters
           </button>

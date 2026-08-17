@@ -144,8 +144,8 @@ export default function MyVehicles() {
       <main className="mx-auto max-w-4xl px-4 pt-8 pb-24 sm:px-6 md:pb-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">My Vehicles</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-[var(--pm-color-text)]">My Vehicles</h1>
+            <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
               Add the vehicles you park with — one photo is required for each.
             </p>
           </div>
@@ -157,8 +157,8 @@ export default function MyVehicles() {
         </div>
 
         {(adding || editing) && (
-          <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-bold text-slate-900">
+          <div className="mt-6 rounded-2xl bg-[var(--pm-color-surface)] p-6 shadow-sm ring-1 ring-[var(--pm-color-border)]">
+            <h2 className="text-lg font-bold text-[var(--pm-color-text)]">
               {editing ? `Edit ${editing.registration}` : 'Add a vehicle'}
             </h2>
             <div className="mt-5">
@@ -183,8 +183,8 @@ export default function MyVehicles() {
           ) : loadError ? (
             <Alert variant="error" message={loadError} />
           ) : vehicles.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-              <p className="text-sm text-slate-500">You have no vehicles yet.</p>
+            <div className="rounded-2xl border border-dashed border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface)] p-10 text-center">
+              <p className="text-sm text-[var(--pm-color-muted)]">You have no vehicles yet.</p>
               <Button className="mx-auto mt-4 max-w-xs" onClick={openAdd}>
                 + Add your first vehicle
               </Button>

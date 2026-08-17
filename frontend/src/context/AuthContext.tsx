@@ -69,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
+    return data.user;
   }, []);
 
   const register = useCallback(

@@ -34,11 +34,11 @@ export default function Button({
     primary:
       'bg-[var(--pm-color-action)] text-white shadow-sm hover:bg-[var(--pm-color-action-hover)] focus-visible:ring-[var(--pm-color-focus)]',
     secondary:
-      'border border-slate-300 bg-white text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-50 focus-visible:ring-[var(--pm-color-focus)]',
+      'border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] text-[var(--pm-color-text)] shadow-sm hover:border-[var(--pm-color-border-strong)] hover:bg-[var(--pm-color-surface-raised)] focus-visible:ring-[var(--pm-color-focus)]',
     danger:
       'bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:ring-red-500',
     ghost:
-      'bg-transparent text-slate-700 hover:bg-slate-100 focus-visible:ring-[var(--pm-color-focus)]',
+      'bg-transparent text-[var(--pm-color-text)] hover:bg-[var(--pm-color-surface-raised)] focus-visible:ring-[var(--pm-color-focus)]',
   }[variant];
 
   return (

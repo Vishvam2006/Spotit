@@ -29,13 +29,13 @@ export default function ConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
-        className="pm-sheet w-full rounded-t-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] ring-1 ring-slate-200 sm:max-w-md sm:rounded-2xl sm:pb-6"
+        className="pm-sheet w-full rounded-t-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] ring-1 ring-[var(--pm-color-border)] sm:max-w-md sm:rounded-2xl sm:pb-6"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id="confirm-dialog-title" className="text-lg font-bold text-slate-900">
+        <h2 id="confirm-dialog-title" className="text-lg font-bold text-[var(--pm-color-text)]">
           {title}
         </h2>
-        <p className="mt-2 text-sm text-slate-600">{message}</p>
+        <p className="mt-2 text-sm text-[var(--pm-color-muted)]">{message}</p>
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button
             type="button"

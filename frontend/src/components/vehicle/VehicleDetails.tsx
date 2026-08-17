@@ -18,7 +18,7 @@ export default function VehicleDetails({ vehicle }: VehicleDetailsProps) {
     <div className="flex items-center gap-3">
       <div
         className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl ${
-          hasImage ? '' : 'bg-slate-100'
+          hasImage ? '' : 'bg-[var(--pm-color-surface-raised)]'
         }`}
       >
         {hasImage ? (
@@ -28,19 +28,19 @@ export default function VehicleDetails({ vehicle }: VehicleDetailsProps) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <Car className="h-6 w-6 text-slate-400" />
+          <Car className="h-6 w-6 text-[var(--pm-color-muted)]" />
         )}
       </div>
       <div className="min-w-0">
-        <p className="truncate font-semibold text-slate-900">
+        <p className="truncate font-semibold text-[var(--pm-color-text)]">
           {vehicle.registration}
         </p>
-        <p className="truncate text-sm text-slate-500">
+        <p className="truncate text-sm text-[var(--pm-color-muted)]">
           {vehicleTypeLabel(vehicle.type)}
           {vehicle.make ? ` · ${vehicle.make}${vehicle.model ? ` ${vehicle.model}` : ''}` : ''}
         </p>
         {!hasImage && (
-          <p className="flex items-center gap-1 text-xs text-slate-400">
+          <p className="flex items-center gap-1 text-xs text-[var(--pm-color-muted)]">
             <Info className="h-3 w-3" />
             Added before photo capture
           </p>

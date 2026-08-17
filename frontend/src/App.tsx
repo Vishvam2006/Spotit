@@ -14,6 +14,11 @@ import AIVerification from './pages/AIVerification';
 import MyParkings from './pages/MyParkings';
 import OwnerDashboard from './pages/OwnerDashboard';
 import Explore from './pages/Explore';
+import AdminLayout from './components/admin/AdminLayout';
+import AdminOverview from './pages/admin/AdminOverview';
+import AdminComplaints from './pages/admin/AdminComplaints';
+import AdminComplaintDetails from './pages/admin/AdminComplaintDetails';
+import AdminBookings from './pages/admin/AdminBookings';
 
 export default function App() {
   return (
@@ -108,6 +113,20 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminOverview />} />
+            <Route path="complaints" element={<AdminComplaints />} />
+            <Route path="complaints/:id" element={<AdminComplaintDetails />} />
+            <Route path="bookings" element={<AdminBookings />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster

@@ -55,11 +55,11 @@ export default function VehicleCard({
 
   return (
     <div
-      className={`flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center ${
+      className={`flex flex-col gap-4 rounded-2xl bg-[var(--pm-color-surface)] p-4 shadow-sm ring-1 ring-[var(--pm-color-border)] sm:flex-row sm:items-center ${
         vehicle.isDefault ? 'ring-emerald-300' : ''
       }`}
     >
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--pm-color-surface-raised)]">
         {vehicle.imageUrl ? (
           <img
             src={vehicle.imageUrl}
@@ -67,13 +67,13 @@ export default function VehicleCard({
             className="h-full w-full object-cover"
           />
         ) : (
-          <Car className="h-7 w-7 text-slate-400" />
+          <Car className="h-7 w-7 text-[var(--pm-color-muted)]" />
         )}
       </div>
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="font-bold text-slate-900">{vehicle.registration}</p>
+          <p className="font-bold text-[var(--pm-color-text)]">{vehicle.registration}</p>
           {vehicle.isDefault && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
               <Star className="h-3 w-3" />
@@ -82,7 +82,7 @@ export default function VehicleCard({
           )}
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
-              badge?.className ?? 'bg-slate-100 text-slate-600'
+              badge?.className ?? 'bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)]'
             }`}
             title={
               vehicle.verifiedAt
@@ -94,7 +94,7 @@ export default function VehicleCard({
             {badge?.label ?? 'Not verified'}
           </span>
         </div>
-        <p className="mt-0.5 text-sm text-slate-500">
+        <p className="mt-0.5 text-sm text-[var(--pm-color-muted)]">
           {vehicleTypeLabel(vehicle.type)}
           {vehicle.make
             ? ` · ${vehicle.make}${vehicle.model ? ` ${vehicle.model}` : ''}`
@@ -116,7 +116,7 @@ export default function VehicleCard({
             type="button"
             disabled={busy}
             onClick={() => onSetDefault(vehicle)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3 py-2 text-xs font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
           >
             <Star className="h-3.5 w-3.5" />
             Set default
@@ -126,7 +126,7 @@ export default function VehicleCard({
           type="button"
           disabled={busy}
           onClick={() => onEdit(vehicle)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3 py-2 text-xs font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-60"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit
@@ -135,7 +135,7 @@ export default function VehicleCard({
           type="button"
           disabled={busy}
           onClick={() => onDelete(vehicle)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-[var(--pm-color-surface)] px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-60"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Delete

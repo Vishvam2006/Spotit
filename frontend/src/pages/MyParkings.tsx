@@ -124,8 +124,8 @@ export default function MyParkings() {
       <main className="mx-auto max-w-5xl px-4 pt-6 pb-24 sm:px-6 md:pb-8">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">My Parkings</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-[var(--pm-color-text)]">My Parkings</h1>
+            <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
               Create and manage the parking lots you own.
             </p>
           </div>
@@ -161,9 +161,9 @@ export default function MyParkings() {
         ) : error ? (
           <Alert variant="error" message={error} />
         ) : parkings.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-            <h2 className="text-lg font-semibold text-slate-900">No parking lots yet</h2>
-            <p className="mt-2 text-sm text-slate-500">
+          <div className="rounded-2xl border border-dashed border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface)] p-10 text-center">
+            <h2 className="text-lg font-semibold text-[var(--pm-color-text)]">No parking lots yet</h2>
+            <p className="mt-2 text-sm text-[var(--pm-color-muted)]">
               Add your first parking lot to start accepting bookings.
             </p>
             {!formMode && (
@@ -177,10 +177,10 @@ export default function MyParkings() {
             {parkings.map((parking) => (
               <article
                 key={parking.id}
-                className="flex flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"
+                className="flex flex-col rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-sm ring-1 ring-[var(--pm-color-border)]"
               >
                 {parking.photos?.[0] && (
-                  <div className="-mx-5 -mt-5 mb-4 aspect-video overflow-hidden rounded-t-2xl bg-slate-100">
+                  <div className="-mx-5 -mt-5 mb-4 aspect-video overflow-hidden rounded-t-2xl bg-[var(--pm-color-surface-raised)]">
                     <img
                       src={parking.photos[0]}
                       alt={parking.name}
@@ -191,14 +191,14 @@ export default function MyParkings() {
 
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900">{parking.name}</h2>
-                    <p className="mt-1 text-sm text-slate-500">{parking.address}</p>
+                    <h2 className="text-lg font-bold text-[var(--pm-color-text)]">{parking.name}</h2>
+                    <p className="mt-1 text-sm text-[var(--pm-color-muted)]">{parking.address}</p>
                   </div>
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
                       parking.isActive
                         ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-                        : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
+                        : 'bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)] ring-1 ring-[var(--pm-color-border)]'
                     }`}
                   >
                     {parking.isActive ? 'Active' : 'Inactive'}
@@ -206,19 +206,19 @@ export default function MyParkings() {
                 </div>
 
                 {parking.description && (
-                  <p className="mt-3 text-sm text-slate-600">{parking.description}</p>
+                  <p className="mt-3 text-sm text-[var(--pm-color-muted)]">{parking.description}</p>
                 )}
 
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <dt className="text-slate-500">Price / hour</dt>
-                    <dd className="font-semibold text-slate-900">
+                    <dt className="text-[var(--pm-color-muted)]">Price / hour</dt>
+                    <dd className="font-semibold text-[var(--pm-color-text)]">
                       {formatINR(parking.pricePerHour)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-slate-500">Availability</dt>
-                    <dd className="font-semibold text-slate-900">
+                    <dt className="text-[var(--pm-color-muted)]">Availability</dt>
+                    <dd className="font-semibold text-[var(--pm-color-text)]">
                       {parking.availableSlots} / {parking.totalSlots}
                     </dd>
                   </div>
@@ -228,7 +228,7 @@ export default function MyParkings() {
                   <button
                     type="button"
                     onClick={() => openEditForm(parking)}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="rounded-lg border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3 py-2 text-sm font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     Edit
                   </button>

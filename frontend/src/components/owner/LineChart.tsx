@@ -75,7 +75,7 @@ export default function LineChart({
               x2={WIDTH - PADDING_X}
               y1={y}
               y2={y}
-              stroke="#e2e8f0"
+              stroke="var(--pm-color-border)"
               strokeWidth="1"
             />
             <text
@@ -83,7 +83,7 @@ export default function LineChart({
               y={y + 3}
               textAnchor="end"
               fontSize="10"
-              fill="#94a3b8"
+              fill="var(--pm-color-muted)"
             >
               {formatValue(Math.round(value))}
             </text>
@@ -115,7 +115,7 @@ export default function LineChart({
             y={height - 8}
             textAnchor="middle"
             fontSize="10"
-            fill="#94a3b8"
+            fill="var(--pm-color-muted)"
           >
             {point.label}
           </text>

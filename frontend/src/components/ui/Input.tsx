@@ -26,7 +26,7 @@ export default function Input({
     <div className={className}>
       <label
         htmlFor={resolvedId}
-        className="block text-sm font-semibold text-slate-800"
+        className="block text-sm font-semibold text-[var(--pm-color-text)]"
       >
         {label}
       </label>
@@ -38,10 +38,10 @@ export default function Input({
           aria-describedby={
             error ? `${resolvedId}-error` : hint ? `${resolvedId}-hint` : undefined
           }
-          className={`min-h-11 w-full rounded-xl border bg-white px-3.5 py-2.5 text-base text-slate-950 shadow-sm transition-colors placeholder:text-slate-400 focus:outline-none focus:ring-2 sm:text-sm ${
+          className={`min-h-11 w-full rounded-xl border bg-[var(--pm-color-surface)] px-3.5 py-2.5 text-base text-[var(--pm-color-text)] shadow-sm transition-colors placeholder:text-[var(--pm-color-muted)] focus:outline-none focus:ring-2 sm:text-sm ${
             error
               ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-              : 'border-slate-300 focus:border-[var(--pm-color-focus)] focus:ring-[var(--pm-color-focus)]'
+              : 'border-[var(--pm-color-border)] focus:border-[var(--pm-color-focus)] focus:ring-[var(--pm-color-focus)]'
           } ${isPassword ? 'pr-11' : ''}`}
           {...props}
         />
@@ -50,7 +50,7 @@ export default function Input({
             type="button"
             onClick={() => setShowPassword((current) => !current)}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
-            className="pm-touch-target absolute inset-y-0 right-0 flex items-center justify-center px-3.5 text-slate-400 transition-colors hover:text-slate-700 focus:outline-none focus-visible:text-slate-900"
+            className="pm-touch-target absolute inset-y-0 right-0 flex items-center justify-center px-3.5 text-[var(--pm-color-muted)] transition-colors hover:text-[var(--pm-color-text)] focus:outline-none focus-visible:text-[var(--pm-color-text)]"
             tabIndex={-1}
           >
             {showPassword ? (
@@ -71,7 +71,7 @@ export default function Input({
         </p>
       )}
       {!error && hint && (
-        <p id={`${resolvedId}-hint`} className="mt-1.5 text-sm text-slate-500">
+        <p id={`${resolvedId}-hint`} className="mt-1.5 text-sm text-[var(--pm-color-muted)]">
           {hint}
         </p>
       )}

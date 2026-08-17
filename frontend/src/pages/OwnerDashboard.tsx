@@ -28,15 +28,15 @@ function OccupancyBar({
   percentage: number;
 }) {
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div className="rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-sm ring-1 ring-[var(--pm-color-border)]">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-slate-500">Occupancy</p>
-        <p className="text-lg font-bold text-slate-900">{percentage.toFixed(1)}%</p>
+        <p className="text-sm font-medium text-[var(--pm-color-muted)]">Occupancy</p>
+        <p className="text-lg font-bold text-[var(--pm-color-text)]">{percentage.toFixed(1)}%</p>
       </div>
-      <p className="mt-1 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
         {occupied} of {total} slots are currently occupied.
       </p>
-      <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-[var(--pm-color-surface-raised)]">
         <div
           className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500"
           style={{ width: `${Math.min(percentage, 100)}%` }}
@@ -65,8 +65,8 @@ export default function OwnerDashboard() {
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-24 sm:px-6 md:pb-8">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Owner Dashboard</h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-[var(--pm-color-text)]">Owner Dashboard</h1>
+            <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
               Revenue, bookings and live parking status at a glance.
             </p>
           </div>
@@ -75,7 +75,7 @@ export default function OwnerDashboard() {
               <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
               Live
             </span>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-[var(--pm-color-muted)]">
               {lastUpdated
                 ? `Updated ${lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
                 : 'Updating…'}
@@ -84,7 +84,7 @@ export default function OwnerDashboard() {
               type="button"
               onClick={() => manualRefresh()}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3 py-2 text-sm font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
@@ -156,10 +156,10 @@ export default function OwnerDashboard() {
                 percentage={dashboard?.occupancyPercentage ?? 0}
               />
 
-              <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:col-span-3">
+              <div className="rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-sm ring-1 ring-[var(--pm-color-border)] lg:col-span-3">
                 <div className="mb-2">
-                  <h2 className="text-base font-bold text-slate-900">Today's revenue</h2>
-                  <p className="text-sm text-slate-500">Per-hour earnings for today.</p>
+                  <h2 className="text-base font-bold text-[var(--pm-color-text)]">Today's revenue</h2>
+                  <p className="text-sm text-[var(--pm-color-muted)]">Per-hour earnings for today.</p>
                 </div>
                 <LineChart
                   data={data.analytics?.dailyRevenue ?? []}
@@ -170,10 +170,10 @@ export default function OwnerDashboard() {
             </section>
 
             <section className="mt-6 grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+              <div className="rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-sm ring-1 ring-[var(--pm-color-border)]">
                 <div className="mb-2">
-                  <h2 className="text-base font-bold text-slate-900">Monthly revenue</h2>
-                  <p className="text-sm text-slate-500">Last 12 months of earnings.</p>
+                  <h2 className="text-base font-bold text-[var(--pm-color-text)]">Monthly revenue</h2>
+                  <p className="text-sm text-[var(--pm-color-muted)]">Last 12 months of earnings.</p>
                 </div>
                 <BarChart
                   data={data.analytics?.monthlyRevenue ?? []}
@@ -182,10 +182,10 @@ export default function OwnerDashboard() {
                 />
               </div>
 
-              <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+              <div className="rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-sm ring-1 ring-[var(--pm-color-border)]">
                 <div className="mb-2">
-                  <h2 className="text-base font-bold text-slate-900">Occupancy trend</h2>
-                  <p className="text-sm text-slate-500">Average occupancy per day.</p>
+                  <h2 className="text-base font-bold text-[var(--pm-color-text)]">Occupancy trend</h2>
+                  <p className="text-sm text-[var(--pm-color-muted)]">Average occupancy per day.</p>
                 </div>
                 <LineChart
                   data={data.analytics?.occupancyTrend ?? []}

@@ -51,7 +51,28 @@
   --pm-color-focus: #8de8d8;
   --pm-shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --pm-shadow-sheet: 0 -12px 32px rgba(0, 0, 0, 0.5);
+  --pm-neumorphic-light: rgba(255, 255, 255, 0.03);
+  --pm-neumorphic-dark: rgba(0, 0, 0, 0.3);
   --pm-bottom-nav-height: 80px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --pm-color-page: #f8fafc;
+  --pm-color-surface: #ffffff;
+  --pm-color-surface-raised: #eef2f7;
+  --pm-color-border: #e2e8f0;
+  --pm-color-border-strong: #cbd5e1;
+  --pm-color-text: #0f172a;
+  --pm-color-muted: #64748b;
+  --pm-color-action: #0f9f8c;
+  --pm-color-action-hover: #0c897a;
+  --pm-color-action-soft: rgba(15, 159, 140, 0.12);
+  --pm-color-focus: #0d9488;
+  --pm-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.06);
+  --pm-shadow-sheet: 0 -12px 32px rgba(15, 23, 42, 0.14);
+  --pm-neumorphic-light: rgba(255, 255, 255, 0.9);
+  --pm-neumorphic-dark: rgba(15, 23, 42, 0.08);
 }
 
 @layer base {
@@ -89,6 +110,21 @@
   button,
   a {
     touch-action: manipulation;
+  }
+}
+
+@layer base {
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      color 0.25s ease,
+      box-shadow 0.25s ease,
+      fill 0.25s ease,
+      stroke 0.25s ease !important;
   }
 }
 
@@ -142,33 +178,33 @@
     display: none;
   }
 
-  /* Neumorphic styles for dark theme */
+  /* Neumorphic styles (theme-aware: light/dark row is driven by --pm-neumorphic-*) */
   .pm-neumorphic {
-    box-shadow: 
-      -4px -4px 8px rgba(255, 255, 255, 0.03),
-      4px 4px 8px rgba(0, 0, 0, 0.3);
+    box-shadow:
+      -4px -4px 8px var(--pm-neumorphic-light),
+      4px 4px 8px var(--pm-neumorphic-dark);
     border: none;
   }
 
   .pm-neumorphic-active:active,
   .pm-neumorphic-inset {
-    box-shadow: 
-      inset -2px -2px 4px rgba(255, 255, 255, 0.02),
-      inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow:
+      inset -2px -2px 4px var(--pm-neumorphic-light),
+      inset 2px 2px 4px var(--pm-neumorphic-dark);
     border: none;
   }
 
   .pm-neumorphic-sm {
-    box-shadow: 
-      -2px -2px 4px rgba(255, 255, 255, 0.03),
-      2px 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow:
+      -2px -2px 4px var(--pm-neumorphic-light),
+      2px 2px 4px var(--pm-neumorphic-dark);
     border: none;
   }
 
   .pm-neumorphic-sm:active {
-    box-shadow: 
-      inset -1px -1px 2px rgba(255, 255, 255, 0.02),
-      inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+    box-shadow:
+      inset -1px -1px 2px var(--pm-neumorphic-light),
+      inset 1px 1px 2px var(--pm-neumorphic-dark);
     border: none;
   }
 }

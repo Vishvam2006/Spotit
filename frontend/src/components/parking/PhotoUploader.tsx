@@ -108,8 +108,8 @@ export default function PhotoUploader({
 
   return (
     <div>
-      <span className="block text-sm font-medium text-slate-700">Photos</span>
-      <span className="mt-0.5 block text-xs text-slate-500">
+      <span className="block text-sm font-medium text-[var(--pm-color-text)]">Photos</span>
+      <span className="mt-0.5 block text-xs text-[var(--pm-color-muted)]">
         Add at least one photo of the parking space (max {MAX_PARKING_PHOTOS}, 8MB each).
       </span>
 
@@ -118,7 +118,7 @@ export default function PhotoUploader({
           {value.map((photo, index) => (
             <div
               key={index}
-              className="group relative aspect-video overflow-hidden rounded-lg border border-slate-200"
+              className="group relative aspect-video overflow-hidden rounded-lg border border-[var(--pm-color-border)]"
             >
               <img
                 src={photo}
@@ -143,7 +143,7 @@ export default function PhotoUploader({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-300 px-4 py-6 text-sm font-medium text-slate-500 hover:border-emerald-400 hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[var(--pm-color-border)] px-4 py-6 text-sm font-medium text-[var(--pm-color-muted)] hover:border-emerald-400 hover:text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
           {uploading ? 'Uploading...' : '+ Add photo'}

@@ -6,7 +6,7 @@ export interface AuthContextValue {
   token: string | null;
   isAuthenticated: boolean;
   isInitializing: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
 }
