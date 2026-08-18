@@ -13,6 +13,7 @@ import DashboardCard from '../components/owner/DashboardCard';
 import ParkingStatusTable from '../components/owner/ParkingStatusTable';
 import RevenueTable from '../components/owner/RevenueTable';
 import BookingsTable from '../components/owner/BookingsTable';
+import OwnerReportsPanel from '../components/continuity/OwnerReportsPanel';
 import LineChart from '../components/owner/LineChart';
 import BarChart from '../components/owner/BarChart';
 import { useOwnerDashboard } from '../hooks/useOwnerDashboard';
@@ -217,6 +218,10 @@ export default function OwnerDashboard() {
                 bookings={data.bookings}
                 loading={loading && data.bookings.length === 0}
               />
+            </section>
+
+            <section className="mt-6">
+              <OwnerReportsPanel />
             </section>
           </>
         )}

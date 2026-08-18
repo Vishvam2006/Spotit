@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ChevronLeft, User, SquareParking, CalendarDays } from 'lucide-react';
+import {
+  ChevronLeft,
+  User,
+  SquareParking,
+  CalendarDays,
+  AlertTriangle,
+} from 'lucide-react';
 import Alert from '../../components/ui/Alert';
 import Spinner from '../../components/ui/Spinner';
 import Button from '../../components/ui/Button';
@@ -13,6 +19,8 @@ import {
 import { getErrorMessage } from '../../services/api';
 import { notifySuccess } from '../../utils/notify';
 import { formatDateTime } from '../../utils/format';
+import { getIssueLabel } from '../../utils/continuity';
+import LotReliabilityPanel from '../../components/continuity/LotReliabilityPanel';
 import type { Complaint, ComplaintStatus } from '../../types/complaint';
 
 const STATUS_OPTIONS: ComplaintStatus[] = [
@@ -101,9 +109,15 @@ export default function AdminComplaintDetails() {
               <ComplaintStatusBadge status={complaint.status} />
             </div>
             <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
-              {complaint.category} · Submitted{' '}
+              {getIssueLabel(complaint.issueType)} · Submitted{' '}
               {formatDateTime(complaint.createdAt)}
             </p>
+            {complaint.severity === 'SERIOUS' && (
+              <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                Serious — counts against this lot's reliability
+              </span>
+            )}
           </div>
           <div className="w-full sm:w-56">
             <label
@@ -135,6 +149,34 @@ export default function AdminComplaintDetails() {
             {complaint.description}
           </p>
         </div>
+
+        {complaint.photos.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--pm-color-muted)]">
+              Photo evidence
+            </h3>
+            <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {complaint.photos.map((url, index) => (
+                <li key={url}>
+                  <a href={url} target="_blank" rel="noreferrer">
+                    <img
+                      src={url}
+                      alt={`Evidence ${index + 1}`}
+                      className="aspect-square w-full rounded-lg object-cover ring-1 ring-[var(--pm-color-border)] transition-opacity hover:opacity-90"
+                    />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {complaint.resolutionNote && (
+          <div className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900 ring-1 ring-emerald-100">
+            <p className="font-semibold">Resolution</p>
+            <p className="mt-1">{complaint.resolutionNote}</p>
+          </div>
+        )}
 
         {complaint.resolvedAt && (
           <p className="mt-3 text-xs text-[var(--pm-color-muted)]">
@@ -181,6 +223,12 @@ export default function AdminComplaintDetails() {
             </p>
           )}
         </div>
+
+        {complaint.parkingLot && (
+          <div className="sm:col-span-2">
+            <LotReliabilityPanel parkingLotId={complaint.parkingLot.id} />
+          </div>
+        )}
 
         {complaint.booking && (
           <div className="rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-sm ring-1 ring-[var(--pm-color-border)] sm:col-span-2">

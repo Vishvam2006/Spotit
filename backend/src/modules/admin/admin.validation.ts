@@ -23,6 +23,8 @@ export const bookingListQuerySchema = adminListQuerySchema.extend({
 
 export const complaintStatusUpdateSchema = z.object({
   status: z.nativeEnum(ComplaintStatus),
+  /** Why the admin closed it — shown back to the user who reported it. */
+  resolutionNote: z.string().trim().max(1000).optional(),
 });
 
 export type AdminListQuery = z.infer<typeof adminListQuerySchema>;

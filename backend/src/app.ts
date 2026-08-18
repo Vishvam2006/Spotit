@@ -13,6 +13,7 @@ import uploadsRoutes from './modules/uploads/uploads.routes';
 import verificationRoutes from './modules/verification/verification.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import complaintRoutes from './modules/complaints/complaint.routes';
+import continuityRoutes from './modules/continuity/continuity.routes';
 import { AuthError } from './services/auth.service';
 import { BookingError } from './modules/booking/booking.service';
 import { ParkingError } from './modules/parking/parking.service';
@@ -21,6 +22,7 @@ import { VehicleError } from './modules/vehicle/vehicle.service';
 import { VerificationError } from './modules/verification/verification.service';
 import { AdminError } from './modules/admin/admin.service';
 import { ComplaintError } from './modules/complaints/complaint.service';
+import { ContinuityError } from './modules/continuity/continuity.states';
 
 const app = express();
 
@@ -56,6 +58,7 @@ app.use('/api/uploads', uploadsRoutes);
 app.use('/api/verification', verificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/complaints', complaintRoutes);
+app.use('/api/continuity', continuityRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({
@@ -172,6 +175,15 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       success: false,
       message: err.message,
       code: 'ADMIN_ERROR',
+    });
+    return;
+  }
+
+  if (err instanceof ContinuityError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      code: 'CONTINUITY_ERROR',
     });
     return;
   }

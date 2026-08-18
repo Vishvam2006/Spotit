@@ -1,5 +1,6 @@
 import { Prisma, type ParkingLot } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { recordEvent } from "../continuity/continuity.events";
 import { cloudinary } from "../../config/cloudinary";
 import { isCloudinaryConfigured } from "../../config/cloudinaryHelpers";
 
@@ -194,6 +195,18 @@ export async function updateParking(
     );
   }
 
+  // A lot the Continuity Engine pulled from circulation must not be put back
+  // by the owner who caused the reports. Only an admin clears a review, and
+  // even then it happens by resolving the reports, which recomputes the lot.
+  // UNDER_REVIEW is not an accepted input status, so any `data.status` here is
+  // an attempt to move the lot out of review.
+  if (parking.status === "UNDER_REVIEW" && data.status !== undefined && !isAdmin) {
+    throw new ParkingError(
+      409,
+      "This parking lot is under review. An admin must resolve the open reports before its status can change.",
+    );
+  }
+
   let updateData: UpdateParkingInput = data;
   if (data.totalSpaces !== undefined && data.availableSpaces === undefined) {
     updateData = { ...data, availableSpaces: merged.totalSpaces - occupiedSpaces };
@@ -211,6 +224,29 @@ export async function updateParking(
       where: { id },
       data: updateData,
     });
+
+    // "Owner updates lot availability" is a Continuity Engine event: it is the
+    // owner's chance to correct the data a user was about to rely on, so it
+    // belongs in the same audit trail as the reports that contradict it.
+    if (
+      updateData.availableSpaces !== undefined ||
+      updateData.totalSpaces !== undefined ||
+      updateData.status !== undefined
+    ) {
+      await recordEvent(prisma, {
+        type: "LOT_CONFIDENCE_CHANGED",
+        parkingLotId: id,
+        actorId: ownerId,
+        actorRole: isAdmin ? "ADMIN" : "OWNER",
+        fromStatus: parking.status,
+        toStatus: updatedParking.status,
+        reason: "Owner updated the lot listing.",
+        metadata: {
+          availableSpaces: updatedParking.availableSpaces,
+          totalSpaces: updatedParking.totalSpaces,
+        },
+      });
+    }
 
     return { parking: updatedParking, cancelledBookings: 0 };
   }
@@ -231,6 +267,17 @@ export async function updateParking(
     }
 
     const cancelledBookings = await cancelUpcomingBookingsForDeactivation(tx, id);
+
+    await recordEvent(tx, {
+      type: "LOT_DEACTIVATED",
+      parkingLotId: id,
+      actorId: ownerId,
+      actorRole: isAdmin ? "ADMIN" : "OWNER",
+      fromStatus: parking.status,
+      toStatus: "INACTIVE",
+      reason: "Lot deactivated by its owner.",
+      metadata: { cancelledBookings },
+    });
 
     const current = await tx.parkingLot.findUniqueOrThrow({ where: { id } });
     return { parking: current, cancelledBookings };

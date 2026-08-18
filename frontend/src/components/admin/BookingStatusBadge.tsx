@@ -7,6 +7,7 @@ const STYLES: Record<BookingStatus, string> = {
   COMPLETED: 'bg-slate-100 text-slate-600',
   CANCELLED: 'bg-red-100 text-red-700',
   EXPIRED: 'bg-orange-100 text-orange-700',
+  DISPUTED: 'bg-amber-100 text-amber-800',
 };
 
 export default function BookingStatusBadge({ status }: { status: BookingStatus }) {

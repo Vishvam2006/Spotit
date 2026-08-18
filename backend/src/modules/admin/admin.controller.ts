@@ -54,8 +54,10 @@ export async function updateComplaintStatus(
   try {
     const data = complaintStatusUpdateSchema.parse(req.body);
     const complaint = await adminService.updateComplaintStatus(
+      req.user!.id,
       String(req.params.id),
       data.status,
+      data.resolutionNote,
     );
     res.json({ success: true, data: complaint });
   } catch (error) {

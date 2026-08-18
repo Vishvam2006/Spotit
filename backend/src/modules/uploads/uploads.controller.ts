@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import {
+  createEvidenceUploadSignature,
   createParkingUploadSignature,
   createVehicleUploadSignature,
   isCloudinaryConfigured,
@@ -40,6 +41,26 @@ export async function getParkingUploadSignature(
     }
 
     const signature = createParkingUploadSignature(req.user!.id);
+    res.json({ success: true, data: signature });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getEvidenceUploadSignature(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!isCloudinaryConfigured()) {
+      throw new VehicleError(
+        503,
+        'Photo evidence uploads are unavailable because Cloudinary is not configured. You can still submit the report without a photo.',
+      );
+    }
+
+    const signature = createEvidenceUploadSignature(req.user!.id);
     res.json({ success: true, data: signature });
   } catch (error) {
     next(error);

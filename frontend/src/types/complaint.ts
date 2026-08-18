@@ -1,3 +1,5 @@
+import type { IssueSeverity, IssueType } from './continuity';
+
 export type ComplaintStatus = 'PENDING' | 'IN_REVIEW' | 'RESOLVED' | 'REJECTED';
 
 export interface ComplaintUser {
@@ -26,6 +28,12 @@ export interface Complaint {
   subject: string;
   description: string;
   status: ComplaintStatus;
+  /** Continuity Engine fields; null on free-form complaints raised outside a booking. */
+  issueType: IssueType | null;
+  severity: IssueSeverity;
+  photos: string[];
+  resolutionNote: string | null;
+  resolvedById: string | null;
   resolvedAt: string | null;
   createdAt: string;
   updatedAt: string;

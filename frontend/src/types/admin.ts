@@ -3,7 +3,8 @@ export type BookingStatus =
   | 'ACTIVE'
   | 'COMPLETED'
   | 'CANCELLED'
-  | 'EXPIRED';
+  | 'EXPIRED'
+  | 'DISPUTED';
 
 export interface AdminDashboard {
   totalUsers: number;
@@ -14,6 +15,10 @@ export interface AdminDashboard {
   currentlyCheckedIn: number;
   currentlyCheckedOut: number;
   pendingComplaints: number;
+  /** Continuity Engine: open cases needing a decision. */
+  disputedBookings: number;
+  lotsUnderReview: number;
+  openSeriousReports: number;
 }
 
 export interface AdminBookingUser {

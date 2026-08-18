@@ -2,13 +2,22 @@ import { cloudinary } from './cloudinary';
 
 const VEHICLE_FOLDER_ROOT = process.env.CLOUDINARY_VEHICLE_FOLDER ?? 'parkmitra/vehicles';
 const PARKING_FOLDER_ROOT = process.env.CLOUDINARY_PARKING_FOLDER ?? 'parkmitra/parking-lots';
+/** Continuity Engine photo evidence attached to issue reports. */
+const EVIDENCE_FOLDER_ROOT =
+  process.env.CLOUDINARY_EVIDENCE_FOLDER ?? 'parkmitra/evidence';
 
 /** Square, auto-cropped transformation applied to every vehicle image. */
 export const VEHICLE_IMAGE_TRANSFORMATION = 'c_fill,g_auto,w_640,h_640';
 export const PARKING_IMAGE_TRANSFORMATION = 'c_fill,g_auto,w_1200,h_800';
+/**
+ * Evidence is resized but never cropped: cropping a photo of an occupied bay
+ * could cut out the very thing that proves the report.
+ */
+export const EVIDENCE_IMAGE_TRANSFORMATION = 'c_limit,w_1600,h_1600,q_auto';
 
 export const VEHICLE_IMAGE_ALLOWED_FORMATS = ['jpg', 'png', 'webp'] as const;
 export const PARKING_IMAGE_ALLOWED_FORMATS = ['jpg', 'png', 'webp'] as const;
+export const EVIDENCE_IMAGE_ALLOWED_FORMATS = ['jpg', 'png', 'webp'] as const;
 
 export function isCloudinaryConfigured(): boolean {
   return Boolean(
@@ -26,6 +35,11 @@ export function vehicleFolderFor(userId: string): string {
 /** Folder restricted to one owner's parking uploads. */
 export function parkingFolderFor(ownerId: string): string {
   return `${PARKING_FOLDER_ROOT}/${ownerId}`;
+}
+
+/** Folder scoped to the reporting user: parkmitra/evidence/{userId} */
+export function evidenceFolderFor(userId: string): string {
+  return `${EVIDENCE_FOLDER_ROOT}/${userId}`;
 }
 
 export interface VehicleUploadSignature {
@@ -101,6 +115,48 @@ export function createParkingUploadSignature(ownerId: string): ParkingUploadSign
     folder,
     transformation: PARKING_IMAGE_TRANSFORMATION,
     allowedFormats: PARKING_IMAGE_ALLOWED_FORMATS,
+    resourceType: 'image',
+  };
+}
+
+export interface EvidenceUploadSignature {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  signature: string;
+  folder: string;
+  transformation: string;
+  allowedFormats: readonly string[];
+  resourceType: 'image';
+}
+
+/** Signed upload slot for one user's issue-report photo evidence. */
+export function createEvidenceUploadSignature(
+  userId: string,
+): EvidenceUploadSignature {
+  const timestamp = Math.round(Date.now() / 1000);
+  const folder = evidenceFolderFor(userId);
+
+  const paramsToSign = {
+    timestamp,
+    folder,
+    transformation: EVIDENCE_IMAGE_TRANSFORMATION,
+    allowed_formats: EVIDENCE_IMAGE_ALLOWED_FORMATS.join(','),
+  };
+
+  const signature = cloudinary.utils.api_sign_request(
+    paramsToSign,
+    process.env.CLOUDINARY_API_SECRET!,
+  );
+
+  return {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
+    apiKey: process.env.CLOUDINARY_API_KEY!,
+    timestamp,
+    signature,
+    folder,
+    transformation: EVIDENCE_IMAGE_TRANSFORMATION,
+    allowedFormats: EVIDENCE_IMAGE_ALLOWED_FORMATS,
     resourceType: 'image',
   };
 }

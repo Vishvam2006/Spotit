@@ -1,7 +1,18 @@
 import type { ParkingLot } from './parking';
 import type { VehicleType } from './vehicle';
 
-export type BookingStatus = 'RESERVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
+/**
+ * RESERVED is the "space is held for you" state (the Continuity Engine spec
+ * calls it CONFIRMED). DISPUTED means the user reported that the lot failed
+ * them: the booking is frozen as evidence rather than cancelled.
+ */
+export type BookingStatus =
+  | 'RESERVED'
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'DISPUTED';
 
 /**
  * Snapshot of the vehicle at the time the booking was created. Old bookings
@@ -34,6 +45,7 @@ export interface Booking {
   status: BookingStatus;
   cancellationReason: string | null;
   cancelledAt: string | null;
+  disputedAt: string | null;
   lastLocationAt: string | null;
   lastSeenAt: string | null;
   createdAt: string;

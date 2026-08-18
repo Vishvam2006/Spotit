@@ -7,6 +7,8 @@ import {
   CirclePlay,
   CircleCheck,
   MessageSquareWarning,
+  ShieldAlert,
+  TriangleAlert,
   RefreshCw,
 } from 'lucide-react';
 import AdminStatCard from '../../components/admin/AdminStatCard';
@@ -110,6 +112,27 @@ export default function AdminOverview() {
             label="Pending Complaints"
             value={data?.pendingComplaints ?? 0}
             sublabel="Awaiting admin review"
+            icon={MessageSquareWarning}
+            accent="red"
+          />
+          <AdminStatCard
+            label="Protected Bookings"
+            value={data?.disputedBookings ?? 0}
+            sublabel="Disputed and held as evidence"
+            icon={ShieldAlert}
+            accent="red"
+          />
+          <AdminStatCard
+            label="Lots Under Review"
+            value={data?.lotsUnderReview ?? 0}
+            sublabel="Pulled from search until cleared"
+            icon={TriangleAlert}
+            accent="red"
+          />
+          <AdminStatCard
+            label="Open Serious Reports"
+            value={data?.openSeriousReports ?? 0}
+            sublabel="Driving lot reliability scores"
             icon={MessageSquareWarning}
             accent="red"
           />

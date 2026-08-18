@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma';
 import { ComplaintStatus } from '@prisma/client';
 import type { ComplaintListQuery, BookingListQuery } from './admin.validation';
+import * as continuityService from '../continuity/continuity.service';
 
 export class AdminError extends Error {
   statusCode: number;
@@ -21,6 +22,10 @@ export interface AdminDashboard {
   currentlyCheckedIn: number;
   currentlyCheckedOut: number;
   pendingComplaints: number;
+  /** Continuity Engine: cases and lots that still need a decision. */
+  disputedBookings: number;
+  lotsUnderReview: number;
+  openSeriousReports: number;
 }
 
 export interface PaginatedResult<T> {
@@ -38,17 +43,33 @@ const complaintInclude = {
 } as const;
 
 export async function getDashboard(): Promise<AdminDashboard> {
-  const [totalUsers, totalOwners, totalParkings, totalBookings, activeReservations, currentlyCheckedIn, currentlyCheckedOut, pendingComplaints] =
-    await Promise.all([
-      prisma.user.count({ where: { role: 'USER' } }),
-      prisma.user.count({ where: { role: 'OWNER' } }),
-      prisma.parkingLot.count(),
-      prisma.booking.count(),
-      prisma.booking.count({ where: { status: 'RESERVED' } }),
-      prisma.booking.count({ where: { status: 'ACTIVE' } }),
-      prisma.booking.count({ where: { status: 'COMPLETED' } }),
-      prisma.complaint.count({ where: { status: 'PENDING' } }),
-    ]);
+  const [
+    totalUsers,
+    totalOwners,
+    totalParkings,
+    totalBookings,
+    activeReservations,
+    currentlyCheckedIn,
+    currentlyCheckedOut,
+    pendingComplaints,
+    disputedBookings,
+    lotsUnderReview,
+    openSeriousReports,
+  ] = await Promise.all([
+    prisma.user.count({ where: { role: 'USER' } }),
+    prisma.user.count({ where: { role: 'OWNER' } }),
+    prisma.parkingLot.count(),
+    prisma.booking.count(),
+    prisma.booking.count({ where: { status: 'RESERVED' } }),
+    prisma.booking.count({ where: { status: 'ACTIVE' } }),
+    prisma.booking.count({ where: { status: 'COMPLETED' } }),
+    prisma.complaint.count({ where: { status: 'PENDING' } }),
+    prisma.booking.count({ where: { status: 'DISPUTED' } }),
+    prisma.parkingLot.count({ where: { status: 'UNDER_REVIEW' } }),
+    prisma.complaint.count({
+      where: { severity: 'SERIOUS', status: { in: ['PENDING', 'IN_REVIEW'] } },
+    }),
+  ]);
 
   return {
     totalUsers,
@@ -59,6 +80,9 @@ export async function getDashboard(): Promise<AdminDashboard> {
     currentlyCheckedIn,
     currentlyCheckedOut,
     pendingComplaints,
+    disputedBookings,
+    lotsUnderReview,
+    openSeriousReports,
   };
 }
 
@@ -102,29 +126,22 @@ export async function getComplaintById(id: string) {
   return complaint;
 }
 
+/**
+ * Delegates to the Continuity Engine rather than writing the row directly, so
+ * an admin closing a report also re-scores the lot it was filed against. That
+ * is the step that lets a lot climb back out of UNDER_REVIEW, and skipping it
+ * would strand lots there forever.
+ */
 export async function updateComplaintStatus(
+  adminId: string,
   id: string,
   status: ComplaintStatus,
+  resolutionNote?: string,
 ) {
-  const existing = await prisma.complaint.findUnique({
-    where: { id },
-    select: { id: true, status: true },
+  return continuityService.resolveReport(adminId, 'ADMIN', id, {
+    status,
+    resolutionNote,
   });
-
-  if (!existing) {
-    throw new AdminError(404, 'Complaint not found');
-  }
-
-  const complaint = await prisma.complaint.update({
-    where: { id },
-    data: {
-      status,
-      resolvedAt: status === 'RESOLVED' ? new Date() : null,
-    },
-    include: complaintInclude,
-  });
-
-  return complaint;
 }
 
 function buildBookingWhere(query: BookingListQuery) {
