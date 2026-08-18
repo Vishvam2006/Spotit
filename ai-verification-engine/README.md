@@ -6,7 +6,7 @@ A standalone, modular, zero-retention AI-powered verification engine for Indian 
 
 ## 🚀 How to Test & Verify ID Documents
 
-We provide a ready-to-use CLI tool [run_verification.py](file:///Users/aryanpatel.proff/Documents/ParkMitra/ai-verification-engine/run_verification.py) to test the verification engine on any real or sample Driving Licence / RC image or PDF.
+We provide a ready-to-use CLI tool [`run_verification.py`](run_verification.py) to test the verification engine on any real or sample Driving Licence / RC image or PDF.
 
 ### 1. Test a Driving Licence (DL)
 ```bash
@@ -57,60 +57,69 @@ print("Checks:", result.checks)
 
 ## 🎯 System Architecture
 
+This is the path `main.py` actually executes for every upload. The vision model
+**reads** the document; the deterministic rule engine **decides** the verdict.
+
 ```text
-                    USER DOCUMENT
-                         │
-                         ▼
-                 Image / PDF Input
-                         │
-                         ▼
-                Image Preprocessing
-           (Resize, Grayscale, CLAHE,
-            Denoise, Deskew Angle)
-                         │
-                         ▼
-                    Modular OCR
-         (PDFTextEngine / Image Engine)
-                         │
-                         ▼
-              Document Classification
-          (DRIVING_LICENSE / RC / UNKNOWN)
-                         │
-              ┌──────────┴──────────┐
-              │                     │
-              ▼                     ▼
-       DRIVING LICENCE              RC
-              │                     │
-              ▼                     ▼
-       Field Extraction      Field Extraction
-        (ONLY mandatory       (ONLY mandatory
-         DL fields)            RC fields)
-              │                     │
-              └──────────┬──────────┘
-                         │
-                         ▼
-                   Normalization
-          (Name, DOB, Vehicle Number)
-                         │
-                         ▼
-                Rule-Based Validation
-          (Name match, DOB exact match,
-           Vehicle Reg match, Expiry)
-                         │
-                         ▼
-             Compare Against Account
-                         │
-                         ▼
-                  Decision Engine
-            (Deterministic Rule Matrix)
-                         │
-                         ▼
-             VERIFIED / MISMATCH /
-        PARTIALLY_MATCHED / EXPIRED /
-       OCR_FAILED / UNKNOWN_DOCUMENT
+                    USER DOCUMENT (image or PDF)
+                                │
+                                ▼
+                  Groq Vision Extraction  (app/vision/)
+        one call: document kind + transcription + raw fields
+             extraction only — no verdict, no self-scored
+             confidence, image text treated as untrusted data
+                                │
+                                ▼
+                   Sanitization (app/vision/sanitize.py)
+          control chars stripped, lengths capped, prompt-injection
+                        patterns rejected
+                                │
+                                ▼
+              Document Classification (app/classifier/)
+     keyword/regex rules over the transcription — an independent
+        second opinion, cross-checked against the vision kind
+                                │
+                    ┌───────────┴───────────┐
+                    ▼                       ▼
+             DRIVING LICENCE                RC
+                    │                       │
+                    ▼                       ▼
+             Field Mapping           Field Mapping
+                    └───────────┬───────────┘
+                                ▼
+                  Normalization (app/normalization/)
+        name casing · date formats · OCR letter/digit confusion
+                  ("GJ O1 AB I234" → "GJ01AB1234")
+                                │
+                                ▼
+                Rule-Based Validation (app/validation/)
+      name fuzzy match (0.90) · DOB exact · registration equality
+                    · real expiry date arithmetic
+                                │
+                                ▼
+                Decision Matrix (app/verification/decision.py)
+       VERIFIED · MISMATCH · PARTIALLY_MATCHED · EXPIRED ·
+       OCR_FAILED · UNKNOWN_DOCUMENT · PROCESSING_ERROR
+                                │
+                                ▼
+              Derived Confidence (app/verification/confidence.py)
+     field completeness · validator agreement · normalization ·
+              legibility · document-type certainty
+        (confidence describes how well we READ the document;
+              it never influences the verdict)
 ```
 
----
+### What the checks actually do
+
+| Check | Backed by |
+|---|---|
+| Document type | Vision kind + keyword classifier agreement |
+| Name | `rapidfuzz` similarity against the account name, 0.90 threshold |
+| Registration | Full equality after normalization and OCR-confusion correction |
+| Validity | Real date arithmetic against today — an expired document fails |
+
+Every check returns a sentence naming the values compared, e.g.
+`"Expired on 15 May 2020, 2,286 days ago."`
 
 ## 📄 Supported Documents & Extracted Scope
 
@@ -153,8 +162,7 @@ If the engine is unreachable, the backend automatically falls back to running
 whatever `python3` is on `PATH`, so the venv above is what makes the fallback
 work too.
 
-> `server.py` is a **standalone browser tester** on port 8080 with its own
-> single-document `/api/verify` contract. The backend does not talk to it.
+> Use `run_verification.py` to test a document from the CLI without the stack.
 
 ## 🤖 Groq API Configuration
 
@@ -194,7 +202,18 @@ Two things to know about the current default:
 
 Without a working key or vision model, the engine reports `NEEDS_REVIEW` with an
 explanatory summary — it does **not** claim the uploaded image is an invalid
-document.
+document, and nothing is persisted against the user's vehicle.
+
+Run `GET /health` before demoing: it reports which of your configured vision
+models this account can actually reach.
+
+### Skipped checks
+
+A check with nothing to compare against is `SKIPPED`, not failed. The `User`
+model has no date-of-birth column, so DL date-of-birth is normally skipped and
+the licence is decided on the name alone; likewise the registration check when
+no vehicle is selected. Without this a valid licence would be rejected 100% of
+the time.
 
 ---
 

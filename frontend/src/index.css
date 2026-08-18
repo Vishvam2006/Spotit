@@ -54,6 +54,24 @@
   --pm-neumorphic-light: rgba(255, 255, 255, 0.03);
   --pm-neumorphic-dark: rgba(0, 0, 0, 0.3);
   --pm-bottom-nav-height: 80px;
+
+  /* Semantic status colours. Status surfaces previously hardcoded Tailwind's
+     emerald-50/amber-50/rose-50, which are near-white -- unreadable under this
+     theme's white body text. There is no tailwind config here and the theme
+     switches on [data-theme], not prefers-color-scheme, so `dark:` variants
+     would track the OS instead of the app. Tokens are the only correct tool. */
+  --pm-status-pass: #34d399;
+  --pm-status-pass-soft: rgba(52, 211, 153, 0.14);
+  --pm-status-pass-border: rgba(52, 211, 153, 0.35);
+  --pm-status-warn: #fbbf24;
+  --pm-status-warn-soft: rgba(251, 191, 36, 0.14);
+  --pm-status-warn-border: rgba(251, 191, 36, 0.35);
+  --pm-status-fail: #fb7185;
+  --pm-status-fail-soft: rgba(251, 113, 133, 0.14);
+  --pm-status-fail-border: rgba(251, 113, 133, 0.35);
+  --pm-status-neutral: #a8b0bc;
+  --pm-status-neutral-soft: rgba(168, 176, 188, 0.12);
+  --pm-status-neutral-border: rgba(168, 176, 188, 0.3);
 }
 
 :root[data-theme='light'] {
@@ -73,6 +91,20 @@
   --pm-shadow-sheet: 0 -12px 32px rgba(15, 23, 42, 0.14);
   --pm-neumorphic-light: rgba(255, 255, 255, 0.9);
   --pm-neumorphic-dark: rgba(15, 23, 42, 0.08);
+
+  /* Darker foregrounds so status text keeps AA contrast on white surfaces. */
+  --pm-status-pass: #047857;
+  --pm-status-pass-soft: rgba(4, 120, 87, 0.1);
+  --pm-status-pass-border: rgba(4, 120, 87, 0.28);
+  --pm-status-warn: #b45309;
+  --pm-status-warn-soft: rgba(180, 83, 9, 0.1);
+  --pm-status-warn-border: rgba(180, 83, 9, 0.28);
+  --pm-status-fail: #be123c;
+  --pm-status-fail-soft: rgba(190, 18, 60, 0.1);
+  --pm-status-fail-border: rgba(190, 18, 60, 0.28);
+  --pm-status-neutral: #64748b;
+  --pm-status-neutral-soft: rgba(100, 116, 139, 0.1);
+  --pm-status-neutral-border: rgba(100, 116, 139, 0.28);
 }
 
 @layer base {

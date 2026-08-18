@@ -6,9 +6,10 @@ export const GOOGLE_MAPS_MAP_ID = import.meta.env
 
 export const GOOGLE_MAPS_LIBRARIES: ('marker' | 'places')[] = ['marker'];
 
+// Ahmedabad — matches the seeded parking data.
 export const DEFAULT_MAP_CENTER = {
-  lat: 12.9716,
-  lng: 77.5946,
+  lat: 23.0225,
+  lng: 72.5714,
 };
 
 export const DEFAULT_MAP_ZOOM = 12;

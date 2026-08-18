@@ -11,6 +11,9 @@ const execFileAsync = promisify(execFile);
 
 const MAX_FILES_PER_REQUEST = 10;
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
+// Sits above the engine's own AI_TOTAL_BUDGET_S (75s) so the engine gets the
+// chance to return a partial answer before we give up on it.
+const AI_ENGINE_TIMEOUT_MS = Number(process.env.AI_ENGINE_TIMEOUT_MS) || 90_000;
 
 function isAllowedImageFormat(buffer: Buffer): boolean {
   if (buffer.length < 12) return false;
@@ -122,6 +125,81 @@ function persistVerification(input: PersistVerificationInput): void {
     });
 }
 
+type SelectedVehicle = Awaited<ReturnType<typeof prisma.vehicle.findFirst>>;
+
+const ENGINE_OFFLINE_CHECKS = [
+  { id: 'documentType', label: 'Recognised as a supported document' },
+  { id: 'nameMatch', label: 'Owner name matches your account' },
+  { id: 'registrationMatch', label: 'Registration number matches your vehicle' },
+  { id: 'validity', label: 'Document is currently valid' },
+];
+
+/**
+ * The engine could not be reached, so nothing was checked.
+ *
+ * This is deliberately NEEDS_REVIEW rather than REJECTED, with every check marked
+ * SKIPPED and zero confidence: the user's document was not examined, so we have
+ * no grounds to fail it. Nothing is persisted and no vehicle is stamped.
+ */
+function engineUnavailableResult(
+  payload: VerifyPayload,
+  selectedVehicle: SelectedVehicle,
+  error: unknown,
+) {
+  const reason =
+    error instanceof Error && error.name === 'TimeoutError'
+      ? 'The verification engine did not respond in time. Your document was not checked.'
+      : 'The verification engine is unavailable. Your document was not checked.';
+
+  const documents = payload.files.map((file, index) => ({
+    filename: file.name || `Document_${index + 1}`,
+    documentType: 'UNKNOWN',
+    status: 'NEEDS_REVIEW' as const,
+    confidenceScore: 0,
+    extractedFields: { documentType: 'UNKNOWN' },
+    checks: {
+      formatValid: false,
+      registrationMatch: false,
+      nameMatch: false,
+      expiryCheck: false,
+    },
+    summary: reason,
+    documentTypeLabel: 'Not checked',
+    statusLabel: 'Not checked',
+    engineStatus: 'PROCESSING_ERROR',
+    engineAvailable: false,
+    confidenceLabel: 'Unknown',
+    checkResults: ENGINE_OFFLINE_CHECKS.map((check) => ({
+      ...check,
+      status: 'SKIPPED' as const,
+      rawStatus: 'SKIPPED',
+      detail: 'Not checked -- the verification engine was unavailable.',
+    })),
+    fields: [],
+    diagnostics: { failureReason: reason },
+  }));
+
+  return {
+    success: true,
+    verificationId: `ver_offline_${crypto.randomBytes(4).toString('hex')}`,
+    engineVersion: 'unavailable',
+    engineAvailable: false,
+    overallStatus: 'NEEDS_REVIEW' as const,
+    overallConfidence: 0,
+    documents,
+    targetVehicle: selectedVehicle
+      ? {
+          id: selectedVehicle.id,
+          registration: selectedVehicle.registration,
+          make: selectedVehicle.make,
+          model: selectedVehicle.model,
+          type: selectedVehicle.type,
+        }
+      : null,
+    summary: reason,
+  };
+}
+
 export async function processDocumentVerification(payload: VerifyPayload) {
   if (!payload.files || payload.files.length === 0) {
     throw new VerificationError(400, 'At least one document image must be uploaded.');
@@ -178,10 +256,22 @@ export async function processDocumentVerification(payload: VerifyPayload) {
       method: 'POST',
       headers,
       body: formData,
+      // Without this a hung socket blocks until the browser's own abort, which
+      // on a demo looks like the app freezing rather than the engine failing.
+      signal: AbortSignal.timeout(AI_ENGINE_TIMEOUT_MS),
     });
 
-    if (aiRes.ok) {
-      const aiData = await aiRes.json();
+    if (!aiRes.ok) {
+      // Previously this fell out of the `if (aiRes.ok)` block without throwing and
+      // silently slid into the bridge path, so a 500 from the engine looked like a
+      // verification result. Fail loudly instead.
+      throw new Error(`AI engine responded ${aiRes.status} ${aiRes.statusText}`);
+    }
+
+    const aiData = await aiRes.json();
+    // An outage is not a verdict: never stamp a vehicle or write an audit row
+    // off the back of documents the engine never actually looked at.
+    if (aiData.engineAvailable !== false) {
       void persistVerification({
         userId: payload.userId,
         vehicleId: payload.vehicleId,
@@ -190,21 +280,30 @@ export async function processDocumentVerification(payload: VerifyPayload) {
         summary: aiData.summary ?? '',
         documents: aiData.documents ?? [],
       });
-      return {
-        ...aiData,
-        targetVehicle: selectedVehicle
-          ? {
-              id: selectedVehicle.id,
-              registration: selectedVehicle.registration,
-              make: selectedVehicle.make,
-              model: selectedVehicle.model,
-              type: selectedVehicle.type,
-            }
-          : null,
-      };
     }
+    return {
+      ...aiData,
+      targetVehicle: selectedVehicle
+        ? {
+            id: selectedVehicle.id,
+            registration: selectedVehicle.registration,
+            make: selectedVehicle.make,
+            model: selectedVehicle.model,
+            type: selectedVehicle.type,
+          }
+        : null,
+    };
   } catch (error) {
-    console.warn('[VerificationService] AI Engine HTTP call failed, using bridge script fallback:', error);
+    console.warn('[VerificationService] AI engine call failed:', error);
+
+    // The bridge runs a different pipeline and, without an OCR engine installed,
+    // returns OCR_FAILED for every image -- which the UI renders as a confident
+    // red rejection of a perfectly valid document. Telling a user their real RC
+    // is fake because our service is down is a wrong answer, not a strict one.
+    // Off by default; opt in only where the bridge is known to work.
+    if (process.env.VERIFICATION_BRIDGE_FALLBACK !== 'true') {
+      return engineUnavailableResult(payload, selectedVehicle, error);
+    }
   }
 
   const docs = await Promise.all(payload.files.map(async (file, idx) => {
@@ -360,10 +459,14 @@ function normalizeBridgeDocument(
     : result.document_type === 'DRIVING_LICENSE'
       ? 'DRIVING_LICENSE'
       : 'INVALID_DOCUMENT';
+  // Only ever report what the document actually yielded. This used to fall back
+  // to `expectedRegistration` -- the user's own garage value -- and present it as
+  // "read from the document", so a failed extraction rendered as a cross-reference
+  // PASS with two identical registration numbers while every check below it failed.
   const vehicleNumber = cleanRegistration(
     typeof extracted.vehicle_registration_number === 'string'
       ? extracted.vehicle_registration_number
-      : expectedRegistration,
+      : undefined,
   );
   const formatValid = result.document_type !== 'UNKNOWN'
     && !['OCR_FAILED', 'UNKNOWN_DOCUMENT', 'PROCESSING_ERROR'].includes(result.status);

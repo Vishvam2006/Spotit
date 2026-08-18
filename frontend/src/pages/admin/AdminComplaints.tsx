@@ -5,8 +5,7 @@ import ComplaintTable from '../../components/admin/ComplaintTable';
 import Pagination from '../../components/admin/Pagination';
 import { useAdminComplaints } from '../../hooks/useAdminComplaints';
 import { updateAdminComplaintStatus } from '../../services/admin';
-import { getErrorMessage } from '../../services/api';
-import { notifySuccess } from '../../utils/notify';
+import { notifyError, notifySuccess } from '../../utils/notify';
 import type { ComplaintStatus } from '../../types/complaint';
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -25,7 +24,7 @@ export default function AdminComplaints() {
   const [status, setStatus] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const { result, loading, error } = useAdminComplaints({
+  const { result, loading, error, manualRefresh } = useAdminComplaints({
     page,
     limit: PAGE_SIZE,
     status,
@@ -36,8 +35,9 @@ export default function AdminComplaints() {
     try {
       await updateAdminComplaintStatus(id, next);
       notifySuccess('Complaint status updated.');
+      await manualRefresh();
     } catch (err) {
-      notifySuccess(getErrorMessage(err));
+      notifyError(err);
     } finally {
       setUpdatingId(null);
     }

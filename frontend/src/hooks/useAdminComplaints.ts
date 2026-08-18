@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { fetchAdminComplaints } from '../services/admin';
-import { getErrorMessage } from '../services/api';
 import type { ComplaintStatus } from '../types/complaint';
-import type { Complaint } from '../types/complaint';
-import type { Paginated } from '../types/admin';
+import { usePolledResource } from './usePolledResource';
 
 export interface UseAdminComplaintsOptions {
   page: number;
@@ -16,58 +14,21 @@ export function useAdminComplaints(
   intervalMs = 15_000,
 ) {
   const { page, limit, status } = options;
-  const [result, setResult] = useState<Paginated<Complaint> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const next = await fetchAdminComplaints({
+  const fetcher = useCallback(
+    () =>
+      fetchAdminComplaints({
         page,
         limit,
-        status: status as ComplaintStatus | undefined,
-      });
-      setResult(next);
-      setError(null);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [page, limit, status]);
+        status: (status || undefined) as ComplaintStatus | undefined,
+      }),
+    [page, limit, status],
+  );
 
-  useEffect(() => {
-    let active = true;
-    fetchAdminComplaints({
-      page,
-      limit,
-      status: status as ComplaintStatus | undefined,
-    })
-      .then((next) => {
-        if (!active) return;
-        setResult(next);
-      })
-      .catch((err) => {
-        if (active) setError(getErrorMessage(err));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [page, limit, status]);
+  const { data, loading, error, manualRefresh } = usePolledResource(
+    fetcher,
+    intervalMs,
+  );
 
-  useEffect(() => {
-    const timer = setInterval(load, intervalMs);
-    return () => clearInterval(timer);
-  }, [load, intervalMs]);
-
-  const manualRefresh = useCallback(async () => {
-    setLoading(true);
-    await load();
-    setLoading(false);
-  }, [load]);
-
-  return { result, loading, error, manualRefresh };
+  return { result: data, loading, error, manualRefresh };
 }

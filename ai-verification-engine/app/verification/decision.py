@@ -27,6 +27,27 @@ def evaluate_dl_decision(
             checks=checks,
             message="Driving Licence is expired."
         )
+    # No DOB on the account to compare against (the User model has no DOB column),
+    # so the DOB check is skipped rather than failed. Without this, validate_dob
+    # returns MISMATCH for an empty account DOB and every valid licence would be
+    # rejected by the MISMATCH branch below.
+    if dob_status == CheckStatus.SKIPPED:
+        if name_status == CheckStatus.MATCH:
+            return VerificationResult(
+                status=VerificationStatus.VERIFIED,
+                document_type=DocumentType.DRIVING_LICENSE,
+                confidence=confidence,
+                checks=checks,
+                message="Driving Licence verified against the account name. Date of birth was not checked because none is on file."
+            )
+        return VerificationResult(
+            status=VerificationStatus.MISMATCH,
+            document_type=DocumentType.DRIVING_LICENSE,
+            confidence=confidence,
+            checks=checks,
+            message="The name on the Driving Licence does not match the account name."
+        )
+
     if name_status == CheckStatus.MATCH and dob_status == CheckStatus.MATCH:
         return VerificationResult(
             status=VerificationStatus.VERIFIED,
@@ -82,6 +103,25 @@ def evaluate_rc_decision(
             confidence=confidence,
             checks=checks,
             message="Vehicle Registration Certificate (RC) is expired."
+        )
+
+    # Standalone scan with no vehicle selected: there is no registration to compare
+    # against, so the check is skipped rather than failed.
+    if vehicle_status == CheckStatus.SKIPPED:
+        if name_status == CheckStatus.MATCH:
+            return VerificationResult(
+                status=VerificationStatus.VERIFIED,
+                document_type=DocumentType.RC,
+                confidence=confidence,
+                checks=checks,
+                message="RC verified against the account name. No vehicle was selected, so the registration number was not cross-checked."
+            )
+        return VerificationResult(
+            status=VerificationStatus.MISMATCH,
+            document_type=DocumentType.RC,
+            confidence=confidence,
+            checks=checks,
+            message="The owner name on the RC does not match the account name."
         )
 
     if name_status == CheckStatus.MATCH and vehicle_status == CheckStatus.MATCH:

@@ -102,8 +102,8 @@ export default function Home() {
                 <Clock className="h-5 w-5 text-[var(--pm-color-muted)]" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-[var(--pm-color-text)]">Central Mall Parking</h3>
-                <p className="text-sm text-[var(--pm-color-muted)]">MG Road, Bengaluru</p>
+                <h3 className="text-base font-bold text-[var(--pm-color-text)]">CG Road Multilevel Parking</h3>
+                <p className="text-sm text-[var(--pm-color-muted)]">Navrangpura, Ahmedabad</p>
               </div>
             </div>
             <ChevronRight className="h-5 w-5 text-[var(--pm-color-muted)]" />
