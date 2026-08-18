@@ -3,6 +3,7 @@ import { geofenceConfig } from '../../config/geofence';
 import type { Booking, ParkingLot, Prisma, VehicleType } from '@prisma/client';
 import type { CreateBookingInput } from './booking.validation';
 import { verifyLocationSample, type LocationSample } from './booking.geofence';
+import { recordEvent } from '../continuity/continuity.events';
 
 const CHECK_IN_EVENT = 'CHECK_IN_READING';
 const CHECK_OUT_EVENT = 'CHECK_OUT_READING';
@@ -95,6 +96,21 @@ async function expireReservedBookings(tx: Prisma.TransactionClient) {
         where: { id: booking.parkingLotId },
         data: { availableSpaces: { increment: 1 } },
       });
+
+      await recordEvent(tx, {
+        type: 'BOOKING_EXPIRED',
+        bookingId: booking.id,
+        parkingLotId: booking.parkingLotId,
+        fromStatus: 'RESERVED',
+        toStatus: 'EXPIRED',
+        reason: 'The user did not check in before the deadline.',
+      });
+      await recordEvent(tx, {
+        type: 'CAPACITY_RELEASED',
+        bookingId: booking.id,
+        parkingLotId: booking.parkingLotId,
+        reason: 'Reservation expired without a check-in.',
+      });
     }
   }
 }
@@ -143,6 +159,21 @@ async function completeStaleSessions(tx: Prisma.TransactionClient) {
       await tx.parkingLot.update({
         where: { id: booking.parkingLotId },
         data: { availableSpaces: { increment: 1 } },
+      });
+
+      await recordEvent(tx, {
+        type: 'CHECKED_OUT',
+        bookingId: booking.id,
+        parkingLotId: booking.parkingLotId,
+        fromStatus: 'ACTIVE',
+        toStatus: 'COMPLETED',
+        reason: 'Session closed automatically after the phone stopped reporting.',
+      });
+      await recordEvent(tx, {
+        type: 'CAPACITY_RELEASED',
+        bookingId: booking.id,
+        parkingLotId: booking.parkingLotId,
+        reason: 'Stale session completed.',
       });
     }
   }
@@ -253,6 +284,27 @@ export async function createBooking(
         estimatedAmount,
       },
       include: bookingInclude,
+    });
+
+    await recordEvent(tx, {
+      type: 'BOOKING_CREATED',
+      bookingId: booking.id,
+      parkingLotId: parkingLot.id,
+      actorId: userId,
+      actorRole: 'USER',
+      toStatus: 'RESERVED',
+      metadata: {
+        durationMinutes: input.durationMinutes,
+        checkInDeadline: checkInDeadline.toISOString(),
+      },
+    });
+    await recordEvent(tx, {
+      type: 'CAPACITY_HELD',
+      bookingId: booking.id,
+      parkingLotId: parkingLot.id,
+      actorId: userId,
+      actorRole: 'USER',
+      reason: 'One space locked for this reservation.',
     });
 
     return mapBooking(booking);
@@ -415,6 +467,17 @@ export async function checkInBooking(
       throw new BookingError(404, 'Booking not found');
     }
 
+    await recordEvent(tx, {
+      type: 'CHECKED_IN',
+      bookingId: checkedIn.id,
+      parkingLotId: checkedIn.parkingLotId,
+      actorId: userId,
+      actorRole: 'USER',
+      fromStatus: 'RESERVED',
+      toStatus: 'ACTIVE',
+      metadata: { sessionEndsAt: sessionEndsAt.toISOString() },
+    });
+
     return mapBooking(checkedIn);
   });
 }
@@ -469,6 +532,17 @@ async function checkInBookingStatusOnly(
     if (!checkedIn) {
       throw new BookingError(404, 'Booking not found');
     }
+
+    await recordEvent(tx, {
+      type: 'CHECKED_IN',
+      bookingId: checkedIn.id,
+      parkingLotId: checkedIn.parkingLotId,
+      actorId: userId,
+      actorRole: 'USER',
+      fromStatus: 'RESERVED',
+      toStatus: 'ACTIVE',
+      metadata: { sessionEndsAt: sessionEndsAt.toISOString() },
+    });
 
     return mapBooking(checkedIn);
   });
@@ -593,6 +667,25 @@ export async function checkOutBooking(
       data: { availableSpaces: { increment: 1 } },
     });
 
+    await recordEvent(tx, {
+      type: 'CHECKED_OUT',
+      bookingId: updatedBooking.id,
+      parkingLotId: updatedBooking.parkingLotId,
+      actorId: userId,
+      actorRole: 'USER',
+      fromStatus: 'ACTIVE',
+      toStatus: 'COMPLETED',
+      metadata: { finalAmount },
+    });
+    await recordEvent(tx, {
+      type: 'CAPACITY_RELEASED',
+      bookingId: updatedBooking.id,
+      parkingLotId: updatedBooking.parkingLotId,
+      actorId: userId,
+      actorRole: 'USER',
+      reason: 'Session completed at check-out.',
+    });
+
     return mapBooking(updatedBooking);
   });
 }
@@ -659,6 +752,25 @@ async function checkOutBookingStatusOnly(
     await tx.parkingLot.update({
       where: { id: existing.parkingLotId },
       data: { availableSpaces: { increment: 1 } },
+    });
+
+    await recordEvent(tx, {
+      type: 'CHECKED_OUT',
+      bookingId: updatedBooking.id,
+      parkingLotId: updatedBooking.parkingLotId,
+      actorId: userId,
+      actorRole: 'USER',
+      fromStatus: 'ACTIVE',
+      toStatus: 'COMPLETED',
+      metadata: { finalAmount },
+    });
+    await recordEvent(tx, {
+      type: 'CAPACITY_RELEASED',
+      bookingId: updatedBooking.id,
+      parkingLotId: updatedBooking.parkingLotId,
+      actorId: userId,
+      actorRole: 'USER',
+      reason: 'Session completed at check-out.',
     });
 
     return mapBooking(updatedBooking);
@@ -750,6 +862,25 @@ export async function cancelBooking(
     await tx.parkingLot.update({
       where: { id: booking.parkingLotId },
       data: { availableSpaces: { increment: 1 } },
+    });
+
+    await recordEvent(tx, {
+      type: 'BOOKING_CANCELLED',
+      bookingId: booking.id,
+      parkingLotId: booking.parkingLotId,
+      actorId: userId,
+      actorRole: 'USER',
+      fromStatus: 'RESERVED',
+      toStatus: 'CANCELLED',
+      reason: 'USER_CANCELLED',
+    });
+    await recordEvent(tx, {
+      type: 'CAPACITY_RELEASED',
+      bookingId: booking.id,
+      parkingLotId: booking.parkingLotId,
+      actorId: userId,
+      actorRole: 'USER',
+      reason: 'Reservation cancelled by the user.',
     });
 
     return mapBooking(booking);

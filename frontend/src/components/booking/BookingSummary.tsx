@@ -1,6 +1,6 @@
 import type { Booking } from '../../types/booking';
 import { formatDateTime, formatINR } from '../../utils/format';
-import { getBookingStatusStyles } from '../../utils/bookingStatus';
+import { getBookingStatusLabel, getBookingStatusStyles } from '../../utils/bookingStatus';
 import VehicleDetails from '../vehicle/VehicleDetails';
 import SmartSuggest from './SmartSuggest';
 
@@ -37,7 +37,7 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
             booking.status,
           )}`}
         >
-          {booking.status}
+          {getBookingStatusLabel(booking.status)}
         </span>
       </div>
 
@@ -47,6 +47,18 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
           <span>
             This booking was cancelled because the parking owner deactivated this location.
           </span>
+        </div>
+      )}
+
+      {booking.status === 'DISPUTED' && (
+        <div className="mx-6 mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-100">
+          <p className="font-semibold">This booking is protected.</p>
+          <p className="mt-1">
+            You reported an issue with this parking lot, so we kept the booking on
+            record as evidence instead of deleting it. The parking owner and our
+            team can both see your report, and the space you paid to hold has been
+            released back to the lot.
+          </p>
         </div>
       )}
 

@@ -26,6 +26,7 @@ export interface ParkingLotOverrides {
 
 export async function resetDb() {
   // Delete all records in the correct order to respect foreign key constraints
+  await prisma.continuityEvent.deleteMany();
   await prisma.complaint.deleteMany();
   await prisma.booking.deleteMany();
   await prisma.vehicle.deleteMany();

@@ -8,54 +8,70 @@ datasource db {
 }
 
 model User {
-  id           String       @id @default(uuid())
-  fullName     String
-  email        String       @unique
-  passwordHash String
-  phone        String?
-  profileImage String?
-  role         Role         @default(USER)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  ParkingLot   ParkingLot[]
-  Booking      Booking[]
-  vehicles     Vehicle[]
+  id            String                @id @default(uuid())
+  fullName      String
+  email         String                @unique
+  passwordHash  String
+  phone         String?
+  profileImage  String?
+  role          Role                  @default(USER)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  ParkingLot    ParkingLot[]
+  Booking       Booking[]
+  vehicles      Vehicle[]
   verifications VerificationRequest[]
-  complaints   Complaint[]
+  complaints    Complaint[]
 }
 
 model ParkingLot {
-  id              String           @id @default(cuid())
-  ownerId         String
-  name            String
-  description     String?
-  address         String
-  city            String
-  latitude        Float
-  longitude       Float
-  pricePerHour    Float
-  totalSpaces     Int
-  availableSpaces Int
-  status          ParkingLotStatus @default(ACTIVE)
-  imageUrl        String?
-  photos          String[]         @default([])
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  owner           User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  Booking         Booking[]
-  complaints      Complaint[]
+  id                     String                 @id @default(cuid())
+  ownerId                String
+  name                   String
+  description            String?
+  address                String
+  city                   String
+  latitude               Float
+  longitude              Float
+  pricePerHour           Float
+  totalSpaces            Int
+  availableSpaces        Int
+  status                 ParkingLotStatus       @default(ACTIVE)
+  /// Continuity Engine: trust level of `availableSpaces`, recomputed from the
+  /// lot's unresolved serious reports.
+  availabilityConfidence AvailabilityConfidence @default(HIGH)
+  /// Set when the engine escalates the lot, cleared when an admin reinstates it.
+  underReviewSince       DateTime?
+  /// The status the lot held before the engine escalated it, so reinstating
+  /// restores the owner's intent rather than blindly forcing ACTIVE.
+  statusBeforeReview     ParkingLotStatus?
+  imageUrl               String?
+  photos                 String[]               @default([])
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  owner                  User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  Booking                Booking[]
+  complaints             Complaint[]
+  continuityEvents       ContinuityEvent[]
 
   @@index([ownerId])
   @@index([city])
   @@index([status])
+  @@index([status, availabilityConfidence])
 }
 
 enum BookingStatus {
+  /// Space is held for the user; equivalent to CONFIRMED in the Continuity
+  /// Engine spec. Kept as RESERVED because the rest of the system, the API
+  /// and the stored rows already use that name.
   RESERVED
   ACTIVE
   COMPLETED
   CANCELLED
   EXPIRED
+  /// The user reported that the lot failed them. The booking is never deleted
+  /// or silently cancelled: it is frozen as evidence for owner/admin review.
+  DISPUTED
 }
 
 enum VehicleType {
@@ -64,24 +80,24 @@ enum VehicleType {
 }
 
 model Vehicle {
-  id            String      @id @default(cuid())
-  userId        String
-  registration  String
-  type          VehicleType
-  imageUrl      String
-  imagePublicId String
-  make          String?
-  model         String?
-  color         String?
-  isDefault     Boolean     @default(false)
+  id                 String      @id @default(cuid())
+  userId             String
+  registration       String
+  type               VehicleType
+  imageUrl           String
+  imagePublicId      String
+  make               String?
+  model              String?
+  color              String?
+  isDefault          Boolean     @default(false)
   // Latest AI document-verification outcome for this vehicle:
   // null = never verified, otherwise VERIFIED / NEEDS_REVIEW / REJECTED.
   verificationStatus String?
   verifiedAt         DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   verifications VerificationRequest[]
 
   @@unique([userId, registration])
@@ -90,37 +106,41 @@ model Vehicle {
 }
 
 model Booking {
-  id                String        @id @default(cuid())
-  userId            String
-  parkingLotId      String
-  vehicleNumber     String
-  durationMinutes   Int
-  reservedAt        DateTime
-  checkInDeadline   DateTime
-  checkInTime       DateTime?
-  sessionEndsAt     DateTime?
-  checkOutTime      DateTime?
-  estimatedAmount   Float?
-  finalAmount       Float?
-  status            BookingStatus @default(RESERVED)
-  cancellationReason String?
-  cancelledAt        DateTime?
-  lastLocationAt    DateTime?
-  lastSeenAt        DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  vehicleId         String?
+  id                  String        @id @default(cuid())
+  userId              String
+  parkingLotId        String
+  vehicleNumber       String
+  durationMinutes     Int
+  reservedAt          DateTime
+  checkInDeadline     DateTime
+  checkInTime         DateTime?
+  sessionEndsAt       DateTime?
+  checkOutTime        DateTime?
+  estimatedAmount     Float?
+  finalAmount         Float?
+  status              BookingStatus @default(RESERVED)
+  cancellationReason  String?
+  cancelledAt         DateTime?
+  lastLocationAt      DateTime?
+  lastSeenAt          DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  vehicleId           String?
   vehicleRegistration String
-  vehicleType       VehicleType
-  vehicleImageUrl   String
-  vehicleMake       String?
-  vehicleModel      String?
-  vehicleColor      String?
+  vehicleType         VehicleType
+  vehicleImageUrl     String
+  vehicleMake         String?
+  vehicleModel        String?
+  vehicleColor        String?
 
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parkingLot    ParkingLot      @relation(fields: [parkingLotId], references: [id], onDelete: Cascade)
-  locationAudit LocationAudit[]
-  complaints    Complaint[]
+  /// Continuity Engine: set when the booking is frozen as evidence.
+  disputedAt DateTime?
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parkingLot       ParkingLot        @relation(fields: [parkingLotId], references: [id], onDelete: Cascade)
+  locationAudit    LocationAudit[]
+  complaints       Complaint[]
+  continuityEvents ContinuityEvent[]
 
   @@index([userId, status])
   @@index([parkingLotId, status])
@@ -179,30 +199,117 @@ enum ComplaintStatus {
 }
 
 model Complaint {
-  id           String          @id @default(cuid())
-  userId       String
-  parkingLotId String?
-  bookingId    String?
-  category     String
-  subject      String
-  description  String
-  status       ComplaintStatus @default(PENDING)
-  resolvedAt   DateTime?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id             String          @id @default(cuid())
+  userId         String
+  parkingLotId   String?
+  bookingId      String?
+  category       String
+  subject        String
+  description    String
+  status         ComplaintStatus @default(PENDING)
+  /// Continuity Engine fields. `issueType` is null for free-form complaints
+  /// raised outside a booking (the pre-existing "contact us" form).
+  issueType      IssueType?
+  severity       IssueSeverity   @default(MINOR)
+  /// Photo evidence URLs (Cloudinary secure URLs).
+  photos         String[]        @default([])
+  resolutionNote String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parkingLot ParkingLot? @relation(fields: [parkingLotId], references: [id], onDelete: SetNull)
-  booking    Booking?    @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parkingLot       ParkingLot?       @relation(fields: [parkingLotId], references: [id], onDelete: SetNull)
+  booking          Booking?          @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  continuityEvents ContinuityEvent[]
 
   @@index([userId, createdAt])
   @@index([parkingLotId])
   @@index([bookingId])
   @@index([status, createdAt])
+  /// Drives the reliability recompute: open serious reports per lot.
+  @@index([parkingLotId, status, severity])
+}
+
+/// Append-only status history for the Continuity Engine. One row per state
+/// change, never updated or deleted, so every booking and lot can explain how
+/// it reached its current state.
+model ContinuityEvent {
+  id           String              @id @default(cuid())
+  type         ContinuityEventType
+  bookingId    String?
+  parkingLotId String?
+  complaintId  String?
+  /// Who caused the change; null when the engine acted on its own (sweeper).
+  actorId      String?
+  actorRole    Role?
+  fromStatus   String?
+  toStatus     String?
+  reason       String?
+  metadata     Json?
+  createdAt    DateTime            @default(now())
+
+  booking    Booking?    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  parkingLot ParkingLot? @relation(fields: [parkingLotId], references: [id], onDelete: Cascade)
+  complaint  Complaint?  @relation(fields: [complaintId], references: [id], onDelete: SetNull)
+
+  @@index([bookingId, createdAt])
+  @@index([parkingLotId, createdAt])
+  @@index([complaintId, createdAt])
+  @@index([type, createdAt])
 }
 
 enum ParkingLotStatus {
   ACTIVE
   INACTIVE
   CLOSED
+  /// Enough unresolved serious reports have accumulated that the lot's
+  /// advertised availability can no longer be trusted. It stops appearing in
+  /// search and cannot take new bookings until an admin clears it.
+  UNDER_REVIEW
+}
+
+/// How much the advertised availability of a lot can be trusted. Derived from
+/// the count of unresolved serious reports; see continuity.reliability.ts.
+enum AvailabilityConfidence {
+  HIGH
+  MEDIUM
+  LOW
+  UNDER_REVIEW
+}
+
+/// The concrete way a lot failed a user. Drives severity, which drives whether
+/// the lot is escalated.
+enum IssueType {
+  SPACE_UNAVAILABLE
+  LOT_FULL
+  LOT_CLOSED
+  MISLEADING_LISTING
+  ACCESS_BLOCKED
+  OTHER
+}
+
+enum IssueSeverity {
+  MINOR
+  SERIOUS
+}
+
+/// Every state change the Continuity Engine makes, appended in order. This is
+/// the audit trail that stops a case from quietly disappearing.
+enum ContinuityEventType {
+  BOOKING_CREATED
+  CAPACITY_HELD
+  CAPACITY_RELEASED
+  CHECKED_IN
+  CHECKED_OUT
+  BOOKING_CANCELLED
+  BOOKING_EXPIRED
+  BOOKING_DISPUTED
+  ISSUE_REPORTED
+  REPORT_STATUS_CHANGED
+  LOT_CONFIDENCE_CHANGED
+  LOT_UNDER_REVIEW
+  LOT_REINSTATED
+  LOT_DEACTIVATED
 }

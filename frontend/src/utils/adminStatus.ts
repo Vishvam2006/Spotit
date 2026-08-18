@@ -7,6 +7,7 @@ const BOOKING_LABELS: Record<BookingStatus, string> = {
   COMPLETED: 'Checked-out',
   CANCELLED: 'Cancelled',
   EXPIRED: 'Expired',
+  DISPUTED: 'Disputed',
 };
 
 const COMPLAINT_LABELS: Record<ComplaintStatus, string> = {

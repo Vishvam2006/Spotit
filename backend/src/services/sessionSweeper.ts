@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma';
 import { geofenceConfig } from '../config/geofence';
+import { recordEvent } from '../modules/continuity/continuity.events';
 
 const DEFAULT_INTERVAL_MS = 15_000;
 
@@ -39,6 +40,22 @@ export async function sweepExpiredReservations(): Promise<number> {
       await prisma.parkingLot.update({
         where: { id: booking.parkingLotId },
         data: { availableSpaces: { increment: 1 } },
+      });
+
+      // No actor: the engine expired this on its own.
+      await recordEvent(prisma, {
+        type: 'BOOKING_EXPIRED',
+        bookingId: booking.id,
+        parkingLotId: booking.parkingLotId,
+        fromStatus: 'RESERVED',
+        toStatus: 'EXPIRED',
+        reason: 'The user did not check in before the deadline.',
+      });
+      await recordEvent(prisma, {
+        type: 'CAPACITY_RELEASED',
+        bookingId: booking.id,
+        parkingLotId: booking.parkingLotId,
+        reason: 'Reservation expired without a check-in.',
       });
     }
   }
@@ -96,6 +113,21 @@ export async function sweepCompletedSessions(): Promise<number> {
       await prisma.parkingLot.update({
         where: { id: booking.parkingLotId },
         data: { availableSpaces: { increment: 1 } },
+      });
+
+      await recordEvent(prisma, {
+        type: 'CHECKED_OUT',
+        bookingId: booking.id,
+        parkingLotId: booking.parkingLotId,
+        fromStatus: 'ACTIVE',
+        toStatus: 'COMPLETED',
+        reason: 'Session closed automatically when its booked time ran out.',
+      });
+      await recordEvent(prisma, {
+        type: 'CAPACITY_RELEASED',
+        bookingId: booking.id,
+        parkingLotId: booking.parkingLotId,
+        reason: 'Session completed by the sweeper.',
       });
     }
   }

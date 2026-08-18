@@ -9,6 +9,8 @@ import Button from '../components/ui/Button';
 import { getErrorMessage } from '../services/api';
 import { cancelBooking, fetchBookings } from '../services/bookings';
 import { notifyError, notifySuccess } from '../utils/notify';
+import ReportIssueForm from '../components/continuity/ReportIssueForm';
+import BookingTimeline from '../components/continuity/BookingTimeline';
 import type { Booking, BookingStatus } from '../types/booking';
 
 const LIVE_STATUSES: BookingStatus[] = ['RESERVED', 'ACTIVE'];
@@ -19,13 +21,19 @@ const REFRESH_INTERVAL_MS = 30_000;
  * Bookings are grouped into three tabs rather than one list per status, so the
  * booking a user is currently acting on is never buried under finished history.
  */
-type TabKey = 'active' | 'upcoming' | 'past';
+type TabKey = 'active' | 'upcoming' | 'reported' | 'past';
 
 const TABS: { key: TabKey; label: string; statuses: BookingStatus[] }[] = [
   { key: 'active', label: 'Active', statuses: ['ACTIVE'] },
   { key: 'upcoming', label: 'Upcoming', statuses: ['RESERVED'] },
+  // Disputed bookings get their own tab rather than being filed under "Past":
+  // they are open cases the user is waiting on, not finished history.
+  { key: 'reported', label: 'Reported', statuses: ['DISPUTED'] },
   { key: 'past', label: 'Past', statuses: ['COMPLETED', 'CANCELLED', 'EXPIRED'] },
 ];
+
+/** Statuses the user may still file a report against. */
+const REPORTABLE: BookingStatus[] = ['RESERVED', 'ACTIVE', 'COMPLETED', 'EXPIRED'];
 
 export default function Bookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -34,6 +42,8 @@ export default function Bookings() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<TabKey | null>(null);
+  const [reportingBooking, setReportingBooking] = useState<Booking | null>(null);
+  const [openTimelineId, setOpenTimelineId] = useState<string | null>(null);
 
   const loadBookings = useCallback(() => {
     let active = true;
@@ -94,7 +104,7 @@ export default function Bookings() {
       acc[tab.key] = bookings.filter((b) => tab.statuses.includes(b.status)).length;
       return acc;
     },
-    { active: 0, upcoming: 0, past: 0 },
+    { active: 0, upcoming: 0, reported: 0, past: 0 },
   );
 
   // Until the user picks a tab, show the most relevant one (an in-progress
@@ -180,7 +190,9 @@ export default function Bookings() {
                     ? 'No parking session is running right now.'
                     : activeTab === 'upcoming'
                       ? 'You have no upcoming reservations.'
-                      : 'No past bookings yet.'}
+                      : activeTab === 'reported'
+                        ? 'You have not reported any issues.'
+                        : 'No past bookings yet.'}
                 </p>
                 {activeTab !== 'past' && (
                   <Link to="/" className="mt-4 block">
@@ -202,8 +214,30 @@ export default function Bookings() {
                       <BookingSummary booking={booking} />
                     )}
 
-                    {booking.status === 'RESERVED' && (
-                      <div className="mt-3 flex justify-end">
+                    <div className="mt-3 flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          setOpenTimelineId((current) =>
+                            current === booking.id ? null : booking.id,
+                          )
+                        }
+                        fullWidth={false}
+                      >
+                        {openTimelineId === booking.id ? 'Hide history' : 'View history'}
+                      </Button>
+
+                      {REPORTABLE.includes(booking.status) && (
+                        <Button
+                          variant="secondary"
+                          onClick={() => setReportingBooking(booking)}
+                          fullWidth={false}
+                        >
+                          Report an issue
+                        </Button>
+                      )}
+
+                      {booking.status === 'RESERVED' && (
                         <Button
                           variant="secondary"
                           onClick={() => handleCancel(booking)}
@@ -212,6 +246,15 @@ export default function Bookings() {
                         >
                           Cancel booking
                         </Button>
+                      )}
+                    </div>
+
+                    {openTimelineId === booking.id && (
+                      <div className="mt-3 rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-sm ring-1 ring-[var(--pm-color-border)]">
+                        <h3 className="text-sm font-bold text-[var(--pm-color-text)]">
+                          Booking history
+                        </h3>
+                        <BookingTimeline bookingId={booking.id} />
                       </div>
                     )}
                   </div>
@@ -221,6 +264,14 @@ export default function Bookings() {
           </>
         )}
       </main>
+
+      {reportingBooking && (
+        <ReportIssueForm
+          booking={reportingBooking}
+          onClose={() => setReportingBooking(null)}
+          onReported={() => loadBookings()}
+        />
+      )}
     </AppLayout>
   );
 }
