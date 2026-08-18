@@ -1,5 +1,19 @@
 import { z } from 'zod';
-import { BookingStatus, ComplaintStatus } from '@prisma/client';
+
+const complaintStatusEnum = z.enum([
+  'PENDING',
+  'IN_REVIEW',
+  'RESOLVED',
+  'REJECTED',
+]);
+
+const bookingStatusEnum = z.enum([
+  'RESERVED',
+  'ACTIVE',
+  'COMPLETED',
+  'CANCELLED',
+  'EXPIRED',
+]);
 
 export const adminListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -7,11 +21,11 @@ export const adminListQuerySchema = z.object({
 });
 
 export const complaintListQuerySchema = adminListQuerySchema.extend({
-  status: z.nativeEnum(ComplaintStatus).optional(),
+  status: complaintStatusEnum.optional(),
 });
 
 export const bookingListQuerySchema = adminListQuerySchema.extend({
-  status: z.nativeEnum(BookingStatus).optional(),
+  status: bookingStatusEnum.optional(),
   parkingId: z.string().trim().min(1).optional(),
   date: z
     .string()
@@ -22,7 +36,7 @@ export const bookingListQuerySchema = adminListQuerySchema.extend({
 });
 
 export const complaintStatusUpdateSchema = z.object({
-  status: z.nativeEnum(ComplaintStatus),
+  status: complaintStatusEnum,
 });
 
 export type AdminListQuery = z.infer<typeof adminListQuerySchema>;
