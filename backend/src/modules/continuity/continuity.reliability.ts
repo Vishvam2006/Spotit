@@ -2,6 +2,7 @@ import type {
   AvailabilityConfidence,
   IssueSeverity,
   IssueType,
+  ParkingLotStatus,
   Prisma,
   Role,
 } from '@prisma/client';
@@ -77,6 +78,7 @@ export async function countOpenSeriousReports(
 export interface ReliabilityOutcome {
   openSeriousReports: number;
   confidence: AvailabilityConfidence;
+  /** The lot's status after this call — true only if the row says UNDER_REVIEW. */
   underReview: boolean;
   /** True when this call actually changed the lot row. */
   changed: boolean;
@@ -133,6 +135,9 @@ export async function recomputeLotReliability(
   const isUnderReview = lot.status === 'UNDER_REVIEW';
 
   const data: Prisma.ParkingLotUpdateInput = {};
+  // Tracks where the lot actually ends up, so callers are told the truth even
+  // when the counts want a change the guards refuse to make.
+  let finalStatus: ParkingLotStatus = lot.status;
   const events: Parameters<typeof recordEvent>[1][] = [];
   const now = new Date();
 
@@ -153,6 +158,7 @@ export async function recomputeLotReliability(
 
   if (wantsReview && !isUnderReview && isEscalatable(lot.status)) {
     data.status = 'UNDER_REVIEW';
+    finalStatus = 'UNDER_REVIEW';
     data.underReviewSince = now;
     // Remember where to put the lot back, so reinstating never promotes a lot
     // the owner had taken down for their own reasons.
@@ -175,6 +181,7 @@ export async function recomputeLotReliability(
   if (!wantsReview && isUnderReview) {
     const restored = lot.statusBeforeReview ?? 'ACTIVE';
     data.status = restored;
+    finalStatus = restored;
     data.underReviewSince = null;
     data.statusBeforeReview = null;
     events.push({
@@ -202,7 +209,7 @@ export async function recomputeLotReliability(
   return {
     openSeriousReports,
     confidence,
-    underReview: wantsReview || (isUnderReview && !changed),
+    underReview: finalStatus === 'UNDER_REVIEW',
     changed,
   };
 }

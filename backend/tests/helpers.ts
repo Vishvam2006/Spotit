@@ -124,6 +124,12 @@ export interface VehicleOverrides {
   model?: string | null;
   color?: string | null;
   isDefault?: boolean;
+  /**
+   * Defaults to VERIFIED so tests exercise the ordinary bookable case. Pass
+   * null (never verified), 'NEEDS_REVIEW' or 'REJECTED' to cover the vehicles
+   * createBooking must refuse.
+   */
+  verificationStatus?: string | null;
 }
 
 export const testVehicleImageUrl = 'https://res.cloudinary.com/parkmitra/image/upload/v1/test/vehicle.jpg';
@@ -148,6 +154,11 @@ export async function createVehicleRecord(
       model: overrides.model ?? 'i20',
       color: overrides.color ?? 'White',
       isDefault: overrides.isDefault ?? false,
+      verificationStatus:
+        overrides.verificationStatus === undefined
+          ? 'VERIFIED'
+          : overrides.verificationStatus,
+      verifiedAt: overrides.verificationStatus === null ? null : new Date(),
     },
     select: { id: true, registration: true, type: true },
   });

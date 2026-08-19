@@ -77,6 +77,19 @@ function addVehicle(token: string, userId: string, overrides: Record<string, unk
     .send(vehiclePayload(userId, overrides));
 }
 
+/**
+ * Vehicles created through the API start unverified, and createBooking refuses
+ * those. Tests below that only care about snapshots or deletion stamp the
+ * vehicle first so they exercise the ordinary bookable case; the verification
+ * gate itself is covered in booking.test.ts.
+ */
+async function markVerified(vehicleId: string) {
+  await prisma.vehicle.update({
+    where: { id: vehicleId },
+    data: { verificationStatus: 'VERIFIED', verifiedAt: new Date() },
+  });
+}
+
 async function setup() {
   const owner = await createUser('owner@example.com', 'OWNER');
   const user = await createUser('user@example.com', 'USER');
@@ -276,6 +289,7 @@ describe('vehicle management', () => {
   it('blocks deletion when the vehicle is used by an ACTIVE booking', async () => {
     const { user, lot } = await setup();
     const vehicle = (await addVehicle(user.token, user.user.id).expect(201)).body.data;
+    await markVerified(vehicle.id);
     const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     await completeCheckIn(user.token, booking.id);
@@ -293,6 +307,7 @@ describe('vehicle management', () => {
     const { user, lot } = await setup();
     const vehicle = (await addVehicle(user.token, user.user.id).expect(201)).body.data;
 
+    await markVerified(vehicle.id);
     await book(user.token, lot.id, vehicle.id).expect(201);
 
     const res = await request(app)
@@ -306,6 +321,7 @@ describe('vehicle management', () => {
   it('allows deletion when used only by completed/cancelled bookings but keeps the asset', async () => {
     const { user, lot } = await setup();
     const vehicle = (await addVehicle(user.token, user.user.id).expect(201)).body.data;
+    await markVerified(vehicle.id);
     const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     await request(app)
@@ -515,6 +531,7 @@ describe('booking vehicle snapshot', () => {
       registration: 'GJ05XY5678',
     }).expect(201)).body.data;
 
+    await markVerified(vehicle.id);
     const res = await book(user.token, lot.id, vehicle.id).expect(201);
 
     expect(res.body.data.vehicle).toEqual({
@@ -532,6 +549,7 @@ describe('booking vehicle snapshot', () => {
   it('keeps the old booking unchanged after the vehicle is edited', async () => {
     const { user, lot } = await setup();
     const vehicle = (await addVehicle(user.token, user.user.id).expect(201)).body.data;
+    await markVerified(vehicle.id);
     const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     await request(app)
@@ -553,6 +571,7 @@ describe('booking vehicle snapshot', () => {
   it('keeps the old booking image after the vehicle image is replaced', async () => {
     const { user, lot } = await setup();
     const vehicle = (await addVehicle(user.token, user.user.id).expect(201)).body.data;
+    await markVerified(vehicle.id);
     const booking = (await book(user.token, lot.id, vehicle.id).expect(201)).body.data;
 
     await request(app)
@@ -578,6 +597,7 @@ describe('booking vehicle snapshot', () => {
   it('shows vehicle details in booking history', async () => {
     const { user, lot } = await setup();
     const vehicle = (await addVehicle(user.token, user.user.id).expect(201)).body.data;
+    await markVerified(vehicle.id);
     await book(user.token, lot.id, vehicle.id).expect(201);
 
     const history = await request(app).get('/api/bookings').set(auth(user.token)).expect(200);

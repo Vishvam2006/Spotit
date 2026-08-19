@@ -37,6 +37,10 @@ export const bookingListQuerySchema = adminListQuerySchema.extend({
 
 export const complaintStatusUpdateSchema = z.object({
   status: complaintStatusEnum,
+  // Kept in step with resolveReportSchema in the continuity module: both are
+  // entry points to the same resolveReport service, so a note accepted by one
+  // must be accepted by the other.
+  resolutionNote: z.string().trim().max(1000).optional(),
 });
 
 export type AdminListQuery = z.infer<typeof adminListQuerySchema>;

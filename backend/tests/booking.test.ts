@@ -137,6 +137,69 @@ describe('bookings', () => {
     expect(res.body.message).toBe('Parking lot is not active');
   });
 
+  describe('vehicle verification gate', () => {
+    it('refuses to book with a vehicle that was never verified', async () => {
+      const { user, lot } = await setup();
+      const vehicle = await createVehicleRecord(user.user.id, {
+        registration: 'KA09ZZ0001',
+        verificationStatus: null,
+      });
+
+      const res = await book(user.token, lot.id, vehicle.id).expect(403);
+      expect(res.body.message).toMatch(/verify this vehicle/i);
+    });
+
+    it('refuses while verification is still under review', async () => {
+      const { user, lot } = await setup();
+      const vehicle = await createVehicleRecord(user.user.id, {
+        registration: 'KA09ZZ0002',
+        verificationStatus: 'NEEDS_REVIEW',
+      });
+
+      const res = await book(user.token, lot.id, vehicle.id).expect(403);
+      expect(res.body.message).toMatch(/still being verified/i);
+    });
+
+    it('refuses a vehicle whose documents were rejected', async () => {
+      const { user, lot } = await setup();
+      const vehicle = await createVehicleRecord(user.user.id, {
+        registration: 'KA09ZZ0003',
+        verificationStatus: 'REJECTED',
+      });
+
+      const res = await book(user.token, lot.id, vehicle.id).expect(403);
+      expect(res.body.message).toMatch(/failed document verification/i);
+    });
+
+    it('holds no space when the vehicle is refused', async () => {
+      const { user, lot } = await setup({ availableSpaces: 2 });
+      const vehicle = await createVehicleRecord(user.user.id, {
+        registration: 'KA09ZZ0004',
+        verificationStatus: null,
+      });
+
+      await book(user.token, lot.id, vehicle.id).expect(403);
+
+      // The guard runs before the decrement, so a rejected attempt must not
+      // leave the lot one space short.
+      const stored = await prisma.parkingLot.findUniqueOrThrow({ where: { id: lot.id } });
+      expect(stored.availableSpaces).toBe(2);
+    });
+
+    it('blocks a verified vehicle that was re-plated after approval', async () => {
+      const { user, lot, vehicle } = await setup();
+
+      // Editing the registration clears the stamp, so the old approval cannot
+      // be carried onto a different number plate.
+      await prisma.vehicle.update({
+        where: { id: vehicle.id },
+        data: { registration: 'KA09ZZ0005', verificationStatus: null, verifiedAt: null },
+      });
+
+      await book(user.token, lot.id, vehicle.id).expect(403);
+    });
+  });
+
   it('rejects booking when no spaces are available', async () => {
     const { user, lot, vehicle } = await setup({ availableSpaces: 0 });
 

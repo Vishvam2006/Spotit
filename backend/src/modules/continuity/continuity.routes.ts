@@ -5,6 +5,7 @@ import {
   getLotReliabilityHandler,
   getOwnerReports,
   resolveReport,
+  reportLotIssue,
 } from './continuity.controller';
 
 /**
@@ -19,5 +20,7 @@ router.use(authenticate);
 router.get('/owner/reports', requireOwner, getOwnerReports);
 router.patch('/reports/:id', requireOwner, resolveReport);
 router.get('/lots/:id/reliability', requireOwner, getLotReliabilityHandler);
+
+router.post('/lots/:id/report', reportLotIssue);
 
 export default router;

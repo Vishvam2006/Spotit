@@ -5,7 +5,7 @@ import AppLayout from '../components/layout/AppLayout';
 import Alert from '../components/ui/Alert';
 import Spinner from '../components/ui/Spinner';
 import VehicleSelector from '../components/vehicle/VehicleSelector';
-import ComplaintForm from '../components/complaint/ComplaintForm';
+import ReportLotModal from '../components/continuity/ReportLotModal';
 import { getErrorMessage } from '../services/api';
 import { fetchParkingLot } from '../services/parking';
 import { fetchVehicles } from '../services/vehicles';
@@ -317,7 +317,7 @@ export default function ParkingDetails() {
         )}
       </main>
       {reportOpen && (
-        <ComplaintForm parkingLotId={id} onClose={() => setReportOpen(false)} />
+        <ReportLotModal parkingLot={{ id: parking.id, name: parking.name }} onClose={() => setReportOpen(false)} />
       )}
     </AppLayout>
   );

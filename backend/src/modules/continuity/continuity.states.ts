@@ -68,6 +68,20 @@ export function assertTransition(from: BookingStatus, to: BookingStatus): void {
   }
 }
 
+/**
+ * Whether a booking is still live enough to be frozen as evidence.
+ *
+ * A RESERVED or ACTIVE booking is: the session is unfinished, so freezing it is
+ * what protects the user. A COMPLETED or EXPIRED one is not — the session is
+ * already over, and overwriting its status would erase the record of what
+ * actually happened, which is the one thing this engine exists to keep. Those
+ * bookings can still be reported; the report simply files against the lot
+ * without rewriting the booking.
+ */
+export function isDisputable(status: BookingStatus): boolean {
+  return canTransition(status, 'DISPUTED');
+}
+
 export function holdsCapacity(status: BookingStatus): boolean {
   return CAPACITY_HOLDING_STATUSES.includes(status);
 }

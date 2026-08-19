@@ -177,6 +177,10 @@ describe('smart suggest backing data', () => {
         type: 'FOUR_WHEELER',
         imageUrl: 'https://res.cloudinary.com/parkmitra/image/upload/v1/test/vehicle.jpg',
         imagePublicId: 'parkmitra/vehicles/test/vehicle',
+        // createBooking only accepts a verified vehicle; this test is about
+        // lot suggestion, not the verification gate.
+        verificationStatus: 'VERIFIED',
+        verifiedAt: new Date(),
       },
     });
 

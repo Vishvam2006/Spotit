@@ -179,6 +179,47 @@ async function completeStaleSessions(tx: Prisma.TransactionClient) {
   }
 }
 
+/**
+ * Only a vehicle whose documents have passed AI verification may be parked.
+ *
+ * Checked here rather than at the route, so every path into a booking goes
+ * through it, and checked before any capacity is touched so a rejected attempt
+ * cannot leave a space held.
+ *
+ * `verificationStatus` is null until the vehicle has been through the engine,
+ * and is reset to null whenever its registration is edited
+ * (`vehicle.service.ts:173`) — so re-plating a verified vehicle drops it back
+ * to unverified instead of carrying the old approval onto a new number.
+ */
+function assertVehicleIsVerified(vehicle: {
+  verificationStatus: string | null;
+}): void {
+  if (vehicle.verificationStatus === 'VERIFIED') {
+    return;
+  }
+
+  // Distinguished so the user knows whether to wait, resubmit, or start —
+  // "not verified" alone leaves them with no next step.
+  if (vehicle.verificationStatus === 'NEEDS_REVIEW') {
+    throw new BookingError(
+      403,
+      'This vehicle is still being verified. You can book once its documents are approved.',
+    );
+  }
+
+  if (vehicle.verificationStatus === 'REJECTED') {
+    throw new BookingError(
+      403,
+      'This vehicle failed document verification. Re-upload its documents before booking.',
+    );
+  }
+
+  throw new BookingError(
+    403,
+    'Verify this vehicle\'s documents before booking with it.',
+  );
+}
+
 export async function createBooking(
   userId: string,
   input: CreateBookingInput,
@@ -194,6 +235,8 @@ export async function createBooking(
     if (!vehicle) {
       throw new BookingError(404, 'Vehicle not found');
     }
+
+    assertVehicleIsVerified(vehicle);
 
     const parkingLot = await tx.parkingLot.findUnique({
       where: { id: input.parkingLotId },

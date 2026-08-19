@@ -39,6 +39,14 @@ export interface ReportIssueInput {
   photos?: string[];
 }
 
+export interface ReportLotIssueInput {
+  issueType: IssueType;
+  description: string;
+  photos?: string[];
+  latitude?: number;
+  longitude?: number;
+}
+
 /** Files an issue against a booking; the engine does the rest server-side. */
 export async function reportBookingIssue(
   bookingId: string,
@@ -46,6 +54,18 @@ export async function reportBookingIssue(
 ): Promise<ReportIssueResult> {
   const { data } = await api.post<Envelope<ReportIssueResult>>(
     `/bookings/${bookingId}/report-issue`,
+    input,
+  );
+  return unwrap(data);
+}
+
+/** Direct reporting of a parking lot without a booking */
+export async function reportLotIssue(
+  lotId: string,
+  input: ReportLotIssueInput,
+): Promise<{ lotUnderReview: boolean; openSeriousReports: number }> {
+  const { data } = await api.post<Envelope<{ lotUnderReview: boolean; openSeriousReports: number }>>(
+    `/continuity/lots/${lotId}/report`,
     input,
   );
   return unwrap(data);

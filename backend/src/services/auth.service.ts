@@ -22,7 +22,33 @@ const safeUserSelect = {
   profileImage: true,
 } as const;
 
-const BCRYPT_ROUNDS = 10;
+const DEFAULT_BCRYPT_ROUNDS = 10;
+
+/**
+ * Password hashing cost, lowered only so the test suite is not spending ~90%
+ * of its runtime on deliberate key stretching (two bcrypt ops per test user
+ * adds up fast across the suite).
+ *
+ * Clamped to the default in production regardless of what the environment
+ * says: the cost factor is the whole point of bcrypt, and a stray env var
+ * must never be able to weaken real users' passwords.
+ */
+function resolveBcryptRounds(): number {
+  const configured = Number(process.env.BCRYPT_ROUNDS);
+
+  if (
+    process.env.NODE_ENV === 'production' ||
+    !Number.isInteger(configured) ||
+    configured < 4 ||
+    configured > 15
+  ) {
+    return DEFAULT_BCRYPT_ROUNDS;
+  }
+
+  return configured;
+}
+
+const BCRYPT_ROUNDS = resolveBcryptRounds();
 
 export async function registerUser(data: RegisterInput): Promise<SafeUser> {
   const existing = await prisma.user.findUnique({

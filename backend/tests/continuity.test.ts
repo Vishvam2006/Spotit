@@ -208,6 +208,88 @@ describe('continuity engine', () => {
     });
   });
 
+  describe('reporting after the session is over', () => {
+    it('files a serious report against a COMPLETED booking without rewriting it', async () => {
+      const { lot } = await setup();
+      const { user, booking } = await bookAs('a@example.com', lot.id, 'KA01AB1111');
+
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { status: 'COMPLETED' },
+      });
+
+      const res = await report(user.token, booking.id, {
+        issueType: 'MISLEADING_LISTING',
+        description: 'The listing advertised covered parking and none of it is covered.',
+      }).expect(201);
+
+      // Nothing left to freeze, so the session keeps its own record...
+      expect(res.body.data.bookingProtected).toBe(false);
+      expect(res.body.data.bookingStatus).toBe('COMPLETED');
+
+      const stored = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+      expect(stored.status).toBe('COMPLETED');
+
+      // ...but the lot is still held to account for it.
+      expect(res.body.data.openSeriousReports).toBe(1);
+      const storedLot = await prisma.parkingLot.findUniqueOrThrow({ where: { id: lot.id } });
+      expect(storedLot.availabilityConfidence).toBe('MEDIUM');
+    });
+
+    it('files a serious report against an EXPIRED booking', async () => {
+      const { lot } = await setup();
+      const { user, booking } = await bookAs('a@example.com', lot.id, 'KA01AB1111');
+
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { status: 'EXPIRED' },
+      });
+
+      // The user who never got in because the lot was shut is exactly who
+      // needs this path.
+      const res = await report(user.token, booking.id, {
+        issueType: 'LOT_CLOSED',
+        description: 'Gates were shut the whole time and I could never get in.',
+      }).expect(201);
+
+      expect(res.body.data.bookingProtected).toBe(false);
+      expect(res.body.data.openSeriousReports).toBe(1);
+
+      const stored = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+      expect(stored.status).toBe('EXPIRED');
+    });
+
+    it('escalates the lot on two late serious reports', async () => {
+      const { lot } = await setup();
+      const first = await bookAs('a@example.com', lot.id, 'KA01AB1111');
+      const second = await bookAs('b@example.com', lot.id, 'KA01AB2222');
+
+      await prisma.booking.updateMany({
+        where: { id: { in: [first.booking.id, second.booking.id] } },
+        data: { status: 'COMPLETED' },
+      });
+
+      await report(first.user.token, first.booking.id).expect(201);
+      const res = await report(second.user.token, second.booking.id).expect(201);
+
+      expect(res.body.data.lotUnderReview).toBe(true);
+      const stored = await prisma.parkingLot.findUniqueOrThrow({ where: { id: lot.id } });
+      expect(stored.status).toBe('UNDER_REVIEW');
+    });
+
+    it('still refuses to report a cancelled booking', async () => {
+      const { lot } = await setup();
+      const { user, booking } = await bookAs('a@example.com', lot.id, 'KA01AB1111');
+
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { status: 'CANCELLED' },
+      });
+
+      await report(user.token, booking.id).expect(409);
+    });
+  });
+
   describe('lot reliability', () => {
     it('drops to MEDIUM on one open serious report and stays bookable', async () => {
       const { lot } = await setup();
@@ -236,6 +318,30 @@ describe('continuity engine', () => {
       expect(stored.availabilityConfidence).toBe('LOW');
       expect(stored.underReviewSince).not.toBeNull();
       expect(stored.statusBeforeReview).toBe('ACTIVE');
+    });
+
+    it('never escalates a lot the owner already took down, and says so', async () => {
+      const { lot } = await setup();
+      const first = await bookAs('a@example.com', lot.id, 'KA01AB1111');
+      const second = await bookAs('b@example.com', lot.id, 'KA01AB2222');
+
+      await prisma.parkingLot.update({
+        where: { id: lot.id },
+        data: { status: 'INACTIVE' },
+      });
+
+      await report(first.user.token, first.booking.id).expect(201);
+      const res = await report(second.user.token, second.booking.id).expect(201);
+
+      // The counts want a review, but the guard refuses to overwrite the
+      // owner's own takedown — so the response must not claim otherwise.
+      expect(res.body.data.openSeriousReports).toBe(2);
+      expect(res.body.data.lotUnderReview).toBe(false);
+
+      const stored = await prisma.parkingLot.findUniqueOrThrow({ where: { id: lot.id } });
+      expect(stored.status).toBe('INACTIVE');
+      expect(stored.availabilityConfidence).toBe('LOW');
+      expect(stored.underReviewSince).toBeNull();
     });
 
     it('pulls a lot under review out of search and blocks new bookings', async () => {

@@ -65,16 +65,30 @@ but it never escalates a lot and never freezes a booking.
 `buildWhere` and `createBooking` both require `status === 'ACTIVE'`. Existing
 bookings on the lot are **not** cancelled.
 
+Only an `ACTIVE` lot is ever escalated (`isEscalatable`). A lot the owner had
+already set `INACTIVE`/`CLOSED` is left alone — there is nothing to protect
+users from, and overwriting it would lose the owner's intent. Reinstatement
+restores `statusBeforeReview`, not `ACTIVE`, so a lot never comes back out of
+review more visible than the owner left it.
+
 `recomputeLotReliability` is the single place this is decided, is idempotent,
 and always runs under a `FOR UPDATE` row lock on the lot so two simultaneous
-reports cannot both read a stale count.
+reports cannot both read a stale count. Every path funnels through it: a new
+report, a report being closed, and `refreshLotReliability()` when an owner
+edits a listing or an admin changes a lot's status — so the lot row and the
+report counts cannot drift apart.
 
 ## What happens when a user reports an issue
 
 `POST /api/bookings/:id/report-issue` — one transaction, all-or-nothing:
 
 1. Writes the report, tied to user + booking + lot + time + photo evidence.
-2. Freezes the booking as `DISPUTED` (serious issues only).
+2. Freezes the booking as `DISPUTED` — serious issues only, and only while the
+   booking is still `RESERVED`/`ACTIVE`. A `COMPLETED` or `EXPIRED` booking is
+   still reportable, but nothing is frozen: the session already happened, and
+   overwriting its status would erase the record. The report is filed and the
+   lot is re-scored either way, so reporting late still costs the lot its
+   standing.
 3. Releases the held space back to the lot — the user never parked, and the lot
    must not also be short a space.
 4. Re-scores the lot, pulling it from search if reports have piled up.
@@ -88,8 +102,10 @@ release can never invent a space that does not physically exist.
 - Owners **cannot close** a report, and cannot lift their own lot out of
   review — closing is what restores the lot's score, and the owner is the
   interested party.
-- Admins close reports (`RESOLVED` / `REJECTED`), which recomputes the lot and
-  is the only way it climbs back out of `UNDER_REVIEW`.
+- Admins close reports (`RESOLVED` / `REJECTED`), which recomputes the lot.
+  Closing reports is the only thing that lowers the open serious count, so it
+  is what lets a lot climb back out of `UNDER_REVIEW` — a later recompute from
+  any other path (a listing edit, a status change) then simply agrees.
 
 ## The ledger
 

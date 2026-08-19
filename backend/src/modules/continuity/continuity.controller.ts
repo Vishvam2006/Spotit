@@ -5,6 +5,7 @@ import { ContinuityError } from './continuity.states';
 import { getBookingTimeline, getLotTimeline } from './continuity.events';
 import {
   reportIssueSchema,
+  reportLotIssueSchema,
   reportListQuerySchema,
   resolveReportSchema,
 } from './continuity.validation';
@@ -18,6 +19,25 @@ export async function reportBookingIssue(
   try {
     const input = reportIssueSchema.parse(req.body);
     const result = await continuityService.reportBookingIssue(
+      req.user!.id,
+      String(req.params.id),
+      input,
+    );
+    res.status(201).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** POST /api/continuity/lots/:id/report */
+export async function reportLotIssue(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const input = reportLotIssueSchema.parse(req.body);
+    const result = await continuityService.reportLotIssue(
       req.user!.id,
       String(req.params.id),
       input,

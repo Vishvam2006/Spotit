@@ -11,6 +11,7 @@ import {
   ContinuityError,
   assertTransition,
   holdsCapacity,
+  isDisputable,
   isReportable,
 } from './continuity.states';
 import {
@@ -21,7 +22,7 @@ import {
   recomputeLotReliability,
   severityFor,
 } from './continuity.reliability';
-import type { ReportIssueInput, ResolveReportInput } from './continuity.validation';
+import type { ReportIssueInput, ResolveReportInput, ReportLotIssueInput } from './continuity.validation';
 
 export { ContinuityError };
 
@@ -191,10 +192,13 @@ export async function reportBookingIssue(
     let bookingStatus: BookingStatus = booking.status;
     let bookingProtected = false;
 
-    // Only a serious report freezes the booking. A MINOR note ("OTHER") is
-    // still filed and still reaches the owner, but it should not tear down a
-    // parking session that is working fine.
-    if (serious) {
+    // Only a serious report freezes the booking, and only while the booking is
+    // still live. A MINOR note ("OTHER") should not tear down a parking session
+    // that is working fine; and a COMPLETED or EXPIRED booking has nothing left
+    // to protect, so the report files against the lot without rewriting a
+    // session that already happened. Either way the report is recorded and the
+    // lot is re-scored below — reporting late still costs the lot its standing.
+    if (serious && isDisputable(booking.status)) {
       assertTransition(booking.status, 'DISPUTED');
 
       const disputed = await tx.booking.updateMany({
@@ -256,6 +260,134 @@ export async function reportBookingIssue(
       report,
       bookingStatus,
       bookingProtected,
+      lotUnderReview: reliability.underReview,
+      openSeriousReports: reliability.openSeriousReports,
+    };
+  });
+}
+
+/**
+ * Haversine formula to calculate distance between two coordinates in meters.
+ */
+function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3; // metres
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+export interface ReportLotIssueResult {
+  report: Prisma.ComplaintGetPayload<{
+    include: { parkingLot: true };
+  }>;
+  lotUnderReview: boolean;
+  openSeriousReports: number;
+}
+
+/**
+ * Direct reporting of a parking lot (no booking involved).
+ * Requires the user's location to prove they are physically at the lot,
+ * mitigating competitor sabotage/spam.
+ */
+export async function reportLotIssue(
+  userId: string,
+  parkingLotId: string,
+  input: ReportLotIssueInput,
+): Promise<ReportLotIssueResult> {
+  return prisma.$transaction(async (tx) => {
+    // 1. Lock lot to prevent concurrent updates missing the threshold.
+    const lot = await tx.$queryRaw<Array<{ id: string; latitude: number; longitude: number }>>`
+      SELECT id, latitude, longitude FROM "ParkingLot" WHERE id = ${parkingLotId} FOR UPDATE
+    `;
+
+    if (!lot || lot.length === 0) {
+      throw new ContinuityError(404, 'Parking lot not found');
+    }
+
+    const { latitude: lotLat, longitude: lotLng } = lot[0];
+
+    // 2. Geofencing Check: Ensure user is within 200 meters of the lot.
+    if (input.latitude == null || input.longitude == null) {
+      throw new ContinuityError(400, 'Location is required to report a parking lot directly.');
+    }
+    
+    const distanceMeters = getDistanceMeters(input.latitude, input.longitude, lotLat, lotLng);
+    if (distanceMeters > 200) {
+      throw new ContinuityError(403, 'You must be near the parking lot to report it directly.');
+    }
+
+    // 3. Prevent Spam: Check if user already has an open direct report for this lot.
+    const existingOpenReport = await tx.complaint.findFirst({
+      where: {
+        parkingLotId,
+        userId,
+        bookingId: null,
+        status: { in: [...OPEN_REPORT_STATUSES] },
+      },
+      select: { id: true },
+    });
+
+    if (existingOpenReport) {
+      throw new ContinuityError(
+        409,
+        'You already have an open report for this parking lot. We are on it.',
+      );
+    }
+
+    const severity = severityFor(input.issueType);
+
+    // 4. Create the Complaint
+    const report = await tx.complaint.create({
+      data: {
+        userId,
+        parkingLotId,
+        bookingId: null,
+        issueType: input.issueType,
+        severity,
+        photos: input.photos ?? [],
+        category: ISSUE_LABELS[input.issueType],
+        subject: ISSUE_LABELS[input.issueType],
+        description: input.description,
+      },
+      include: { parkingLot: true },
+    });
+
+    // 5. Append Ledger Event
+    await recordEvent(tx, {
+      type: 'ISSUE_REPORTED',
+      bookingId: null,
+      parkingLotId,
+      complaintId: report.id,
+      actorId: userId,
+      actorRole: 'USER',
+      reason: ISSUE_LABELS[input.issueType],
+      metadata: {
+        issueType: input.issueType,
+        severity,
+        photoCount: report.photos.length,
+        directReport: true,
+        distanceMeters,
+      },
+    });
+
+    // 6. Recompute Reliability (will escalate if SERIOUS count reaches threshold)
+    const reliability = await recomputeLotReliability(tx, parkingLotId, {
+      actorId: userId,
+      actorRole: 'USER',
+      complaintId: report.id,
+      reason: `New direct ${severity.toLowerCase()} report: ${ISSUE_LABELS[input.issueType]}`,
+    });
+
+    return {
+      report,
       lotUnderReview: reliability.underReview,
       openSeriousReports: reliability.openSeriousReports,
     };
