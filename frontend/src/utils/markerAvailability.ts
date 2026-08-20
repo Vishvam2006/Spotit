@@ -8,6 +8,10 @@ export interface MarkerAvailability {
 }
 
 export function getMarkerAvailability(parking: ParkingLot): MarkerAvailability {
+  if (parking.status === 'UNDER_REVIEW') {
+    return { color: 'gray', label: 'Under review' };
+  }
+
   if (parking.status !== 'ACTIVE') {
     return { color: 'gray', label: 'Unavailable' };
   }

@@ -1,5 +1,5 @@
 import { prisma } from '../../config/prisma';
-import type { Booking, ParkingLot } from '@prisma/client';
+import type { AvailabilityConfidence, Booking, ParkingLot } from '@prisma/client';
 
 export class OwnerError extends Error {
   statusCode: number;
@@ -11,7 +11,11 @@ export class OwnerError extends Error {
   }
 }
 
-export type ParkingDisplayStatus = 'OPERATING' | 'FULL' | 'CLOSED';
+export type ParkingDisplayStatus =
+  | 'OPERATING'
+  | 'FULL'
+  | 'CLOSED'
+  | 'UNDER_REVIEW';
 export type SlotStatus = 'OCCUPIED' | 'AVAILABLE' | 'RESERVED';
 
 export interface OwnerDashboard {
@@ -37,6 +41,7 @@ export interface ParkingStatusCard {
   reservedSlots: number;
   availableSlots: number;
   status: ParkingDisplayStatus;
+  availabilityConfidence: AvailabilityConfidence;
   revenueGenerated: number;
 }
 
@@ -117,6 +122,7 @@ interface LotWithCapacity {
   address: string;
   totalSpaces: number;
   status: string;
+  availabilityConfidence: AvailabilityConfidence;
 }
 
 function startOfDayUtc(day: Date): Date {
@@ -155,6 +161,11 @@ function displayStatusFor(
   lotStatus: string,
   availableSlots: number,
 ): ParkingDisplayStatus {
+  // A lot the Continuity Engine pulled from circulation is not operating, no
+  // matter how many slots look free: it cannot take a booking in that state.
+  if (lotStatus === 'UNDER_REVIEW') {
+    return 'UNDER_REVIEW';
+  }
   if (lotStatus === 'INACTIVE' || lotStatus === 'CLOSED') {
     return 'CLOSED';
   }
@@ -365,6 +376,7 @@ export async function getOwnerParkings(ownerId: string): Promise<ParkingStatusCa
       reservedSlots: counts.reserved,
       availableSlots: counts.available,
       status: displayStatusFor(lot.status, counts.available),
+      availabilityConfidence: lot.availabilityConfidence,
       revenueGenerated: Math.round(revenueByLot.get(lot.id) ?? 0),
     };
   });

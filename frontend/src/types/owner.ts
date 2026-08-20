@@ -1,4 +1,10 @@
-export type ParkingDisplayStatus = 'OPERATING' | 'FULL' | 'CLOSED';
+import type { AvailabilityConfidence } from './continuity';
+
+export type ParkingDisplayStatus =
+  | 'OPERATING'
+  | 'FULL'
+  | 'CLOSED'
+  | 'UNDER_REVIEW';
 export type SlotStatus = 'OCCUPIED' | 'AVAILABLE' | 'RESERVED';
 export type OwnerBookingStatus =
   | 'RESERVED'
@@ -30,6 +36,7 @@ export interface OwnerParkingCard {
   reservedSlots: number;
   availableSlots: number;
   status: ParkingDisplayStatus;
+  availabilityConfidence: AvailabilityConfidence;
   revenueGenerated: number;
 }
 

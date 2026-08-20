@@ -1,4 +1,4 @@
-import type { IssueSeverity, IssueType } from './continuity';
+import type { AvailabilityConfidence, IssueSeverity, IssueType } from './continuity';
 
 export type ComplaintStatus = 'PENDING' | 'IN_REVIEW' | 'RESOLVED' | 'REJECTED';
 
@@ -14,6 +14,10 @@ export interface ComplaintParking {
   name: string;
   address: string;
   city: string;
+  /** Lot state at the time the admin opens the report. */
+  status: string;
+  availabilityConfidence: AvailabilityConfidence;
+  underReviewSince?: string | null;
 }
 
 export interface ComplaintBooking {

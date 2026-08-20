@@ -1,4 +1,6 @@
-export type ParkingLotStatus = 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+import type { AvailabilityConfidence } from './continuity';
+
+export type ParkingLotStatus = 'ACTIVE' | 'INACTIVE' | 'CLOSED' | 'UNDER_REVIEW';
 
 export type ParkingSort = 'newest' | 'cheapest' | 'expensive' | 'nearest';
 
@@ -56,6 +58,10 @@ export interface ParkingLot {
   totalSpaces: number;
   availableSpaces: number;
   status: ParkingLotStatus;
+  /** Continuity Engine trust signal, recomputed from open serious reports. */
+  availabilityConfidence: AvailabilityConfidence;
+  /** Set while the engine holds the lot out of circulation. */
+  underReviewSince?: string | null;
   imageUrl?: string;
   photos?: string[];
   createdAt: string;

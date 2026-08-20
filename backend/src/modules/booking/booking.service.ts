@@ -4,6 +4,7 @@ import type { Booking, ParkingLot, Prisma, VehicleType } from '@prisma/client';
 import type { CreateBookingInput } from './booking.validation';
 import { verifyLocationSample, type LocationSample } from './booking.geofence';
 import { recordEvent } from '../continuity/continuity.events';
+import { releaseCapacity } from '../continuity/continuity.service';
 
 const CHECK_IN_EVENT = 'CHECK_IN_READING';
 const CHECK_OUT_EVENT = 'CHECK_OUT_READING';
@@ -92,10 +93,7 @@ async function expireReservedBookings(tx: Prisma.TransactionClient) {
     });
 
     if (result.count === 1) {
-      await tx.parkingLot.update({
-        where: { id: booking.parkingLotId },
-        data: { availableSpaces: { increment: 1 } },
-      });
+      await releaseCapacity(tx, booking.parkingLotId);
 
       await recordEvent(tx, {
         type: 'BOOKING_EXPIRED',
@@ -156,10 +154,7 @@ async function completeStaleSessions(tx: Prisma.TransactionClient) {
     });
 
     if (result.count === 1) {
-      await tx.parkingLot.update({
-        where: { id: booking.parkingLotId },
-        data: { availableSpaces: { increment: 1 } },
-      });
+      await releaseCapacity(tx, booking.parkingLotId);
 
       await recordEvent(tx, {
         type: 'CHECKED_OUT',
@@ -705,10 +700,7 @@ export async function checkOutBooking(
       include: bookingInclude,
     });
 
-    await tx.parkingLot.update({
-      where: { id: booking.parkingLotId },
-      data: { availableSpaces: { increment: 1 } },
-    });
+    await releaseCapacity(tx, booking.parkingLotId);
 
     await recordEvent(tx, {
       type: 'CHECKED_OUT',
@@ -792,10 +784,7 @@ async function checkOutBookingStatusOnly(
       include: bookingInclude,
     });
 
-    await tx.parkingLot.update({
-      where: { id: existing.parkingLotId },
-      data: { availableSpaces: { increment: 1 } },
-    });
+    await releaseCapacity(tx, existing.parkingLotId);
 
     await recordEvent(tx, {
       type: 'CHECKED_OUT',
@@ -902,10 +891,7 @@ export async function cancelBooking(
       throw new BookingError(404, 'Booking not found');
     }
 
-    await tx.parkingLot.update({
-      where: { id: booking.parkingLotId },
-      data: { availableSpaces: { increment: 1 } },
-    });
+    await releaseCapacity(tx, booking.parkingLotId);
 
     await recordEvent(tx, {
       type: 'BOOKING_CANCELLED',

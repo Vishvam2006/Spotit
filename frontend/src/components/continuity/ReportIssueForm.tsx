@@ -15,6 +15,9 @@ import {
 import type { Booking } from '../../types/booking';
 import type { IssueType, ReportIssueResult } from '../../types/continuity';
 
+/** Enough text for an owner or admin to act on without guessing. */
+const MIN_DESCRIPTION = 10;
+
 interface ReportIssueFormProps {
   booking: Booking;
   onClose: () => void;
@@ -38,6 +41,14 @@ export default function ReportIssueForm({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // While a submit is in flight the report may already exist server-side, so
+  // every dismissal path is closed until we know the outcome.
+  const busy = loading || uploading;
+
+  function requestClose() {
+    if (loading) return;
+    onClose();
+  }
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selected = ISSUE_OPTIONS.find((option) => option.value === issueType);
@@ -90,8 +101,10 @@ export default function ReportIssueForm({
       return;
     }
 
-    if (description.trim().length < 10) {
-      setError('Please describe the issue in at least 10 characters.');
+    if (description.trim().length < MIN_DESCRIPTION) {
+      setError(
+        `Please describe the issue in at least ${MIN_DESCRIPTION} characters.`,
+      );
       return;
     }
 
@@ -121,7 +134,7 @@ export default function ReportIssueForm({
     <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={requestClose}
         aria-hidden="true"
       />
       <div
@@ -146,9 +159,10 @@ export default function ReportIssueForm({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
+            disabled={loading}
             aria-label="Close"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)] transition-colors hover:bg-[var(--pm-color-border)] focus:outline-none"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)] transition-colors hover:bg-[var(--pm-color-border)] focus:outline-none disabled:opacity-40"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -216,9 +230,19 @@ export default function ReportIssueForm({
               placeholder="Tell us what you saw when you arrived."
               value={description}
               onChange={(event) => setDescription(event.target.value)}
+              disabled={loading}
               required
-              className="mt-1.5 w-full rounded-xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3.5 py-2.5 text-base text-[var(--pm-color-text)] shadow-sm transition-colors placeholder:text-[var(--pm-color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-color-focus)] sm:text-sm"
+              aria-describedby="issue-description-hint"
+              className="mt-1.5 w-full rounded-xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] px-3.5 py-2.5 text-base text-[var(--pm-color-text)] shadow-sm transition-colors placeholder:text-[var(--pm-color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--pm-color-focus)] disabled:opacity-60 sm:text-sm"
             />
+            <p
+              id="issue-description-hint"
+              className="mt-1 text-xs text-[var(--pm-color-muted)]"
+            >
+              {description.trim().length < MIN_DESCRIPTION
+                ? `${MIN_DESCRIPTION - description.trim().length} more characters needed.`
+                : 'Thanks \u2014 that is enough detail to act on.'}
+            </p>
           </div>
 
           <div>
@@ -244,6 +268,7 @@ export default function ReportIssueForm({
                       onClick={() =>
                         setPhotos((current) => current.filter((item) => item !== url))
                       }
+                      disabled={busy}
                       aria-label={`Remove evidence ${index + 1}`}
                       className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
                     >
@@ -266,7 +291,7 @@ export default function ReportIssueForm({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
+                disabled={busy}
                 className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--pm-color-border-strong)] px-4 text-sm font-semibold text-[var(--pm-color-muted)] transition-colors hover:bg-[var(--pm-color-surface-raised)] disabled:opacity-60"
               >
                 {uploading ? (
@@ -286,14 +311,26 @@ export default function ReportIssueForm({
 
           {error && <Alert variant="error" message={error} />}
 
+          {uploading && !loading && (
+            <p className="text-xs text-[var(--pm-color-muted)]">
+              Waiting for the photo to finish uploading before this can be sent.
+            </p>
+          )}
+
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button type="button" variant="secondary" fullWidth={false} onClick={onClose}>
+            <Button
+              type="button"
+              variant="secondary"
+              fullWidth={false}
+              disabled={loading}
+              onClick={requestClose}
+            >
               Cancel
             </Button>
             <Button
               type="submit"
               loading={loading}
-              disabled={uploading}
+              disabled={busy}
               fullWidth={false}
             >
               {loading ? 'Submitting...' : 'Submit report'}

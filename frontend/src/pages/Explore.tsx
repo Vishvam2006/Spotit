@@ -107,6 +107,9 @@ export default function Explore() {
         if (active) setLoading(false);
       });
       
+    // requestUserLocation awaits the geolocation prompt before writing state,
+    // so nothing is set synchronously here; the rule cannot see past the await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void requestUserLocation();
 
     return () => {
@@ -117,6 +120,10 @@ export default function Explore() {
   useEffect(() => {
     if (searchParams.get('addParking') !== '1') return;
 
+    // Consuming a one-shot navigation instruction from the URL. It runs once and
+    // clears the param below, so it cannot cascade; there is no render-time
+    // equivalent because setSearchParams is a navigation, not a state write.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsAddingParking(true);
     setSelectedParkingId(null);
     setSelectedLocation(null);
@@ -136,6 +143,9 @@ export default function Explore() {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
 
+    // Same one-shot URL-to-state handoff: a lat/lng deep link selects the map
+    // location once per navigation, keyed by the searchParams identity.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSearchLocation({ lat, lng });
     setSelectedParkingId(null);
     setSelectedLocation(null);

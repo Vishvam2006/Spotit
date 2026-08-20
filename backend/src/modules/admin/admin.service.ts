@@ -38,7 +38,20 @@ export interface PaginatedResult<T> {
 
 const complaintInclude = {
   user: { select: { id: true, fullName: true, email: true, phone: true } },
-  parkingLot: { select: { id: true, name: true, address: true, city: true } },
+  // status and availabilityConfidence ride along because an admin judging a
+  // report needs to know how much the lot is already trusted and whether the
+  // engine has pulled it from circulation, without a second round trip.
+  parkingLot: {
+    select: {
+      id: true,
+      name: true,
+      address: true,
+      city: true,
+      status: true,
+      availabilityConfidence: true,
+      underReviewSince: true,
+    },
+  },
   booking: { select: { id: true, status: true, reservedAt: true } },
 } as const;
 

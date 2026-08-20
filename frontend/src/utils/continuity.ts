@@ -63,29 +63,36 @@ export function getIssueLabel(issueType: IssueType | null | undefined): string {
   return ISSUE_OPTIONS.find((option) => option.value === issueType)?.label ?? issueType;
 }
 
+/**
+ * How the confidence score is worded for users. Deliberately says what it is
+ * derived from -- bookings and reports -- and never claims live verification,
+ * because there is no sensor or operator feed behind it.
+ */
+export const CONFIDENCE_BASIS = 'Based on recent bookings and reported issues.';
+
 const CONFIDENCE_COPY: Record<
   AvailabilityConfidence,
   { label: string; description: string; styles: string }
 > = {
   HIGH: {
-    label: 'High confidence',
-    description: 'No open reports contradict this listing.',
-    styles: 'bg-emerald-100 text-emerald-700',
+    label: 'Availability confidence: High',
+    description: `No open reports contradict this listing. ${CONFIDENCE_BASIS}`,
+    styles: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200',
   },
   MEDIUM: {
-    label: 'Medium confidence',
-    description: 'One user was turned away recently.',
-    styles: 'bg-amber-100 text-amber-800',
+    label: 'Availability confidence: Medium',
+    description: `One driver was recently turned away here. ${CONFIDENCE_BASIS}`,
+    styles: 'bg-amber-100 text-amber-800 ring-1 ring-amber-200',
   },
   LOW: {
-    label: 'Low confidence',
-    description: 'Several users were turned away. This lot is under review.',
-    styles: 'bg-red-100 text-red-700',
+    label: 'Availability confidence: Low',
+    description: `Several drivers were recently turned away here. ${CONFIDENCE_BASIS}`,
+    styles: 'bg-orange-100 text-orange-800 ring-1 ring-orange-300',
   },
   UNDER_REVIEW: {
-    label: 'Under review',
-    description: 'An admin is checking this lot.',
-    styles: 'bg-red-100 text-red-700',
+    label: 'This parking lot is under review',
+    description: `Bookings are paused while an admin checks the reports against it. ${CONFIDENCE_BASIS}`,
+    styles: 'bg-red-100 text-red-700 ring-1 ring-red-200',
   },
 };
 

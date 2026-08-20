@@ -1,4 +1,5 @@
 import { InfoWindow } from '@vis.gl/react-google-maps';
+import ConfidenceBadge from '../continuity/ConfidenceBadge';
 import type { ParkingLot } from '../../types/parking';
 
 interface ParkingPopupProps {
@@ -44,7 +45,15 @@ export default function ParkingPopup({
           </div>
           <div className="flex justify-between gap-6">
             <dt>Status</dt>
-            <dd className="font-semibold capitalize">{parking.status.toLowerCase()}</dd>
+            <dd className="font-semibold capitalize">
+              {parking.status.toLowerCase().replace('_', ' ')}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-6">
+            <dt>Reliability</dt>
+            <dd>
+              <ConfidenceBadge confidence={parking.availabilityConfidence} size="sm" />
+            </dd>
           </div>
         </dl>
         <button

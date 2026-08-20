@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import ComplaintForm from '../components/complaint/ComplaintForm';
+import ConfidenceBadge from '../components/continuity/ConfidenceBadge';
 import { fetchParkingLots } from '../services/parking';
 import type { ParkingLot } from '../types/parking';
 import { getCurrentPositionDetailed, type LatLng } from '../utils/geolocation';
@@ -203,6 +204,13 @@ function NearbyParkingCard({ lot, onClick }: { lot: ParkingLot, onClick: () => v
         <p className="text-sm text-[var(--pm-color-muted)]">
           {lot.distanceKm !== undefined ? `${lot.distanceKm.toFixed(1)} km away` : lot.address}
         </p>
+        {lot.availabilityConfidence !== 'HIGH' && (
+          <ConfidenceBadge
+            confidence={lot.availabilityConfidence}
+            size="sm"
+            className="mt-2"
+          />
+        )}
         <div className="mt-3 flex items-center justify-between">
           <div>
             <p className="text-xs text-[var(--pm-color-muted)]">Price</p>

@@ -1,6 +1,7 @@
 import { Prisma, type ParkingLot } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { recordEvent } from "../continuity/continuity.events";
+import { releaseCapacity } from "../continuity/continuity.service";
 import { cloudinary } from "../../config/cloudinary";
 import { isCloudinaryConfigured } from "../../config/cloudinaryHelpers";
 
@@ -313,10 +314,7 @@ async function cancelUpcomingBookingsForDeactivation(
     if (result.count !== 1) continue;
 
     cancelled += 1;
-    await tx.parkingLot.update({
-      where: { id: parkingId },
-      data: { availableSpaces: { increment: 1 } },
-    });
+    await releaseCapacity(tx, parkingId);
   }
 
   return cancelled;

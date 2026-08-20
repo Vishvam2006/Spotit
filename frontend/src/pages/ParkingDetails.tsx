@@ -6,11 +6,12 @@ import Alert from '../components/ui/Alert';
 import Spinner from '../components/ui/Spinner';
 import VehicleSelector from '../components/vehicle/VehicleSelector';
 import ReportLotModal from '../components/continuity/ReportLotModal';
+import ConfidenceBadge from '../components/continuity/ConfidenceBadge';
 import { getErrorMessage } from '../services/api';
 import { fetchParkingLot } from '../services/parking';
 import { fetchVehicles } from '../services/vehicles';
 import { createBooking } from '../services/bookings';
-import { formatINR } from '../utils/format';
+import { formatDateTime, formatINR } from '../utils/format';
 import { notifyError, notifySuccess } from '../utils/notify';
 import { useAuth } from '../context/auth-context';
 import type { ParkingLot } from '../types/parking';
@@ -190,15 +191,23 @@ export default function ParkingDetails() {
                   </span>
                 </p>
               </div>
-              <span
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
-                  canBook
-                    ? 'bg-[var(--pm-color-action-soft)] text-[var(--pm-color-action)] ring-1 ring-[var(--pm-color-action)]/30'
-                    : 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20'
-                }`}
-              >
-                {canBook ? 'Available' : 'Full'}
-              </span>
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${
+                    canBook
+                      ? 'bg-[var(--pm-color-action-soft)] text-[var(--pm-color-action)] ring-1 ring-[var(--pm-color-action)]/30'
+                      : 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20'
+                  }`}
+                >
+                  {canBook ? 'Available' : 'Full'}
+                </span>
+                <ConfidenceBadge
+                  confidence={parking.availabilityConfidence}
+                  size="sm"
+                  withBasis
+                  className="text-right"
+                />
+              </div>
             </div>
 
             <div className="mt-5 grid grid-cols-3 gap-3 border-t border-[var(--pm-color-border-strong)] pt-5">
@@ -223,6 +232,15 @@ export default function ParkingDetails() {
               <Alert
                 variant="error"
                 message="You own this parking spot, so you cannot book it."
+              />
+            ) : parking.status === 'UNDER_REVIEW' ? (
+              <Alert
+                variant="error"
+                message={`Other drivers reported that this lot's availability did not match reality, so bookings are paused while an admin verifies those reports${
+                  parking.underReviewSince
+                    ? `. Under review since ${formatDateTime(parking.underReviewSince)}`
+                    : ''
+                }.`}
               />
             ) : parking.status !== 'ACTIVE' ? (
               <Alert variant="error" message="This parking lot is currently not accepting bookings." />
@@ -277,19 +295,24 @@ export default function ParkingDetails() {
                     </div>
                   )}
                 </div>
-
-                {/* Report Issue Secondary Action */}
-                <button
-                  type="button"
-                  onClick={() => setReportOpen(true)}
-                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-[var(--pm-color-muted)] transition-colors hover:bg-[var(--pm-color-surface-raised)]"
-                >
-                  <AlertTriangle className="h-4 w-4" />
-                  Report an issue
-                </button>
               </form>
             )}
           </div>
+
+          {/* A lot is most worth reporting when it is full, closed, or already
+              under review, so this sits outside the booking form rather than
+              inside it. */}
+          {!isOwner && (
+            <button
+              type="button"
+              title="Misleading photos, wrong location details, or unsafe conditions"
+              onClick={() => setReportOpen(true)}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-[var(--pm-color-muted)] transition-colors hover:bg-[var(--pm-color-surface-raised)]"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Report this lot
+            </button>
+          )}
         </div>
 
         {/* Sticky Bottom Bar */}

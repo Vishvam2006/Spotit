@@ -1,4 +1,5 @@
 import { MapPin, Navigation } from 'lucide-react';
+import ConfidenceBadge from '../continuity/ConfidenceBadge';
 import type { ParkingLot } from '../../types/parking';
 import { formatDistanceKm } from '../../utils/distance';
 import { getMarkerAvailability } from '../../utils/markerAvailability';
@@ -60,6 +61,13 @@ export default function ParkingCard({
               {parking.address}, {parking.city}
             </span>
           </p>
+          {parking.availabilityConfidence !== 'HIGH' && (
+            <ConfidenceBadge
+              confidence={parking.availabilityConfidence}
+              size="sm"
+              className="mt-2"
+            />
+          )}
         </div>
         <span
           className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${badgeStyles[color]}`}

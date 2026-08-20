@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
-import { X, AlertTriangle, Camera, Loader2, Trash2 } from 'lucide-react';
+import { X, AlertTriangle, Camera, Loader2, ShieldCheck, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import Alert from '../ui/Alert';
 import { reportLotIssue, uploadEvidencePhoto } from '../../services/continuity';
@@ -10,6 +10,7 @@ import {
   ISSUE_OPTIONS,
   MAX_EVIDENCE_BYTES,
   MAX_EVIDENCE_PHOTOS,
+  isSeriousIssue,
 } from '../../utils/continuity';
 import type { IssueType } from '../../types/continuity';
 
@@ -28,20 +29,20 @@ export default function ReportLotModal({
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() =>
+    navigator.geolocation ? '' : 'Geolocation is not supported by your browser.',
+  );
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locating, setLocating] = useState(true);
+  // Geolocation support is fixed for the life of the component, so the
+  // unsupported case is initial state rather than something an effect syncs.
+  const [locating, setLocating] = useState(() => Boolean(navigator.geolocation));
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selected = ISSUE_OPTIONS.find((option) => option.value === issueType);
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser.');
-      setLocating(false);
-      return;
-    }
+    if (!navigator.geolocation) return;
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -51,7 +52,7 @@ export default function ReportLotModal({
         });
         setLocating(false);
       },
-      (err) => {
+      () => {
         setError('Location access is required to report a parking lot directly. Please enable location services.');
         setLocating(false);
       },
@@ -212,6 +213,17 @@ export default function ReportLotModal({
               })}
             </div>
           </fieldset>
+
+          {selected && isSeriousIssue(selected.value) && (
+            <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 ring-1 ring-emerald-100">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p>
+                This lowers the lot's reliability score for every driver. If enough
+                drivers report the same thing, the lot stops taking bookings until an
+                admin has checked it.
+              </p>
+            </div>
+          )}
 
           <div>
             <label

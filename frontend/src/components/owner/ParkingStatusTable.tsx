@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { OwnerParkingCard, OwnerParkingStatus } from '../../types/owner';
 import { formatINR } from '../../utils/format';
 import SlotGrid from './SlotGrid';
+import ConfidenceBadge from '../continuity/ConfidenceBadge';
 
 interface ParkingStatusTableProps {
   parkings: OwnerParkingCard[];
@@ -24,6 +25,10 @@ const STATUS_PILL: Record<OwnerParkingCard['status'], { label: string; cls: stri
   CLOSED: {
     label: '🟡 Closed',
     cls: 'bg-amber-50 text-amber-700 ring-amber-200',
+  },
+  UNDER_REVIEW: {
+    label: '🔴 Under review',
+    cls: 'bg-red-50 text-red-700 ring-red-200',
   },
 };
 
@@ -70,6 +75,11 @@ export default function ParkingStatusTable({
                       <p className="mt-0.5 truncate text-xs text-[var(--pm-color-muted)]">
                         {parking.location}
                       </p>
+                      <ConfidenceBadge
+                        confidence={parking.availabilityConfidence}
+                        size="sm"
+                        className="mt-2"
+                      />
                     </div>
                     <span
                       className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${pill.cls}`}
@@ -160,6 +170,11 @@ export default function ParkingStatusTable({
                       <td className="px-5 py-3">
                         <p className="font-semibold text-[var(--pm-color-text)]">{parking.name}</p>
                         <p className="text-xs text-[var(--pm-color-muted)]">{parking.city}</p>
+                        <ConfidenceBadge
+                          confidence={parking.availabilityConfidence}
+                          size="sm"
+                          className="mt-1.5"
+                        />
                       </td>
                       <td className="px-4 py-3 text-[var(--pm-color-muted)]">{parking.location}</td>
                       <td className="px-4 py-3 text-center font-semibold text-[var(--pm-color-text)]">

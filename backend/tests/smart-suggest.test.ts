@@ -6,6 +6,14 @@ const VEHICLE = 'KA01AB1234';
 const ORIGIN_LAT = 12.9756;
 const ORIGIN_LNG = 77.6068;
 
+/**
+ * There is no /api/smart-suggest endpoint, and there should not be one: the
+ * Smart Suggest panel is built client-side (frontend/src/components/booking/
+ * SmartSuggest.tsx) from two endpoints that already exist -- GET /api/bookings
+ * for the cancellation reason, and GET /api/parking-lots for the nearby
+ * alternatives. This file pins the guarantees that panel depends on, so a
+ * change to either endpoint fails here rather than silently emptying it.
+ */
 describe('smart suggest backing data', () => {
   beforeEach(resetDb);
 

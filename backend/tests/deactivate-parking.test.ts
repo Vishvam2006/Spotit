@@ -91,7 +91,7 @@ describe('parking deactivation', () => {
   it('cancels all upcoming RESERVED bookings', async () => {
     const owner = await createUser('owner@example.com', 'OWNER');
     const user = await createUser('user@example.com', 'USER');
-    const lot = await createParkingLot(owner.token, { availableSpaces: 8 });
+    const lot = await createParkingLot(owner.token, { availableSpaces: 7 });
 
     const bookings = [];
     for (let i = 0; i < 3; i += 1) {
@@ -119,7 +119,32 @@ describe('parking deactivation', () => {
     }
 
     const parking = await prisma.parkingLot.findUnique({ where: { id: lot.id } });
-    expect(parking?.availableSpaces).toBe(11);
+    expect(parking?.availableSpaces).toBe(10);
+    expect(parking?.availableSpaces).toBeLessThanOrEqual(parking!.totalSpaces);
+  });
+
+  it('never releases more spaces than the lot physically has', async () => {
+    const owner = await createUser('owner@example.com', 'OWNER');
+    const user = await createUser('user@example.com', 'USER');
+    // A lot already showing every space free, with a stray RESERVED booking
+    // against it. Cancelling that booking must not invent an 11th space:
+    // capacity the engine hands back has to exist on the ground.
+    const lot = await createParkingLot(owner.token, { availableSpaces: 10 });
+    await createBooking({
+      userId: user.user.id,
+      parkingLotId: lot.id,
+      vehicleNumber: VEHICLE,
+      durationMinutes: 60,
+      status: 'RESERVED',
+      estimatedAmount: 40,
+      checkInDeadline: minutesFromNow(15),
+    });
+
+    await deactivate(owner.token, lot.id).expect(200);
+
+    const parking = await prisma.parkingLot.findUnique({ where: { id: lot.id } });
+    expect(parking?.availableSpaces).toBe(10);
+    expect(parking?.totalSpaces).toBe(10);
   });
 
   it('leaves COMPLETED bookings untouched', async () => {

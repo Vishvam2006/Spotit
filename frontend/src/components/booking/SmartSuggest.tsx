@@ -86,6 +86,10 @@ export default function SmartSuggest({ booking }: SmartSuggestProps) {
 
   useEffect(() => {
     if (!showSmartSuggest) return;
+    // load() flips the loading flag before awaiting the fetch and returns the
+    // cancel cleanup. That is the fetch-on-mount pattern, not a render cascade:
+    // the only synchronous writes are the loading/error flags for this fetch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     return load();
   }, [showSmartSuggest, reloadKey, load]);
 

@@ -21,6 +21,8 @@ import { notifySuccess } from '../../utils/notify';
 import { formatDateTime } from '../../utils/format';
 import { getIssueLabel } from '../../utils/continuity';
 import LotReliabilityPanel from '../../components/continuity/LotReliabilityPanel';
+import BookingTimeline from '../../components/continuity/BookingTimeline';
+import ConfidenceBadge from '../../components/continuity/ConfidenceBadge';
 import type { Complaint, ComplaintStatus } from '../../types/complaint';
 
 const STATUS_OPTIONS: ComplaintStatus[] = [
@@ -216,6 +218,18 @@ export default function AdminComplaintDetails() {
               <p className="text-sm text-[var(--pm-color-muted)]">
                 {complaint.parkingLot.address}, {complaint.parkingLot.city}
               </p>
+              <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-[var(--pm-color-muted)]">
+                Lot status
+              </p>
+              <p className="text-sm font-semibold text-[var(--pm-color-text)]">
+                {complaint.parkingLot.status.replace('_', ' ')}
+              </p>
+              <ConfidenceBadge
+                confidence={complaint.parkingLot.availabilityConfidence}
+                size="sm"
+                withBasis
+                className="mt-3"
+              />
             </>
           ) : (
             <p className="mt-3 text-sm text-[var(--pm-color-muted)]">
@@ -245,6 +259,13 @@ export default function AdminComplaintDetails() {
               Status: {complaint.booking.status} · Reserved{' '}
               {formatDateTime(complaint.booking.reservedAt)}
             </p>
+
+            {/* The ledger for this exact booking. It is what shows an admin the
+                report is attached to a real reservation rather than loose
+                feedback, and in what order the engine acted. */}
+            <div className="mt-5">
+              <BookingTimeline bookingId={complaint.booking.id} />
+            </div>
           </div>
         )}
       </div>
