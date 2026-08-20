@@ -26,8 +26,18 @@ const SEVERITY_BY_ISSUE: Record<IssueType, IssueSeverity> = {
   OTHER: 'MINOR',
 };
 
-/** Open serious reports at or above which a lot is pulled from circulation. */
-export const UNDER_REVIEW_THRESHOLD = 2;
+/**
+ * Open serious reports at or above which a lot is pulled from circulation.
+ *
+ * Configurable because the right number is a policy call, not a fact: a dense
+ * city may want a lower bar than a quiet one. Defaults to 2, which is what the
+ * engine's behaviour is specified and tested against, so leaving it unset
+ * changes nothing.
+ */
+export const UNDER_REVIEW_THRESHOLD =
+  Number(process.env.UNDER_REVIEW_THRESHOLD) > 0
+    ? Number(process.env.UNDER_REVIEW_THRESHOLD)
+    : 2;
 
 export function severityFor(issueType: IssueType): IssueSeverity {
   return SEVERITY_BY_ISSUE[issueType];

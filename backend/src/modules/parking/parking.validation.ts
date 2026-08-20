@@ -30,7 +30,7 @@ const parkingBaseSchema = z.object({
   totalSpaces: z.number().int().min(1),
   availableSpaces: z.number().int().min(0),
   status: parkingLotStatusEnum.optional(),
-  imageUrl: z.string().optional(),
+  imageUrl: photoString.optional(),
   photos: z.array(photoString).max(MAX_PARKING_PHOTOS),
 });
 

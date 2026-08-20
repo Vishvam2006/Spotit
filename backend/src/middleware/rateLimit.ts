@@ -29,3 +29,23 @@ export const authRateLimiter = rateLimit({
       .json({ success: false, message: 'Too many attempts. Please try again later.' });
   },
 });
+
+/**
+ * Filing a report is a privileged act: two serious reports pull a lot out of
+ * search and stop it taking bookings. The booking-linked path is already
+ * behind bookingRateLimiter, but a direct lot report needs no booking at all --
+ * only a claimed position, which the client supplies. Without a limiter here a
+ * single account could discredit a competitor's lot in seconds.
+ */
+export const reportRateLimiter = rateLimit({
+  windowMs: Number(process.env.REPORT_RATE_LIMIT_WINDOW_MS) || 60 * 60 * 1000,
+  limit: Number(process.env.REPORT_RATE_LIMIT_MAX) || 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    res.status(429).json({
+      success: false,
+      message: 'Too many reports filed. Please try again later.',
+    });
+  },
+});
