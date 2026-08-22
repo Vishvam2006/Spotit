@@ -1,19 +1,13 @@
 import { prisma } from '../../config/prisma';
 
 export async function getUserProfile(userId: string) {
-  return prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-      phone: true,
-      bio: true,
-      profileImage: true,
-      role: true,
-      createdAt: true,
-    },
   });
+  if (!user) return null;
+  
+  const { passwordHash, ...safeUser } = user;
+  return safeUser;
 }
 
 export async function updateUserProfile(
@@ -25,18 +19,11 @@ export async function updateUserProfile(
     profileImage?: string;
   }
 ) {
-  return prisma.user.update({
+  const user = await prisma.user.update({
     where: { id: userId },
     data,
-    select: {
-      id: true,
-      fullName: true,
-      email: true,
-      phone: true,
-      bio: true,
-      profileImage: true,
-      role: true,
-      createdAt: true,
-    },
   });
+  
+  const { passwordHash, ...safeUser } = user;
+  return safeUser;
 }
