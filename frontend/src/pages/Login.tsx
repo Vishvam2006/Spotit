@@ -7,8 +7,6 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 import Logo from '../components/Logo';
-import ThemeToggle from '../components/ui/ThemeToggle';
-
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -52,9 +50,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-[var(--pm-color-page)] lg:grid lg:grid-cols-2">
-      <div className="fixed right-4 top-4 z-20">
-        <ThemeToggle compact />
-      </div>
       {/* Brand panel */}
       <aside className="relative hidden overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-600 to-emerald-600 lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-2xl" />

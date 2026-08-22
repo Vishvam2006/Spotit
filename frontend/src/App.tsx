@@ -14,6 +14,7 @@ import AIVerification from './pages/AIVerification';
 import MyParkings from './pages/MyParkings';
 import OwnerDashboard from './pages/OwnerDashboard';
 import Explore from './pages/Explore';
+import Account from './pages/Account';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminOverview from './pages/admin/AdminOverview';
 import AdminComplaints from './pages/admin/AdminComplaints';
@@ -94,6 +95,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MyVehicles />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              <ProtectedRoute>
+                <Account />
               </ProtectedRoute>
             }
           />
