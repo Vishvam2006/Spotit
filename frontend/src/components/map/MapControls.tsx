@@ -49,10 +49,11 @@ export default function MapControls({
   };
 
   const buttonClasses =
-    'pm-touch-target inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-md shadow-slate-900/10 transition-colors hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60';
+    'pm-touch-target inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#2a2a34] bg-[#141418]/95 text-white shadow-xl shadow-black/60 backdrop-blur-xl transition-all hover:bg-[#202028] hover:scale-105 active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60';
 
   return (
-    <div className="absolute left-4 top-40 z-10 flex flex-row gap-2 sm:left-auto sm:right-4 sm:top-4 sm:flex-col">
+    <div className="absolute right-4 top-32 z-10 flex flex-col gap-2.5 sm:top-24">
+      {/* Map Layers Toggle (Satellite / Roadmap) */}
       <button
         type="button"
         onClick={toggleMapView}
@@ -63,30 +64,34 @@ export default function MapControls({
         title={mapView === 'satellite' ? 'Map view' : 'Satellite'}
       >
         {mapView === 'satellite' ? (
-          <MapIcon className="h-5 w-5" aria-hidden="true" />
+          <MapIcon className="h-5 w-5 text-emerald-400" aria-hidden="true" />
         ) : (
-          <Satellite className="h-5 w-5" aria-hidden="true" />
+          <Satellite className="h-5 w-5 text-slate-300" aria-hidden="true" />
         )}
       </button>
+
+      {/* Recenter / Reset */}
       <button
         type="button"
         onClick={handleReset}
         disabled={!map}
         className={buttonClasses}
         aria-label="Reset map"
-        title="Reset map"
+        title="Reset map view"
       >
-        <RotateCcw className="h-5 w-5" aria-hidden="true" />
+        <RotateCcw className="h-5 w-5 text-slate-300" aria-hidden="true" />
       </button>
+
+      {/* GPS Locate Me Button (Google Maps Style) */}
       <button
         type="button"
         onClick={handleLocateMe}
         disabled={!map || locating}
         className={buttonClasses}
         aria-label={locating ? 'Locating' : 'Locate me'}
-        title="Locate me"
+        title="Your location"
       >
-        <LocateFixed className={`h-5 w-5 ${locating ? 'animate-pulse' : ''}`} aria-hidden="true" />
+        <LocateFixed className={`h-5 w-5 ${locating ? 'animate-pulse text-emerald-400' : 'text-slate-200'}`} aria-hidden="true" />
       </button>
     </div>
   );
