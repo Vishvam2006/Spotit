@@ -19,7 +19,6 @@ import {
   DEFAULT_MAP_ZOOM,
 } from '../../config/map';
 import ParkingMarker from './ParkingMarker';
-import ParkingPopup from './ParkingPopup';
 import UserLocationMarker from './UserLocationMarker';
 import MapControls from './MapControls';
 import Spinner from '../ui/Spinner';
@@ -33,7 +32,6 @@ interface ParkingMapProps {
   parkingLots: ParkingLot[];
   selectedParkingId: string | null;
   onSelect: (id: string | null) => void;
-  onViewDetails?: (parking: ParkingLot) => void;
   mode?: 'browse' | 'select';
   onLocationSelect?: (location: MapLocation) => void;
   isAddingParking?: boolean;
@@ -46,7 +44,6 @@ export default function ParkingMap({
   parkingLots,
   selectedParkingId,
   onSelect,
-  onViewDetails,
   mode = 'browse',
   onLocationSelect,
   isAddingParking = false,
@@ -63,13 +60,14 @@ export default function ParkingMap({
     );
   }
 
-  const selectedParking =
-    parkingLots.find((parking) => parking.id === selectedParkingId) ?? null;
-
   const handleMapClick = (event: MapMouseEvent) => {
-    if (!onLocationSelect || !(isAddingParking || mode === 'select')) return;
-    const latLng = event.detail.latLng;
-    if (latLng) onLocationSelect(latLng);
+    if (onLocationSelect && (isAddingParking || mode === 'select')) {
+      const latLng = event.detail.latLng;
+      if (latLng) onLocationSelect(latLng);
+      return;
+    }
+    // Clicking an empty area of the map deselects parking
+    onSelect(null);
   };
 
   return (
@@ -100,14 +98,6 @@ export default function ParkingMap({
           ))}
 
           {userLocation && <UserLocationMarker position={userLocation} />}
-
-          {selectedParking && onViewDetails && (
-            <ParkingPopup
-              parking={selectedParking}
-              onClose={() => onSelect(null)}
-              onViewDetails={onViewDetails}
-            />
-          )}
 
           {selectedLocation && (
             <AdvancedMarker

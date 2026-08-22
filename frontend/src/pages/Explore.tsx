@@ -4,13 +4,16 @@ import {
   ChevronLeft,
   Plus,
   X,
+  SlidersHorizontal,
+  Zap,
+  Warehouse,
+  Check,
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import ParkingMap from '../components/map/ParkingMap';
 import type { MapLocation } from '../components/map/ParkingMap';
 import SearchBar from '../components/map/SearchBar';
-import DistanceFilter from '../components/map/DistanceFilter';
-import ParkingCard from '../components/map/ParkingCard';
+import ParkingBottomSheet from '../components/map/ParkingBottomSheet';
 import AddParkingForm from '../components/parking/AddParkingForm';
 import AddParkingDrawer from '../components/parking/AddParkingDrawer';
 import Spinner from '../components/ui/Spinner';
@@ -24,6 +27,7 @@ import { notifyError, notifySuccess } from '../utils/notify';
 import type { ParkingLot } from '../types/parking';
 
 const DEFAULT_RADIUS_KM = 25;
+const RADIUS_OPTIONS = [5, 10, 25, 50, 100];
 
 function filterLotsByRadius(lots: ParkingLot[], center: LatLng, radiusKm: number): ParkingLot[] {
   if (radiusKm <= 0) return [];
@@ -62,12 +66,19 @@ export default function Explore() {
   const [searchLocation, setSearchLocation] = useState<LatLng | null>(null);
   const [searching, setSearching] = useState(false);
   const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+  const [showRadiusPopover, setShowRadiusPopover] = useState(false);
+
+  // Filter states
+  const [filterAvailableOnly, setFilterAvailableOnly] = useState(false);
+  const [filterUnder100, setFilterUnder100] = useState(false);
+  const [filterCoveredOnly, setFilterCoveredOnly] = useState(false);
+  const [filterEvOnly, setFilterEvOnly] = useState(false);
+
+  // Add Parking states
   const [isAddingParking, setIsAddingParking] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
   const [returnToMyParkings, setReturnToMyParkings] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  // Bumped once per add-parking session so the mobile drawer remounts with a
-  // clean form, while closing/reopening it mid-session keeps the user's input.
   const [addSessionId, setAddSessionId] = useState(0);
 
   const requestUserLocation = useCallback(async (): Promise<LatLng | null> => {
@@ -193,10 +204,43 @@ export default function Explore() {
     [parkingClusterCenter, searchLocation, userLocation],
   );
 
-  const filteredParkingLots = useMemo(
-    () => filterLotsByRadius(allParkingLots, mapCenter, radiusKm),
-    [allParkingLots, mapCenter, radiusKm],
-  );
+  // Filter lots based on radius and active quick filters
+  const filteredParkingLots = useMemo(() => {
+    let lots = filterLotsByRadius(allParkingLots, mapCenter, radiusKm);
+
+    if (filterAvailableOnly) {
+      lots = lots.filter((lot) => lot.availableSpaces > 0 && lot.status === 'ACTIVE');
+    }
+
+    if (filterUnder100) {
+      lots = lots.filter((lot) => lot.pricePerHour <= 100);
+    }
+
+    if (filterCoveredOnly) {
+      lots = lots.filter((lot) =>
+        (lot.description?.toLowerCase().includes('covered') ?? false) ||
+        lot.name.toLowerCase().includes('covered'),
+      );
+    }
+
+    if (filterEvOnly) {
+      lots = lots.filter((lot) =>
+        (lot.description?.toLowerCase().includes('ev') ?? false) ||
+        (lot.description?.toLowerCase().includes('charging') ?? false) ||
+        lot.name.toLowerCase().includes('ev'),
+      );
+    }
+
+    return lots;
+  }, [
+    allParkingLots,
+    mapCenter,
+    radiusKm,
+    filterAvailableOnly,
+    filterUnder100,
+    filterCoveredOnly,
+    filterEvOnly,
+  ]);
 
   const visibleParkingLots = useMemo(
     () =>
@@ -213,6 +257,32 @@ export default function Explore() {
         .sort((a, b) => a.distanceKm - b.distanceKm),
     [filteredParkingLots, mapCenter],
   );
+
+  // Selected parking lot for the bottom sheet
+  const selectedParking = useMemo(() => {
+    if (!selectedParkingId) return null;
+    return allParkingLots.find((lot) => lot.id === selectedParkingId) ?? null;
+  }, [allParkingLots, selectedParkingId]);
+
+  const selectedDistanceFromUser = useMemo(() => {
+    if (!selectedParking || !userLocation) return undefined;
+    return haversineDistanceKm(
+      userLocation.lat,
+      userLocation.lng,
+      selectedParking.latitude,
+      selectedParking.longitude,
+    );
+  }, [selectedParking, userLocation]);
+
+  const selectedDistanceFromDestination = useMemo(() => {
+    if (!selectedParking || !searchLocation) return undefined;
+    return haversineDistanceKm(
+      searchLocation.lat,
+      searchLocation.lng,
+      selectedParking.latitude,
+      selectedParking.longitude,
+    );
+  }, [selectedParking, searchLocation]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
@@ -293,11 +363,16 @@ export default function Explore() {
           </div>
         ) : (
           <>
+            {/* Primary Google Map View */}
             <div className="absolute inset-0">
               <ParkingMap
                 parkingLots={visibleParkingLots}
                 selectedParkingId={selectedParkingId}
-                onSelect={setSelectedParkingId}
+                onSelect={(id) => {
+                  if (!isAddingParking) {
+                    setSelectedParkingId(id);
+                  }
+                }}
                 mapCenter={mapCenter}
                 userLocation={userLocation}
                 isAddingParking={isAddingParking}
@@ -306,17 +381,19 @@ export default function Explore() {
               />
             </div>
 
+            {/* Floating Top Bar (Search + Back + Add parking) */}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6">
-              <div className="pointer-events-auto mx-auto flex max-w-3xl gap-2">
+              <div className="pointer-events-auto mx-auto flex max-w-3xl items-center gap-2">
                 <button
                   type="button"
                   onClick={() => navigate(-1)}
                   aria-label="Back to Home"
-                  className="pm-touch-target flex shrink-0 items-center justify-center rounded-2xl bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] shadow-lg shadow-black/30 ring-1 ring-[var(--pm-color-border)] backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
+                  className="pm-touch-target flex shrink-0 items-center justify-center rounded-2xl bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] shadow-xl shadow-black/40 ring-1 ring-[var(--pm-color-border)] backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
                 >
                   <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                 </button>
-                <div className="min-w-0 flex-1 rounded-2xl bg-[var(--pm-color-surface)]/95 p-3 shadow-lg shadow-black/30 ring-1 ring-[var(--pm-color-border)] backdrop-blur-xl">
+
+                <div className="min-w-0 flex-1 rounded-2xl bg-[var(--pm-color-surface)]/95 p-2.5 shadow-xl shadow-black/40 ring-1 ring-[var(--pm-color-border)] backdrop-blur-xl">
                   <SearchBar
                     value={searchQuery}
                     onChange={handleSearchChange}
@@ -326,25 +403,12 @@ export default function Explore() {
                     compact
                   />
                 </div>
-              </div>
 
-              {/* Filter Chips Layer (Premium Dark Style) */}
-              {!isAddingParking && (
-                 <div className="pointer-events-auto mx-auto mt-3 flex max-w-3xl items-center gap-2 overflow-x-auto pm-scrollbar-none">
-                   {['Price', 'Distance', 'Available now', 'Covered', 'EV charging'].map(chip => (
-                     <button key={chip} className="whitespace-nowrap rounded-full bg-[var(--pm-color-surface)]/90 px-3 py-1.5 text-xs font-bold text-[var(--pm-color-text)] shadow-sm ring-1 ring-[var(--pm-color-border)] backdrop-blur-md">
-                        {chip}
-                     </button>
-                   ))}
-                 </div>
-              )}
-
-              <div className="pointer-events-auto mx-auto mt-3 flex max-w-3xl justify-end">
                 {isAddingParking ? (
                   <button
                     type="button"
                     onClick={cancelAddParking}
-                    className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)]/95 px-4 text-sm font-bold text-[var(--pm-color-text)] shadow-lg shadow-black/30 backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    className="flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-2xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)]/95 px-4 text-xs font-bold text-[var(--pm-color-text)] shadow-xl shadow-black/40 backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
                   >
                     <X className="h-4 w-4" aria-hidden="true" />
                     Cancel
@@ -353,16 +417,134 @@ export default function Explore() {
                   <button
                     type="button"
                     onClick={startAddParking}
-                    className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--pm-color-text)] px-4 text-sm font-bold text-[var(--pm-color-page)] shadow-lg shadow-black/40 transition-colors hover:bg-[var(--pm-color-muted)] focus:outline-none"
+                    className="flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-[var(--pm-color-text)] px-4 text-xs font-bold text-[var(--pm-color-page)] shadow-xl shadow-black/40 transition-colors hover:bg-[var(--pm-color-muted)] focus:outline-none"
                   >
                     <Plus className="h-4 w-4" aria-hidden="true" />
-                    Add parking
+                    <span className="hidden sm:inline">Add parking</span>
+                    <span className="sm:hidden">Add</span>
                   </button>
                 )}
               </div>
+
+              {/* Floating Filter Chips Layer */}
+              {!isAddingParking && (
+                <div className="pointer-events-auto relative mx-auto mt-2.5 flex max-w-3xl items-center gap-2 overflow-x-auto pb-1 pm-scrollbar-none">
+                  {/* Nearby Pill & Radius Selector Toggle */}
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowRadiusPopover((prev) => !prev)}
+                      className="flex items-center gap-1.5 rounded-full bg-[var(--pm-color-surface)]/95 px-3.5 py-1.5 text-xs font-bold text-[var(--pm-color-action)] shadow-md ring-1 ring-[var(--pm-color-action)]/30 backdrop-blur-md transition-all hover:bg-[var(--pm-color-surface-raised)]"
+                    >
+                      <SlidersHorizontal className="h-3 w-3" />
+                      <span>{visibleParkingLots.length} spots ({radiusKm} km)</span>
+                    </button>
+
+                    {/* Radius Options Popover */}
+                    {showRadiusPopover && (
+                      <div className="absolute left-0 top-full z-40 mt-2 flex flex-col gap-1 rounded-2xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] p-2 shadow-2xl backdrop-blur-xl">
+                        <span className="px-2 py-1 text-[11px] font-semibold text-[var(--pm-color-muted)]">
+                          Search Radius
+                        </span>
+                        <div className="flex gap-1">
+                          {RADIUS_OPTIONS.map((km) => (
+                            <button
+                              key={km}
+                              type="button"
+                              onClick={() => {
+                                setRadiusKm(km);
+                                setShowRadiusPopover(false);
+                              }}
+                              className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition-all ${
+                                radiusKm === km
+                                  ? 'bg-[var(--pm-color-action)] text-slate-950 shadow-sm'
+                                  : 'text-[var(--pm-color-text)] hover:bg-[var(--pm-color-surface-raised)]'
+                              }`}
+                            >
+                              {km} km
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Available Now Filter Chip */}
+                  <button
+                    type="button"
+                    onClick={() => setFilterAvailableOnly((prev) => !prev)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ring-1 backdrop-blur-md transition-all ${
+                      filterAvailableOnly
+                        ? 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/50'
+                        : 'bg-[var(--pm-color-surface)]/90 text-[var(--pm-color-text)] ring-[var(--pm-color-border)] hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    {filterAvailableOnly && <Check className="h-3 w-3" />}
+                    Available now
+                  </button>
+
+                  {/* Price Chip */}
+                  <button
+                    type="button"
+                    onClick={() => setFilterUnder100((prev) => !prev)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ring-1 backdrop-blur-md transition-all ${
+                      filterUnder100
+                        ? 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/50'
+                        : 'bg-[var(--pm-color-surface)]/90 text-[var(--pm-color-text)] ring-[var(--pm-color-border)] hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    {filterUnder100 && <Check className="h-3 w-3" />}
+                    ≤ ₹100/hr
+                  </button>
+
+                  {/* Covered Filter Chip */}
+                  <button
+                    type="button"
+                    onClick={() => setFilterCoveredOnly((prev) => !prev)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ring-1 backdrop-blur-md transition-all ${
+                      filterCoveredOnly
+                        ? 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/50'
+                        : 'bg-[var(--pm-color-surface)]/90 text-[var(--pm-color-text)] ring-[var(--pm-color-border)] hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    <Warehouse className="h-3 w-3" />
+                    Covered
+                  </button>
+
+                  {/* EV Charging Chip */}
+                  <button
+                    type="button"
+                    onClick={() => setFilterEvOnly((prev) => !prev)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ring-1 backdrop-blur-md transition-all ${
+                      filterEvOnly
+                        ? 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/50'
+                        : 'bg-[var(--pm-color-surface)]/90 text-[var(--pm-color-text)] ring-[var(--pm-color-border)] hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    <Zap className="h-3 w-3" />
+                    EV charging
+                  </button>
+
+                  {/* Clear all filters if any active */}
+                  {(filterAvailableOnly || filterUnder100 || filterCoveredOnly || filterEvOnly) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterAvailableOnly(false);
+                        setFilterUnder100(false);
+                        setFilterCoveredOnly(false);
+                        setFilterEvOnly(false);
+                      }}
+                      className="shrink-0 rounded-full bg-[var(--pm-color-surface-raised)] px-2.5 py-1.5 text-xs font-semibold text-[var(--pm-color-muted)] hover:text-white"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Mobile instruction strip */}
+            {/* Mobile instruction strip for Add Parking */}
             {isAddingParking && (
               <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--pm-bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] z-20 flex justify-center px-4 md:hidden">
                 <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-[var(--pm-color-page)]/95 px-5 py-3.5 text-sm text-[var(--pm-color-text)] shadow-xl backdrop-blur-md ring-1 ring-[var(--pm-color-border)]">
@@ -392,84 +574,51 @@ export default function Explore() {
               </div>
             )}
 
-            {/* Sidebar / Bottom sheet */}
-            <section
-              aria-label={isAddingParking ? 'Add parking' : 'Nearby parking'}
-              // In add mode the panel has no mobile content (the form lives in the
-              // drawer), so it must be fully hidden below md — otherwise an empty
-              // sheet covers the bottom of the map and eats the taps meant to pin
-              // the location.
-              className={`pm-sheet absolute inset-x-0 bottom-[calc(var(--pm-bottom-nav-height)+env(safe-area-inset-bottom))] z-20 rounded-t-3xl border-t border-[var(--pm-color-border)] px-4 pb-4 pt-3 md:bottom-6 md:left-6 md:right-auto md:w-[420px] md:rounded-2xl md:border md:p-4 bg-[var(--pm-color-surface)] ${
-                isAddingParking ? 'hidden md:block' : ''
-              }`}
-            >
-              {!isAddingParking && <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--pm-color-border-strong)] md:hidden" />}
-
-              {isAddingParking ? (
-                <div className="hidden md:block">
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Add parking</h2>
-                      <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
-                        Click the map to pin the parking location.
-                      </p>
-                    </div>
+            {/* Desktop Add Parking Floating Form */}
+            {isAddingParking && (
+              <section
+                aria-label="Add parking"
+                className="pm-sheet absolute bottom-6 left-6 z-20 hidden w-[420px] rounded-2xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] p-4 md:block shadow-2xl"
+              >
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Add parking</h2>
+                    <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
+                      Click the map to pin the parking location.
+                    </p>
                   </div>
-                  <div className="pm-scrollbar-none max-h-[60vh] overflow-y-auto pb-1 pr-1">
-                    <AddParkingForm
-                      selectedLocation={selectedLocation}
-                      onCreated={handleParkingCreated}
-                      onCancel={cancelAddParking}
-                      embedded
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={cancelAddParking}
+                    className="rounded-full p-1 text-[var(--pm-color-muted)] hover:bg-[var(--pm-color-surface-raised)] hover:text-[var(--pm-color-text)]"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-              ) : (
-                <div>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Nearby parking</h2>
-                      <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
-                        {visibleParkingLots.length} of {allParkingLots.length} lots in range
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-[var(--pm-color-action-soft)] px-3 py-1 text-xs font-bold text-[var(--pm-color-action)]">
-                      {radiusKm} km
-                    </span>
-                  </div>
-
-                  <div className="mt-3 rounded-xl bg-[var(--pm-color-surface-raised)] p-3 ring-1 ring-[var(--pm-color-border)]">
-                    <DistanceFilter
-                      variant="inline"
-                      radiusKm={radiusKm}
-                      onChange={setRadiusKm}
-                      visibleCount={visibleParkingLots.length}
-                      totalCount={allParkingLots.length}
-                    />
-                  </div>
-
-                  {visibleParkingLots.length === 0 ? (
-                    <div className="mt-4 rounded-xl border border-dashed border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface-raised)] p-5 text-center">
-                      <p className="text-sm font-semibold text-[var(--pm-color-text)]">No parking lots found here</p>
-                      <p className="mt-1 text-sm text-[var(--pm-color-muted)]">Try another area or increase the search radius.</p>
-                    </div>
-                  ) : (
-                    <div className="pm-scrollbar-none mt-4 max-h-[34vh] space-y-3 overflow-y-auto pb-1 pr-1 md:max-h-[58vh]">
-                      {visibleParkingLots.map((parking) => (
-                        <ParkingCard
-                          key={parking.id}
-                          parking={parking}
-                          selected={parking.id === selectedParkingId}
-                          onSelect={(lot) => setSelectedParkingId(lot.id)}
-                          onViewDetails={handleViewDetails}
-                        />
-                      ))}
-                    </div>
-                  )}
+                <div className="pm-scrollbar-none max-h-[60vh] overflow-y-auto pb-1 pr-1">
+                  <AddParkingForm
+                    selectedLocation={selectedLocation}
+                    onCreated={handleParkingCreated}
+                    onCancel={cancelAddParking}
+                    embedded
+                  />
                 </div>
-              )}
-            </section>
+              </section>
+            )}
 
+            {/* Google Maps Style Bottom Sheet for ONLY the selected parking lot */}
+            {selectedParking && !isAddingParking && (
+              <ParkingBottomSheet
+                key={selectedParking.id}
+                parking={selectedParking}
+                distanceFromUser={selectedDistanceFromUser}
+                distanceFromDestination={selectedDistanceFromDestination}
+                onClose={() => setSelectedParkingId(null)}
+                onReserve={handleViewDetails}
+              />
+            )}
+
+            {/* Mobile Drawer for Add Parking */}
             <AddParkingDrawer
               key={addSessionId}
               open={mobileDrawerOpen && isAddingParking}
