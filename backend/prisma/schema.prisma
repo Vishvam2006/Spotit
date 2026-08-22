@@ -13,6 +13,7 @@ model User {
   email         String                @unique
   passwordHash  String
   phone         String?
+  bio           String?
   profileImage  String?
   role          Role                  @default(USER)
   createdAt     DateTime              @default(now())

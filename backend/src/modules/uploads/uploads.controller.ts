@@ -3,6 +3,7 @@ import {
   createEvidenceUploadSignature,
   createParkingUploadSignature,
   createVehicleUploadSignature,
+  createProfileUploadSignature,
   isCloudinaryConfigured,
 } from '../../config/cloudinaryHelpers';
 import { VehicleError } from '../vehicle/vehicle.service';
@@ -21,6 +22,26 @@ export async function getVehicleUploadSignature(
     }
 
     const signature = createVehicleUploadSignature(req.user!.id);
+    res.json({ success: true, data: signature });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getProfileUploadSignature(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!isCloudinaryConfigured()) {
+      throw new VehicleError(
+        503,
+        'Profile image uploads are unavailable because Cloudinary is not configured. Please try again later.',
+      );
+    }
+
+    const signature = createProfileUploadSignature(req.user!.id);
     res.json({ success: true, data: signature });
   } catch (error) {
     next(error);

@@ -5,9 +5,7 @@ export type Theme = 'dark' | 'light';
 export const THEME_STORAGE_KEY = 'pm-theme';
 
 export function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'dark';
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  return stored === 'light' || stored === 'dark' ? stored : 'dark';
+  return 'light';
 }
 
 export function applyTheme(theme: Theme) {

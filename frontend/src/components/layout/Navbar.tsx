@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   CalendarDays,
   Car,
@@ -15,7 +15,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Logo from '../Logo';
-import ThemeToggle from '../ui/ThemeToggle';
 import { useAuth } from '../../context/auth-context';
 import type { Role } from '../../types';
 
@@ -53,6 +52,7 @@ export default function Navbar() {
     location.pathname.startsWith('/parking/') ||
     location.pathname.startsWith('/booking/confirm/');
   const menuRef = useRef<HTMLDivElement>(null);
+  const mobileSheetRef = useRef<HTMLDivElement>(null);
 
   const canViewDashboard =
     user?.role === 'OWNER' || user?.role === 'ADMIN';
@@ -88,7 +88,11 @@ export default function Navbar() {
     if (!accountOpen) return;
 
     const handlePointerDown = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedOutsideMenu = menuRef.current && !menuRef.current.contains(target);
+      const clickedOutsideSheet = mobileSheetRef.current && !mobileSheetRef.current.contains(target);
+      
+      if (clickedOutsideMenu && clickedOutsideSheet) {
         setAccountOpen(false);
       }
     };
@@ -140,7 +144,6 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <ThemeToggle />
             <div className="relative" ref={menuRef}>
             <button
               type="button"
@@ -177,6 +180,14 @@ export default function Navbar() {
                     {user ? ROLE_LABELS[user.role] : ''}
                   </span>
                 </div>
+                <Link
+                  to="/account"
+                  onClick={() => setAccountOpen(false)}
+                  className="flex min-h-11 w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface)] focus:outline-none"
+                >
+                  <User className="h-4 w-4" />
+                  My Profile
+                </Link>
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -253,6 +264,7 @@ export default function Navbar() {
             aria-hidden="true"
           />
           <div
+            ref={mobileSheetRef}
             role="dialog"
             aria-label="Account"
             className="pm-sheet absolute inset-x-0 bottom-0 max-h-[85vh] animate-slide-up overflow-y-auto rounded-t-3xl bg-[var(--pm-color-surface)] p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-2xl ring-1 ring-white/10"
@@ -285,16 +297,12 @@ export default function Navbar() {
               <span className="rounded-full bg-[var(--pm-color-action-soft)] px-3 py-1.5 text-xs font-bold text-[var(--pm-color-action)]">
                 {user ? ROLE_LABELS[user.role] : ''}
               </span>
-              <span className="w-px self-stretch bg-[var(--pm-color-border)]" aria-hidden="true" />
-              <span className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--pm-color-muted)]">
-                <ThemeToggle compact />
-                <span>Theme</span>
-              </span>
             </div>
 
             <div className="mt-6 space-y-1">
               {/* Extra nav items inside the menu */}
               {[
+                { to: '/account', label: 'My Profile', icon: User },
                 { to: '/verification', label: 'AI Verification', icon: ShieldCheck },
                 { to: '/my-vehicles', label: 'My Vehicles', icon: Car },
                 { to: '/my-parkings', label: 'My Parkings', icon: SquareParking },
