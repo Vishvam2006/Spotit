@@ -39,6 +39,7 @@ interface VehicleCardProps {
   onSetDefault: (vehicle: Vehicle) => void;
   onEdit: (vehicle: Vehicle) => void;
   onDelete: (vehicle: Vehicle) => void;
+  hideActions?: boolean;
 }
 
 export default function VehicleCard({
@@ -47,6 +48,7 @@ export default function VehicleCard({
   onSetDefault,
   onEdit,
   onDelete,
+  hideActions = false,
 }: VehicleCardProps) {
   const badge = vehicle.verificationStatus
     ? VERIFICATION_BADGES[vehicle.verificationStatus]
@@ -103,6 +105,7 @@ export default function VehicleCard({
         </p>
       </div>
 
+      {!hideActions && (
       <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
         <Link
           to={`/verification?vehicleId=${vehicle.id}`}
@@ -141,6 +144,7 @@ export default function VehicleCard({
           Delete
         </button>
       </div>
+      )}
     </div>
   );
 }
