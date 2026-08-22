@@ -47,6 +47,11 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [accountOpen, setAccountOpen] = useState(false);
+
+  // Hide mobile bottom tab bar on detail pages where sticky action buttons might overlap
+  const hideMobileNav =
+    location.pathname.startsWith('/parking/') ||
+    location.pathname.startsWith('/booking/confirm/');
   const menuRef = useRef<HTMLDivElement>(null);
 
   const canViewDashboard =
@@ -191,51 +196,53 @@ export default function Navbar() {
       </header>
 
       {/* Floating Pill Mobile bottom tab bar */}
-      <nav
-        className="fixed inset-x-0 bottom-4 z-50 px-4 md:hidden pb-[env(safe-area-inset-bottom)] pointer-events-none"
-        aria-label="Mobile navigation"
-      >
-        <div className="mx-auto flex max-w-md items-center justify-between rounded-[2rem] bg-[#1a2230]/95 backdrop-blur-xl p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.4)] ring-1 ring-white/10 pointer-events-auto">
-          {mobileNavItems.map(({ to, label, mobileLabel, icon: Icon, end }) => {
-            const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
-            return (
-              <NavLink key={to} to={to} end={end} className={mobileTabClass}>
-                <span
-                  className={`flex h-10 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
-                    isActive ? 'bg-[var(--pm-color-action)] text-white shadow-lg' : 'bg-transparent text-[var(--pm-color-muted)]'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <span className={`mt-1 max-w-full truncate transition-all duration-300 ${isActive ? 'opacity-100 scale-100 font-extrabold text-white' : 'opacity-80 scale-95 font-medium'}`}>
-                  {mobileLabel ?? label}
-                </span>
-              </NavLink>
-            );
-          })}
-          
-          <button
-            type="button"
-            onClick={() => setAccountOpen(true)}
-            aria-label="Open account menu"
-            aria-expanded={accountOpen}
-            className={`group relative flex flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 py-2 rounded-xl text-[11px] font-bold leading-none transition-all duration-200 focus:outline-none ${
-              accountOpen ? 'text-[var(--pm-color-text)]' : 'text-[var(--pm-color-muted)] hover:text-[var(--pm-color-text)]'
-            }`}
-          >
-            <span
-              className={`flex h-10 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
-                accountOpen ? 'bg-[var(--pm-color-action)] text-white shadow-lg' : 'bg-transparent text-[var(--pm-color-muted)]'
+      {!hideMobileNav && (
+        <nav
+          className="fixed inset-x-0 bottom-4 z-50 px-4 md:hidden pb-[env(safe-area-inset-bottom)] pointer-events-none"
+          aria-label="Mobile navigation"
+        >
+          <div className="mx-auto flex max-w-md items-center justify-between rounded-[2rem] bg-[#1a2230]/95 backdrop-blur-xl p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.4)] ring-1 ring-white/10 pointer-events-auto">
+            {mobileNavItems.map(({ to, label, mobileLabel, icon: Icon, end }) => {
+              const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+              return (
+                <NavLink key={to} to={to} end={end} className={mobileTabClass}>
+                  <span
+                    className={`flex h-10 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
+                      isActive ? 'bg-[var(--pm-color-action)] text-white shadow-lg' : 'bg-transparent text-[var(--pm-color-muted)]'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className={`mt-1 max-w-full truncate transition-all duration-300 ${isActive ? 'opacity-100 scale-100 font-extrabold text-white' : 'opacity-80 scale-95 font-medium'}`}>
+                    {mobileLabel ?? label}
+                  </span>
+                </NavLink>
+              );
+            })}
+            
+            <button
+              type="button"
+              onClick={() => setAccountOpen(true)}
+              aria-label="Open account menu"
+              aria-expanded={accountOpen}
+              className={`group relative flex flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 py-2 rounded-xl text-[11px] font-bold leading-none transition-all duration-200 focus:outline-none ${
+                accountOpen ? 'text-[var(--pm-color-text)]' : 'text-[var(--pm-color-muted)] hover:text-[var(--pm-color-text)]'
               }`}
             >
-              <User className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <span className={`mt-1 max-w-full truncate transition-all duration-300 ${accountOpen ? 'opacity-100 scale-100 font-extrabold text-white' : 'opacity-80 scale-95 font-medium'}`}>
-              Account
-            </span>
-          </button>
-        </div>
-      </nav>
+              <span
+                className={`flex h-10 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
+                  accountOpen ? 'bg-[var(--pm-color-action)] text-white shadow-lg' : 'bg-transparent text-[var(--pm-color-muted)]'
+                }`}
+              >
+                <User className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className={`mt-1 max-w-full truncate transition-all duration-300 ${accountOpen ? 'opacity-100 scale-100 font-extrabold text-white' : 'opacity-80 scale-95 font-medium'}`}>
+                Account
+              </span>
+            </button>
+          </div>
+        </nav>
+      )}
 
       {/* Mobile account sheet */}
       {accountOpen && (
