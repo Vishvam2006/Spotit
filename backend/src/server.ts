@@ -3,11 +3,11 @@ import app from './app';
 import { prisma } from './config/prisma';
 import { startSessionSweeper } from './services/sessionSweeper';
 
-const port = process.env.PORT || 5000;
+const port = Number(process.env.PORT) || 5001;
 
 const sweeper = startSessionSweeper();
 
-const server = app.listen(Number(port), '0.0.0.0', () => {
+const server = app.listen(port, '0.0.0.0', () => {
   console.log(`ParkMitra server running on port ${port}`);
 });
 

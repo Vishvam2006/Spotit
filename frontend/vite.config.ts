@@ -5,17 +5,22 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiPort = env.VITE_API_PORT || '5001';
+  const apiUrl = env.VITE_API_URL;
+
+  const proxy = apiUrl
+    ? undefined
+    : {
+        '/api': {
+          target: 'http://127.0.0.1:5001',
+          changeOrigin: true,
+        },
+      };
 
   return {
     plugins: [react(), tailwindcss()],
     server: {
-      proxy: {
-        '/api': {
-          target: `http://127.0.0.1:${apiPort}`,
-          changeOrigin: true,
-        },
-      },
+      port: 5173,
+      proxy,
     },
   };
 });

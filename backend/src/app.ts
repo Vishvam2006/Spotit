@@ -28,10 +28,8 @@ const app = express();
 
 app.use(helmet());
 
-const allowedOrigins = (
-  process.env.CORS_ORIGINS ??
-  'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174'
-)
+const corsOrigins = process.env.CORS_ORIGINS ?? process.env.WEB_APP_URL ?? 'http://localhost:5173';
+const allowedOrigins = corsOrigins
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
