@@ -27,6 +27,7 @@ import { ContinuityError } from './modules/continuity/continuity.states';
 const app = express();
 
 app.use(helmet());
+app.set("trust proxy", 1);
 
 const corsOrigins = process.env.CORS_ORIGINS ?? process.env.WEB_APP_URL ?? 'http://localhost:5173';
 const allowedOrigins = corsOrigins
