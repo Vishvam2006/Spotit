@@ -14,6 +14,7 @@ import ParkingMap from '../components/map/ParkingMap';
 import type { MapLocation } from '../components/map/ParkingMap';
 import SearchBar from '../components/map/SearchBar';
 import ParkingBottomSheet from '../components/map/ParkingBottomSheet';
+import ExploreFiltersModal, { type ExploreFiltersState } from '../components/map/ExploreFiltersModal';
 import AddParkingForm from '../components/parking/AddParkingForm';
 import AddParkingDrawer from '../components/parking/AddParkingDrawer';
 import Spinner from '../components/ui/Spinner';
@@ -27,7 +28,6 @@ import { notifyError, notifySuccess } from '../utils/notify';
 import type { ParkingLot } from '../types/parking';
 
 const DEFAULT_RADIUS_KM = 25;
-const RADIUS_OPTIONS = [5, 10, 25, 50, 100];
 
 function filterLotsByRadius(lots: ParkingLot[], center: LatLng, radiusKm: number): ParkingLot[] {
   if (radiusKm <= 0) return [];
@@ -65,14 +65,19 @@ export default function Explore() {
   const [submittedSearch, setSubmittedSearch] = useState('');
   const [searchLocation, setSearchLocation] = useState<LatLng | null>(null);
   const [searching, setSearching] = useState(false);
-  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
-  const [showRadiusPopover, setShowRadiusPopover] = useState(false);
 
-  // Filter states
-  const [filterAvailableOnly, setFilterAvailableOnly] = useState(false);
-  const [filterUnder100, setFilterUnder100] = useState(false);
-  const [filterCoveredOnly, setFilterCoveredOnly] = useState(false);
-  const [filterEvOnly, setFilterEvOnly] = useState(false);
+  // Fully adjustable filters state
+  const [filters, setFilters] = useState<ExploreFiltersState>({
+    radiusKm: DEFAULT_RADIUS_KM,
+    maxPrice: null,
+    availableOnly: false,
+    coveredOnly: false,
+    evOnly: false,
+    cctvOnly: false,
+    securityOnly: false,
+    sortBy: 'nearest',
+  });
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // Add Parking states
   const [isAddingParking, setIsAddingParking] = useState(false);
@@ -204,26 +209,26 @@ export default function Explore() {
     [parkingClusterCenter, searchLocation, userLocation],
   );
 
-  // Filter lots based on radius and active quick filters
+  // Filter lots based on radius and active adjustable filters
   const filteredParkingLots = useMemo(() => {
-    let lots = filterLotsByRadius(allParkingLots, mapCenter, radiusKm);
+    let lots = filterLotsByRadius(allParkingLots, mapCenter, filters.radiusKm);
 
-    if (filterAvailableOnly) {
+    if (filters.availableOnly) {
       lots = lots.filter((lot) => lot.availableSpaces > 0 && lot.status === 'ACTIVE');
     }
 
-    if (filterUnder100) {
-      lots = lots.filter((lot) => lot.pricePerHour <= 100);
+    if (filters.maxPrice !== null) {
+      lots = lots.filter((lot) => lot.pricePerHour <= filters.maxPrice!);
     }
 
-    if (filterCoveredOnly) {
+    if (filters.coveredOnly) {
       lots = lots.filter((lot) =>
         (lot.description?.toLowerCase().includes('covered') ?? false) ||
         lot.name.toLowerCase().includes('covered'),
       );
     }
 
-    if (filterEvOnly) {
+    if (filters.evOnly) {
       lots = lots.filter((lot) =>
         (lot.description?.toLowerCase().includes('ev') ?? false) ||
         (lot.description?.toLowerCase().includes('charging') ?? false) ||
@@ -231,32 +236,43 @@ export default function Explore() {
       );
     }
 
-    return lots;
-  }, [
-    allParkingLots,
-    mapCenter,
-    radiusKm,
-    filterAvailableOnly,
-    filterUnder100,
-    filterCoveredOnly,
-    filterEvOnly,
-  ]);
+    if (filters.cctvOnly) {
+      lots = lots.filter((lot) =>
+        (lot.description?.toLowerCase().includes('cctv') ?? false) ||
+        (lot.description?.toLowerCase().includes('camera') ?? false),
+      );
+    }
 
-  const visibleParkingLots = useMemo(
-    () =>
-      filteredParkingLots
-        .map((lot) => ({
-          ...lot,
-          distanceKm: haversineDistanceKm(
-            mapCenter.lat,
-            mapCenter.lng,
-            lot.latitude,
-            lot.longitude,
-          ),
-        }))
-        .sort((a, b) => a.distanceKm - b.distanceKm),
-    [filteredParkingLots, mapCenter],
-  );
+    if (filters.securityOnly) {
+      lots = lots.filter((lot) =>
+        (lot.description?.toLowerCase().includes('security') ?? false) ||
+        (lot.description?.toLowerCase().includes('guard') ?? false),
+      );
+    }
+
+    return lots;
+  }, [allParkingLots, mapCenter, filters]);
+
+  const visibleParkingLots = useMemo(() => {
+    const withDistance = filteredParkingLots.map((lot) => ({
+      ...lot,
+      distanceKm: haversineDistanceKm(
+        mapCenter.lat,
+        mapCenter.lng,
+        lot.latitude,
+        lot.longitude,
+      ),
+    }));
+
+    if (filters.sortBy === 'cheapest') {
+      return withDistance.sort((a, b) => a.pricePerHour - b.pricePerHour);
+    }
+    if (filters.sortBy === 'available') {
+      return withDistance.sort((a, b) => b.availableSpaces - a.availableSpaces);
+    }
+    // Default: nearest
+    return withDistance.sort((a, b) => a.distanceKm - b.distanceKm);
+  }, [filteredParkingLots, mapCenter, filters.sortBy]);
 
   // Selected parking lot for the bottom sheet
   const selectedParking = useMemo(() => {
@@ -283,6 +299,19 @@ export default function Explore() {
       selectedParking.longitude,
     );
   }, [selectedParking, searchLocation]);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.radiusKm !== DEFAULT_RADIUS_KM) count++;
+    if (filters.maxPrice !== null) count++;
+    if (filters.availableOnly) count++;
+    if (filters.coveredOnly) count++;
+    if (filters.evOnly) count++;
+    if (filters.cctvOnly) count++;
+    if (filters.securityOnly) count++;
+    if (filters.sortBy !== 'nearest') count++;
+    return count;
+  }, [filters]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
@@ -426,115 +455,111 @@ export default function Explore() {
                 )}
               </div>
 
-              {/* Floating Filter Chips Layer */}
+              {/* Floating Filter Chips Layer (Full adjustable controls) */}
               {!isAddingParking && (
                 <div className="pointer-events-auto relative mx-auto mt-2.5 flex max-w-3xl items-center gap-2 overflow-x-auto pb-1 pm-scrollbar-none">
-                  {/* Nearby Pill & Radius Selector Toggle */}
-                  <div className="relative shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setShowRadiusPopover((prev) => !prev)}
-                      className="flex items-center gap-1.5 rounded-full bg-[var(--pm-color-surface)]/95 px-3.5 py-1.5 text-xs font-bold text-[var(--pm-color-action)] shadow-md ring-1 ring-[var(--pm-color-action)]/30 backdrop-blur-md transition-all hover:bg-[var(--pm-color-surface-raised)]"
-                    >
-                      <SlidersHorizontal className="h-3 w-3" />
-                      <span>{visibleParkingLots.length} spots ({radiusKm} km)</span>
-                    </button>
-
-                    {/* Radius Options Popover */}
-                    {showRadiusPopover && (
-                      <div className="absolute left-0 top-full z-40 mt-2 flex flex-col gap-1 rounded-2xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] p-2 shadow-2xl backdrop-blur-xl">
-                        <span className="px-2 py-1 text-[11px] font-semibold text-[var(--pm-color-muted)]">
-                          Search Radius
-                        </span>
-                        <div className="flex gap-1">
-                          {RADIUS_OPTIONS.map((km) => (
-                            <button
-                              key={km}
-                              type="button"
-                              onClick={() => {
-                                setRadiusKm(km);
-                                setShowRadiusPopover(false);
-                              }}
-                              className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition-all ${
-                                radiusKm === km
-                                  ? 'bg-[var(--pm-color-action)] text-slate-950 shadow-sm'
-                                  : 'text-[var(--pm-color-text)] hover:bg-[var(--pm-color-surface-raised)]'
-                              }`}
-                            >
-                              {km} km
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Available Now Filter Chip */}
+                  {/* Main Filters Button (opens full adjustment modal) */}
                   <button
                     type="button"
-                    onClick={() => setFilterAvailableOnly((prev) => !prev)}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ring-1 backdrop-blur-md transition-all ${
-                      filterAvailableOnly
-                        ? 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/50'
-                        : 'bg-[var(--pm-color-surface)]/90 text-[var(--pm-color-text)] ring-[var(--pm-color-border)] hover:bg-[var(--pm-color-surface-raised)]'
+                    onClick={() => setIsFilterModalOpen(true)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-black shadow-md transition-all ${
+                      activeFiltersCount > 0
+                        ? 'bg-emerald-400 text-slate-950 ring-2 ring-white shadow-emerald-500/40 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] ring-1 ring-[var(--pm-color-border)] hover:bg-[var(--pm-color-surface-raised)]'
                     }`}
                   >
-                    {filterAvailableOnly && <Check className="h-3 w-3" />}
-                    Available now
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    <span>Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}</span>
                   </button>
 
-                  {/* Price Chip */}
+                  {/* Radius Chip (Clickable to adjust radius in modal) */}
                   <button
                     type="button"
-                    onClick={() => setFilterUnder100((prev) => !prev)}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ring-1 backdrop-blur-md transition-all ${
-                      filterUnder100
-                        ? 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/50'
-                        : 'bg-[var(--pm-color-surface)]/90 text-[var(--pm-color-text)] ring-[var(--pm-color-border)] hover:bg-[var(--pm-color-surface-raised)]'
+                    onClick={() => setIsFilterModalOpen(true)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      filters.radiusKm !== DEFAULT_RADIUS_KM
+                        ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300 shadow-md shadow-emerald-500/30 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-muted)] ring-1 ring-[var(--pm-color-border-strong)] hover:text-white hover:bg-[var(--pm-color-surface-raised)]'
                     }`}
                   >
-                    {filterUnder100 && <Check className="h-3 w-3" />}
-                    ≤ ₹100/hr
+                    <span>{visibleParkingLots.length} in {filters.radiusKm} km</span>
+                  </button>
+
+                  {/* Max Price Chip (Clickable to adjust price in modal) */}
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterModalOpen(true)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      filters.maxPrice !== null
+                        ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300 shadow-md shadow-emerald-500/30 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-muted)] ring-1 ring-[var(--pm-color-border-strong)] hover:text-white hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    <span>{filters.maxPrice !== null ? `≤ ₹${filters.maxPrice}/hr` : 'Max Price'}</span>
+                  </button>
+
+                  {/* Available Now Filter Chip (Toggle directly) */}
+                  <button
+                    type="button"
+                    onClick={() => setFilters((prev) => ({ ...prev, availableOnly: !prev.availableOnly }))}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      filters.availableOnly
+                        ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300 shadow-md shadow-emerald-500/30 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] ring-1 ring-[var(--pm-color-border-strong)] hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    {filters.availableOnly ? (
+                      <Check className="h-3.5 w-3.5 stroke-[3]" />
+                    ) : null}
+                    Available now
                   </button>
 
                   {/* Covered Filter Chip */}
                   <button
                     type="button"
-                    onClick={() => setFilterCoveredOnly((prev) => !prev)}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ring-1 backdrop-blur-md transition-all ${
-                      filterCoveredOnly
-                        ? 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/50'
-                        : 'bg-[var(--pm-color-surface)]/90 text-[var(--pm-color-text)] ring-[var(--pm-color-border)] hover:bg-[var(--pm-color-surface-raised)]'
+                    onClick={() => setFilters((prev) => ({ ...prev, coveredOnly: !prev.coveredOnly }))}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      filters.coveredOnly
+                        ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300 shadow-md shadow-emerald-500/30 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] ring-1 ring-[var(--pm-color-border-strong)] hover:bg-[var(--pm-color-surface-raised)]'
                     }`}
                   >
-                    <Warehouse className="h-3 w-3" />
+                    <Warehouse className="h-3.5 w-3.5" />
+                    {filters.coveredOnly && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                     Covered
                   </button>
 
                   {/* EV Charging Chip */}
                   <button
                     type="button"
-                    onClick={() => setFilterEvOnly((prev) => !prev)}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ring-1 backdrop-blur-md transition-all ${
-                      filterEvOnly
-                        ? 'bg-emerald-500/20 text-emerald-300 ring-emerald-500/50'
-                        : 'bg-[var(--pm-color-surface)]/90 text-[var(--pm-color-text)] ring-[var(--pm-color-border)] hover:bg-[var(--pm-color-surface-raised)]'
+                    onClick={() => setFilters((prev) => ({ ...prev, evOnly: !prev.evOnly }))}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      filters.evOnly
+                        ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300 shadow-md shadow-emerald-500/30 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] ring-1 ring-[var(--pm-color-border-strong)] hover:bg-[var(--pm-color-surface-raised)]'
                     }`}
                   >
-                    <Zap className="h-3 w-3" />
+                    <Zap className="h-3.5 w-3.5" />
+                    {filters.evOnly && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                     EV charging
                   </button>
 
-                  {/* Clear all filters if any active */}
-                  {(filterAvailableOnly || filterUnder100 || filterCoveredOnly || filterEvOnly) && (
+                  {/* Reset all button if any filter is active */}
+                  {activeFiltersCount > 0 && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setFilterAvailableOnly(false);
-                        setFilterUnder100(false);
-                        setFilterCoveredOnly(false);
-                        setFilterEvOnly(false);
-                      }}
+                      onClick={() =>
+                        setFilters({
+                          radiusKm: DEFAULT_RADIUS_KM,
+                          maxPrice: null,
+                          availableOnly: false,
+                          coveredOnly: false,
+                          evOnly: false,
+                          cctvOnly: false,
+                          securityOnly: false,
+                          sortBy: 'nearest',
+                        })
+                      }
                       className="shrink-0 rounded-full bg-[var(--pm-color-surface-raised)] px-2.5 py-1.5 text-xs font-semibold text-[var(--pm-color-muted)] hover:text-white"
                     >
                       Reset
@@ -617,6 +642,15 @@ export default function Explore() {
                 onReserve={handleViewDetails}
               />
             )}
+
+            {/* Fully Adjustable Filters Modal */}
+            <ExploreFiltersModal
+              isOpen={isFilterModalOpen}
+              onClose={() => setIsFilterModalOpen(false)}
+              filters={filters}
+              onApply={setFilters}
+              totalMatchingCount={visibleParkingLots.length}
+            />
 
             {/* Mobile Drawer for Add Parking */}
             <AddParkingDrawer
