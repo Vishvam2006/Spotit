@@ -404,7 +404,6 @@ export default function Explore() {
                     setSelectedParkingId(id);
                   }
                 }}
-                onViewDetails={handleViewDetails}
                 mapCenter={mapCenter}
                 userLocation={userLocation}
                 isAddingParking={isAddingParking}
