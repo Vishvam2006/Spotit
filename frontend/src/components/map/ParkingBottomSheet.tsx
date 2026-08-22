@@ -99,7 +99,7 @@ export default function ParkingBottomSheet({
     <div
       ref={sheetRef}
       style={{ height: `${sheetHeight}px` }}
-      className={`fixed bottom-2 left-1/2 z-30 flex w-[96%] max-w-5xl -translate-x-1/2 flex-col rounded-3xl border border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface)]/98 shadow-2xl shadow-black/85 backdrop-blur-2xl transition-[height] duration-150 md:bottom-4 ${
+      className={`fixed bottom-2 left-1/2 z-[60] flex w-[96%] max-w-5xl -translate-x-1/2 flex-col rounded-3xl border border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface)]/98 shadow-2xl shadow-black/85 backdrop-blur-2xl transition-[height] duration-150 md:bottom-4 ${
         isDragging ? 'transition-none select-none' : 'ease-out'
       }`}
     >

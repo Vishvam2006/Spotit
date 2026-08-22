@@ -6,12 +6,13 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const apiUrl = env.VITE_API_URL;
+  const apiPort = env.VITE_API_PORT || '5001';
 
   const proxy = apiUrl
     ? undefined
     : {
         '/api': {
-          target: 'http://127.0.0.1:5001',
+          target: `http://127.0.0.1:${apiPort}`,
           changeOrigin: true,
         },
       };

@@ -10,7 +10,6 @@ import {
   Search,
   Mic,
   MapPin,
-  Sparkles,
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import ParkingMap from '../components/map/ParkingMap';
@@ -396,7 +395,6 @@ export default function Explore() {
           </div>
         ) : (
           <>
-            {/* Primary Google Map View */}
             <div className="absolute inset-0">
               <ParkingMap
                 parkingLots={visibleParkingLots}
@@ -500,22 +498,8 @@ export default function Explore() {
                   </div>
                 </div>
 
-                {/* Filter Chips Layer (Google Maps style scrollable chips) */}
                 {!isAddingParking && (
                   <div className="mt-2.5 flex items-center gap-2 overflow-x-auto pb-1 pm-scrollbar-none">
-                    {/* ✨ Ask AI / Smart Spot */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const best = visibleParkingLots.find((l) => l.availableSpaces > 0);
-                        if (best) setSelectedParkingId(best.id);
-                      }}
-                      className="flex shrink-0 items-center gap-1.5 rounded-full border border-cyan-500/40 bg-gradient-to-r from-cyan-950/80 to-blue-950/80 px-3.5 py-1.5 text-xs font-black text-cyan-300 shadow-md backdrop-blur-md transition-all hover:scale-105"
-                    >
-                      <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-                      <span>Ask AI</span>
-                    </button>
-
                     {/* Main Filters Button */}
                     <button
                       type="button"
