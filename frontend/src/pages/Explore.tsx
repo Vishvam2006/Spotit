@@ -4,13 +4,17 @@ import {
   ChevronLeft,
   Plus,
   X,
+  SlidersHorizontal,
+  Zap,
+  Warehouse,
+  Check,
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import ParkingMap from '../components/map/ParkingMap';
 import type { MapLocation } from '../components/map/ParkingMap';
 import SearchBar from '../components/map/SearchBar';
-import DistanceFilter from '../components/map/DistanceFilter';
-import ParkingCard from '../components/map/ParkingCard';
+import ParkingBottomSheet from '../components/map/ParkingBottomSheet';
+import ExploreFiltersModal, { type ExploreFiltersState } from '../components/map/ExploreFiltersModal';
 import AddParkingForm from '../components/parking/AddParkingForm';
 import AddParkingDrawer from '../components/parking/AddParkingDrawer';
 import Spinner from '../components/ui/Spinner';
@@ -61,13 +65,25 @@ export default function Explore() {
   const [submittedSearch, setSubmittedSearch] = useState('');
   const [searchLocation, setSearchLocation] = useState<LatLng | null>(null);
   const [searching, setSearching] = useState(false);
-  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+
+  // Fully adjustable filters state
+  const [filters, setFilters] = useState<ExploreFiltersState>({
+    radiusKm: DEFAULT_RADIUS_KM,
+    maxPrice: null,
+    availableOnly: false,
+    coveredOnly: false,
+    evOnly: false,
+    cctvOnly: false,
+    securityOnly: false,
+    sortBy: 'nearest',
+  });
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  // Add Parking states
   const [isAddingParking, setIsAddingParking] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
   const [returnToMyParkings, setReturnToMyParkings] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  // Bumped once per add-parking session so the mobile drawer remounts with a
-  // clean form, while closing/reopening it mid-session keeps the user's input.
   const [addSessionId, setAddSessionId] = useState(0);
 
   const requestUserLocation = useCallback(async (): Promise<LatLng | null> => {
@@ -193,26 +209,109 @@ export default function Explore() {
     [parkingClusterCenter, searchLocation, userLocation],
   );
 
-  const filteredParkingLots = useMemo(
-    () => filterLotsByRadius(allParkingLots, mapCenter, radiusKm),
-    [allParkingLots, mapCenter, radiusKm],
-  );
+  // Filter lots based on radius and active adjustable filters
+  const filteredParkingLots = useMemo(() => {
+    let lots = filterLotsByRadius(allParkingLots, mapCenter, filters.radiusKm);
 
-  const visibleParkingLots = useMemo(
-    () =>
-      filteredParkingLots
-        .map((lot) => ({
-          ...lot,
-          distanceKm: haversineDistanceKm(
-            mapCenter.lat,
-            mapCenter.lng,
-            lot.latitude,
-            lot.longitude,
-          ),
-        }))
-        .sort((a, b) => a.distanceKm - b.distanceKm),
-    [filteredParkingLots, mapCenter],
-  );
+    if (filters.availableOnly) {
+      lots = lots.filter((lot) => lot.availableSpaces > 0 && lot.status === 'ACTIVE');
+    }
+
+    if (filters.maxPrice !== null) {
+      lots = lots.filter((lot) => lot.pricePerHour <= filters.maxPrice!);
+    }
+
+    if (filters.coveredOnly) {
+      lots = lots.filter((lot) =>
+        (lot.description?.toLowerCase().includes('covered') ?? false) ||
+        lot.name.toLowerCase().includes('covered'),
+      );
+    }
+
+    if (filters.evOnly) {
+      lots = lots.filter((lot) =>
+        (lot.description?.toLowerCase().includes('ev') ?? false) ||
+        (lot.description?.toLowerCase().includes('charging') ?? false) ||
+        lot.name.toLowerCase().includes('ev'),
+      );
+    }
+
+    if (filters.cctvOnly) {
+      lots = lots.filter((lot) =>
+        (lot.description?.toLowerCase().includes('cctv') ?? false) ||
+        (lot.description?.toLowerCase().includes('camera') ?? false),
+      );
+    }
+
+    if (filters.securityOnly) {
+      lots = lots.filter((lot) =>
+        (lot.description?.toLowerCase().includes('security') ?? false) ||
+        (lot.description?.toLowerCase().includes('guard') ?? false),
+      );
+    }
+
+    return lots;
+  }, [allParkingLots, mapCenter, filters]);
+
+  const visibleParkingLots = useMemo(() => {
+    const withDistance = filteredParkingLots.map((lot) => ({
+      ...lot,
+      distanceKm: haversineDistanceKm(
+        mapCenter.lat,
+        mapCenter.lng,
+        lot.latitude,
+        lot.longitude,
+      ),
+    }));
+
+    if (filters.sortBy === 'cheapest') {
+      return withDistance.sort((a, b) => a.pricePerHour - b.pricePerHour);
+    }
+    if (filters.sortBy === 'available') {
+      return withDistance.sort((a, b) => b.availableSpaces - a.availableSpaces);
+    }
+    // Default: nearest
+    return withDistance.sort((a, b) => a.distanceKm - b.distanceKm);
+  }, [filteredParkingLots, mapCenter, filters.sortBy]);
+
+  // Selected parking lot for the bottom sheet
+  const selectedParking = useMemo(() => {
+    if (!selectedParkingId) return null;
+    return allParkingLots.find((lot) => lot.id === selectedParkingId) ?? null;
+  }, [allParkingLots, selectedParkingId]);
+
+  const selectedDistanceFromUser = useMemo(() => {
+    if (!selectedParking || !userLocation) return undefined;
+    return haversineDistanceKm(
+      userLocation.lat,
+      userLocation.lng,
+      selectedParking.latitude,
+      selectedParking.longitude,
+    );
+  }, [selectedParking, userLocation]);
+
+  const selectedDistanceFromDestination = useMemo(() => {
+    if (!selectedParking || !searchLocation) return undefined;
+    return haversineDistanceKm(
+      searchLocation.lat,
+      searchLocation.lng,
+      selectedParking.latitude,
+      selectedParking.longitude,
+    );
+  }, [selectedParking, searchLocation]);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.radiusKm !== DEFAULT_RADIUS_KM) count++;
+    if (filters.maxPrice !== null) count++;
+    if (filters.availableOnly) count++;
+    if (filters.coveredOnly) count++;
+    if (filters.evOnly) count++;
+    if (filters.cctvOnly) count++;
+    if (filters.securityOnly) count++;
+    if (filters.sortBy !== 'nearest') count++;
+    return count;
+  }, [filters]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
@@ -293,11 +392,16 @@ export default function Explore() {
           </div>
         ) : (
           <>
+            {/* Primary Google Map View */}
             <div className="absolute inset-0">
               <ParkingMap
                 parkingLots={visibleParkingLots}
                 selectedParkingId={selectedParkingId}
-                onSelect={setSelectedParkingId}
+                onSelect={(id) => {
+                  if (!isAddingParking) {
+                    setSelectedParkingId(id);
+                  }
+                }}
                 mapCenter={mapCenter}
                 userLocation={userLocation}
                 isAddingParking={isAddingParking}
@@ -306,17 +410,19 @@ export default function Explore() {
               />
             </div>
 
+            {/* Floating Top Bar (Search + Back + Add parking) */}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-4 pt-3 sm:px-6">
-              <div className="pointer-events-auto mx-auto flex max-w-3xl gap-2">
+              <div className="pointer-events-auto mx-auto flex max-w-3xl items-center gap-2">
                 <button
                   type="button"
                   onClick={() => navigate(-1)}
                   aria-label="Back to Home"
-                  className="pm-touch-target flex shrink-0 items-center justify-center rounded-2xl bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] shadow-lg shadow-black/30 ring-1 ring-[var(--pm-color-border)] backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
+                  className="pm-touch-target flex shrink-0 items-center justify-center rounded-2xl bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] shadow-xl shadow-black/40 ring-1 ring-[var(--pm-color-border)] backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
                 >
                   <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                 </button>
-                <div className="min-w-0 flex-1 rounded-2xl bg-[var(--pm-color-surface)]/95 p-3 shadow-lg shadow-black/30 ring-1 ring-[var(--pm-color-border)] backdrop-blur-xl">
+
+                <div className="min-w-0 flex-1 rounded-2xl bg-[var(--pm-color-surface)]/95 p-2.5 shadow-xl shadow-black/40 ring-1 ring-[var(--pm-color-border)] backdrop-blur-xl">
                   <SearchBar
                     value={searchQuery}
                     onChange={handleSearchChange}
@@ -326,25 +432,12 @@ export default function Explore() {
                     compact
                   />
                 </div>
-              </div>
 
-              {/* Filter Chips Layer (Premium Dark Style) */}
-              {!isAddingParking && (
-                 <div className="pointer-events-auto mx-auto mt-3 flex max-w-3xl items-center gap-2 overflow-x-auto pm-scrollbar-none">
-                   {['Price', 'Distance', 'Available now', 'Covered', 'EV charging'].map(chip => (
-                     <button key={chip} className="whitespace-nowrap rounded-full bg-[var(--pm-color-surface)]/90 px-3 py-1.5 text-xs font-bold text-[var(--pm-color-text)] shadow-sm ring-1 ring-[var(--pm-color-border)] backdrop-blur-md">
-                        {chip}
-                     </button>
-                   ))}
-                 </div>
-              )}
-
-              <div className="pointer-events-auto mx-auto mt-3 flex max-w-3xl justify-end">
                 {isAddingParking ? (
                   <button
                     type="button"
                     onClick={cancelAddParking}
-                    className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)]/95 px-4 text-sm font-bold text-[var(--pm-color-text)] shadow-lg shadow-black/30 backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    className="flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-2xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)]/95 px-4 text-xs font-bold text-[var(--pm-color-text)] shadow-xl shadow-black/40 backdrop-blur-xl transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
                   >
                     <X className="h-4 w-4" aria-hidden="true" />
                     Cancel
@@ -353,16 +446,130 @@ export default function Explore() {
                   <button
                     type="button"
                     onClick={startAddParking}
-                    className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[var(--pm-color-text)] px-4 text-sm font-bold text-[var(--pm-color-page)] shadow-lg shadow-black/40 transition-colors hover:bg-[var(--pm-color-muted)] focus:outline-none"
+                    className="flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-2xl bg-[var(--pm-color-text)] px-4 text-xs font-bold text-[var(--pm-color-page)] shadow-xl shadow-black/40 transition-colors hover:bg-[var(--pm-color-muted)] focus:outline-none"
                   >
                     <Plus className="h-4 w-4" aria-hidden="true" />
-                    Add parking
+                    <span className="hidden sm:inline">Add parking</span>
+                    <span className="sm:hidden">Add</span>
                   </button>
                 )}
               </div>
+
+              {/* Floating Filter Chips Layer (Full adjustable controls) */}
+              {!isAddingParking && (
+                <div className="pointer-events-auto relative mx-auto mt-2.5 flex max-w-3xl items-center gap-2 overflow-x-auto pb-1 pm-scrollbar-none">
+                  {/* Main Filters Button (opens full adjustment modal) */}
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterModalOpen(true)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-black shadow-md transition-all ${
+                      activeFiltersCount > 0
+                        ? 'bg-emerald-400 text-slate-950 ring-2 ring-white shadow-emerald-500/40 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] ring-1 ring-[var(--pm-color-border)] hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    <span>Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}</span>
+                  </button>
+
+                  {/* Radius Chip (Clickable to adjust radius in modal) */}
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterModalOpen(true)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      filters.radiusKm !== DEFAULT_RADIUS_KM
+                        ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300 shadow-md shadow-emerald-500/30 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-muted)] ring-1 ring-[var(--pm-color-border-strong)] hover:text-white hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    <span>{visibleParkingLots.length} in {filters.radiusKm} km</span>
+                  </button>
+
+                  {/* Max Price Chip (Clickable to adjust price in modal) */}
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterModalOpen(true)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      filters.maxPrice !== null
+                        ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300 shadow-md shadow-emerald-500/30 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-muted)] ring-1 ring-[var(--pm-color-border-strong)] hover:text-white hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    <span>{filters.maxPrice !== null ? `≤ ₹${filters.maxPrice}/hr` : 'Max Price'}</span>
+                  </button>
+
+                  {/* Available Now Filter Chip (Toggle directly) */}
+                  <button
+                    type="button"
+                    onClick={() => setFilters((prev) => ({ ...prev, availableOnly: !prev.availableOnly }))}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      filters.availableOnly
+                        ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300 shadow-md shadow-emerald-500/30 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] ring-1 ring-[var(--pm-color-border-strong)] hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    {filters.availableOnly ? (
+                      <Check className="h-3.5 w-3.5 stroke-[3]" />
+                    ) : null}
+                    Available now
+                  </button>
+
+                  {/* Covered Filter Chip */}
+                  <button
+                    type="button"
+                    onClick={() => setFilters((prev) => ({ ...prev, coveredOnly: !prev.coveredOnly }))}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      filters.coveredOnly
+                        ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300 shadow-md shadow-emerald-500/30 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] ring-1 ring-[var(--pm-color-border-strong)] hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    <Warehouse className="h-3.5 w-3.5" />
+                    {filters.coveredOnly && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                    Covered
+                  </button>
+
+                  {/* EV Charging Chip */}
+                  <button
+                    type="button"
+                    onClick={() => setFilters((prev) => ({ ...prev, evOnly: !prev.evOnly }))}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      filters.evOnly
+                        ? 'bg-emerald-500 text-slate-950 font-black ring-2 ring-emerald-300 shadow-md shadow-emerald-500/30 scale-[1.02]'
+                        : 'bg-[var(--pm-color-surface)]/95 text-[var(--pm-color-text)] ring-1 ring-[var(--pm-color-border-strong)] hover:bg-[var(--pm-color-surface-raised)]'
+                    }`}
+                  >
+                    <Zap className="h-3.5 w-3.5" />
+                    {filters.evOnly && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                    EV charging
+                  </button>
+
+                  {/* Reset all button if any filter is active */}
+                  {activeFiltersCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFilters({
+                          radiusKm: DEFAULT_RADIUS_KM,
+                          maxPrice: null,
+                          availableOnly: false,
+                          coveredOnly: false,
+                          evOnly: false,
+                          cctvOnly: false,
+                          securityOnly: false,
+                          sortBy: 'nearest',
+                        })
+                      }
+                      className="shrink-0 rounded-full bg-[var(--pm-color-surface-raised)] px-2.5 py-1.5 text-xs font-semibold text-[var(--pm-color-muted)] hover:text-white"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Mobile instruction strip */}
+            {/* Mobile instruction strip for Add Parking */}
             {isAddingParking && (
               <div className="pointer-events-none absolute inset-x-0 bottom-[calc(var(--pm-bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] z-20 flex justify-center px-4 md:hidden">
                 <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-[var(--pm-color-page)]/95 px-5 py-3.5 text-sm text-[var(--pm-color-text)] shadow-xl backdrop-blur-md ring-1 ring-[var(--pm-color-border)]">
@@ -392,84 +599,60 @@ export default function Explore() {
               </div>
             )}
 
-            {/* Sidebar / Bottom sheet */}
-            <section
-              aria-label={isAddingParking ? 'Add parking' : 'Nearby parking'}
-              // In add mode the panel has no mobile content (the form lives in the
-              // drawer), so it must be fully hidden below md — otherwise an empty
-              // sheet covers the bottom of the map and eats the taps meant to pin
-              // the location.
-              className={`pm-sheet absolute inset-x-0 bottom-[calc(var(--pm-bottom-nav-height)+env(safe-area-inset-bottom))] z-20 rounded-t-3xl border-t border-[var(--pm-color-border)] px-4 pb-4 pt-3 md:bottom-6 md:left-6 md:right-auto md:w-[420px] md:rounded-2xl md:border md:p-4 bg-[var(--pm-color-surface)] ${
-                isAddingParking ? 'hidden md:block' : ''
-              }`}
-            >
-              {!isAddingParking && <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[var(--pm-color-border-strong)] md:hidden" />}
-
-              {isAddingParking ? (
-                <div className="hidden md:block">
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Add parking</h2>
-                      <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
-                        Click the map to pin the parking location.
-                      </p>
-                    </div>
+            {/* Desktop Add Parking Floating Form */}
+            {isAddingParking && (
+              <section
+                aria-label="Add parking"
+                className="pm-sheet absolute bottom-6 left-6 z-20 hidden w-[420px] rounded-2xl border border-[var(--pm-color-border)] bg-[var(--pm-color-surface)] p-4 md:block shadow-2xl"
+              >
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Add parking</h2>
+                    <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
+                      Click the map to pin the parking location.
+                    </p>
                   </div>
-                  <div className="pm-scrollbar-none max-h-[60vh] overflow-y-auto pb-1 pr-1">
-                    <AddParkingForm
-                      selectedLocation={selectedLocation}
-                      onCreated={handleParkingCreated}
-                      onCancel={cancelAddParking}
-                      embedded
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={cancelAddParking}
+                    className="rounded-full p-1 text-[var(--pm-color-muted)] hover:bg-[var(--pm-color-surface-raised)] hover:text-[var(--pm-color-text)]"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-              ) : (
-                <div>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Nearby parking</h2>
-                      <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
-                        {visibleParkingLots.length} of {allParkingLots.length} lots in range
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-[var(--pm-color-action-soft)] px-3 py-1 text-xs font-bold text-[var(--pm-color-action)]">
-                      {radiusKm} km
-                    </span>
-                  </div>
-
-                  <div className="mt-3 rounded-xl bg-[var(--pm-color-surface-raised)] p-3 ring-1 ring-[var(--pm-color-border)]">
-                    <DistanceFilter
-                      variant="inline"
-                      radiusKm={radiusKm}
-                      onChange={setRadiusKm}
-                      visibleCount={visibleParkingLots.length}
-                      totalCount={allParkingLots.length}
-                    />
-                  </div>
-
-                  {visibleParkingLots.length === 0 ? (
-                    <div className="mt-4 rounded-xl border border-dashed border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface-raised)] p-5 text-center">
-                      <p className="text-sm font-semibold text-[var(--pm-color-text)]">No parking lots found here</p>
-                      <p className="mt-1 text-sm text-[var(--pm-color-muted)]">Try another area or increase the search radius.</p>
-                    </div>
-                  ) : (
-                    <div className="pm-scrollbar-none mt-4 max-h-[34vh] space-y-3 overflow-y-auto pb-1 pr-1 md:max-h-[58vh]">
-                      {visibleParkingLots.map((parking) => (
-                        <ParkingCard
-                          key={parking.id}
-                          parking={parking}
-                          selected={parking.id === selectedParkingId}
-                          onSelect={(lot) => setSelectedParkingId(lot.id)}
-                          onViewDetails={handleViewDetails}
-                        />
-                      ))}
-                    </div>
-                  )}
+                <div className="pm-scrollbar-none max-h-[60vh] overflow-y-auto pb-1 pr-1">
+                  <AddParkingForm
+                    selectedLocation={selectedLocation}
+                    onCreated={handleParkingCreated}
+                    onCancel={cancelAddParking}
+                    embedded
+                  />
                 </div>
-              )}
-            </section>
+              </section>
+            )}
 
+            {/* Google Maps Style Bottom Sheet for ONLY the selected parking lot */}
+            {selectedParking && !isAddingParking && (
+              <ParkingBottomSheet
+                key={selectedParking.id}
+                parking={selectedParking}
+                distanceFromUser={selectedDistanceFromUser}
+                distanceFromDestination={selectedDistanceFromDestination}
+                onClose={() => setSelectedParkingId(null)}
+                onReserve={handleViewDetails}
+              />
+            )}
+
+            {/* Fully Adjustable Filters Modal */}
+            <ExploreFiltersModal
+              isOpen={isFilterModalOpen}
+              onClose={() => setIsFilterModalOpen(false)}
+              filters={filters}
+              onApply={setFilters}
+              totalMatchingCount={visibleParkingLots.length}
+            />
+
+            {/* Mobile Drawer for Add Parking */}
             <AddParkingDrawer
               key={addSessionId}
               open={mobileDrawerOpen && isAddingParking}
