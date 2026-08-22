@@ -9,10 +9,10 @@
   --color-park-500: #19c7b2;
   --color-park-600: #14a08f;
   --color-park-700: #0f7a6d;
-  --color-ink-900: #0b1220;
-  --color-ink-800: #1a2230;
-  --color-ink-700: #2a3342;
-  --color-ink-500: #a8b0bc;
+  --color-ink-900: #08080a;
+  --color-ink-800: #121215;
+  --color-ink-700: #1e1e24;
+  --color-ink-500: #9e9ea7;
 
   --animate-slide-up: slide-up 0.25s ease-out;
   --animate-fade-in: fade-in 0.18s ease-out;
@@ -38,21 +38,21 @@
 
 :root {
   color-scheme: dark;
-  --pm-color-page: #0b1220;
-  --pm-color-surface: #1a2230;
-  --pm-color-surface-raised: #2a3342;
-  --pm-color-border: #2a3342;
-  --pm-color-border-strong: #3b4657;
+  --pm-color-page: #000000;
+  --pm-color-surface: #121214;
+  --pm-color-surface-raised: #1e1e24;
+  --pm-color-border: #26262e;
+  --pm-color-border-strong: #363640;
   --pm-color-text: #ffffff;
-  --pm-color-muted: #a8b0bc;
-  --pm-color-action: #19c7b2;
-  --pm-color-action-hover: #14a08f;
-  --pm-color-action-soft: rgba(25, 199, 178, 0.15);
-  --pm-color-focus: #8de8d8;
-  --pm-shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --pm-shadow-sheet: 0 -12px 32px rgba(0, 0, 0, 0.5);
-  --pm-neumorphic-light: rgba(255, 255, 255, 0.03);
-  --pm-neumorphic-dark: rgba(0, 0, 0, 0.3);
+  --pm-color-muted: #9e9ea7;
+  --pm-color-action: #10b981;
+  --pm-color-action-hover: #059669;
+  --pm-color-action-soft: rgba(16, 185, 129, 0.16);
+  --pm-color-focus: #34d399;
+  --pm-shadow-card: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --pm-shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.85);
+  --pm-neumorphic-light: rgba(255, 255, 255, 0.02);
+  --pm-neumorphic-dark: rgba(0, 0, 0, 0.5);
   --pm-bottom-nav-height: 80px;
 
   /* Semantic status colours. Status surfaces previously hardcoded Tailwind's
