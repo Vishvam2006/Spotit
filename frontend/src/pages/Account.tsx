@@ -249,7 +249,7 @@ export default function Account() {
               <div className="space-y-4">
                 {vehicles.slice(0, 3).map((vehicle) => (
                   <div key={vehicle.id} className="pointer-events-none">
-                    <VehicleCard vehicle={vehicle} onEdit={() => {}} onDelete={() => {}} onSetDefault={() => {}} />
+                    <VehicleCard vehicle={vehicle} onEdit={() => {}} onDelete={() => {}} onSetDefault={() => {}} hideActions />
                   </div>
                 ))}
               </div>

@@ -58,6 +58,9 @@ export default function ProfileImageUpload({
       formData.append('signature', signature);
       formData.append('folder', folder);
       formData.append('transformation', transformation);
+      if (signatureData.data.allowedFormats) {
+        formData.append('allowed_formats', signatureData.data.allowedFormats.join(','));
+      }
 
       const uploadResponse = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
