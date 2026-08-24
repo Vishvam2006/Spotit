@@ -22,10 +22,11 @@ import { fetchParkingLots } from '../services/parking';
 import type { ParkingLot } from '../types/parking';
 import { getCurrentPositionDetailed, type LatLng } from '../utils/geolocation';
 import { haversineDistanceKm } from '../utils/distance';
+import LandingPage from '../components/landing/LandingPage';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isInitializing } = useAuth();
   const [allParkingLots, setAllParkingLots] = useState<ParkingLot[]>([]);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -68,6 +69,12 @@ export default function Home() {
       else navigate('/explore?addParking=1');
     }
   };
+
+  if (isInitializing) return null;
+
+  if (!user) {
+    return <LandingPage />;
+  }
 
   return (
     <AppLayout maxWidth="max-w-none">
