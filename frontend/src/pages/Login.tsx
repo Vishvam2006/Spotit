@@ -58,7 +58,7 @@ export default function Login() {
         <div className="relative flex items-center gap-3">
           <Logo className="h-11 w-11" />
           <span className="text-2xl font-bold tracking-tight text-white">
-            ParkMitra
+            Spotit
           </span>
         </div>
 
@@ -73,7 +73,7 @@ export default function Login() {
         </div>
 
         <p className="relative text-sm text-emerald-200">
-          &copy; {new Date().getFullYear()} ParkMitra. All rights reserved.
+          &copy; {new Date().getFullYear()} Spotit. All rights reserved.
         </p>
       </aside>
 
@@ -84,7 +84,7 @@ export default function Login() {
             <Logo className="h-14 w-14" />
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-tight text-[var(--pm-color-text)]">
-                ParkMitra
+                Spotit
               </h1>
               <p className="text-sm text-[var(--pm-color-muted)]">
                 Smart Parking Made Simple
@@ -97,7 +97,7 @@ export default function Login() {
               Welcome back
             </h2>
             <p className="mt-1.5 text-sm text-[var(--pm-color-muted)]">
-              Sign in to your ParkMitra account to continue.
+              Sign in to your Spotit account to continue.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>

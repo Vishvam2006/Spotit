@@ -11,7 +11,7 @@ import {
 } from './helpers';
 
 const EVIDENCE =
-  'https://res.cloudinary.com/parkmitra/image/upload/v1/evidence/bay-occupied.jpg';
+  'https://res.cloudinary.com/spotit/image/upload/v1/evidence/bay-occupied.jpg';
 
 /**
  * The demo loop, walked end to end over HTTP exactly as it is presented:

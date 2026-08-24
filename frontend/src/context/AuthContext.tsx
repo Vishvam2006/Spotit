@@ -4,8 +4,8 @@ import { api, UNAUTHORIZED_EVENT } from "../services/api";
 import type { AuthResponse, MeResponse, User } from "../types";
 import { AuthContext } from "./auth-context";
 
-const TOKEN_KEY = "parkmitra_token";
-const USER_KEY = "parkmitra_user";
+const TOKEN_KEY = "spotit_token";
+const USER_KEY = "spotit_user";
 
 function readStoredUser(): User | null {
   const raw = localStorage.getItem(USER_KEY);

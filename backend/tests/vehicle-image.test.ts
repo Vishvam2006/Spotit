@@ -8,7 +8,7 @@ import {
 
 const USER_ID = 'user-123';
 const OWN_FOLDER = vehicleFolderFor(USER_ID);
-const URL_BASE = 'https://res.cloudinary.com/parkmitra/image/upload/v1';
+const URL_BASE = 'https://res.cloudinary.com/spotit/image/upload/v1';
 
 describe('verifyVehicleImage (structural checks when Cloudinary is unconfigured)', () => {
   it('accepts an image in the user\'s own folder', async () => {
@@ -22,13 +22,13 @@ describe('verifyVehicleImage (structural checks when Cloudinary is unconfigured)
       verifyVehicleImage(
         USER_ID,
         publicId,
-        `https://res.cloudinary.com/parkmitra/image/upload/c_fill,g_auto,w_640,h_640/v123/${publicId}.webp`,
+        `https://res.cloudinary.com/spotit/image/upload/c_fill,g_auto,w_640,h_640/v123/${publicId}.webp`,
       ),
     ).resolves.toBeUndefined();
   });
 
   it('rejects a publicId outside the user\'s folder', async () => {
-    const publicId = 'parkmitra/vehicles/someone-else/abc123';
+    const publicId = 'spotit/vehicles/someone-else/abc123';
     await expect(
       verifyVehicleImage(USER_ID, publicId, `${URL_BASE}/${publicId}.jpg`),
     ).rejects.toThrow('own folder');
@@ -36,7 +36,7 @@ describe('verifyVehicleImage (structural checks when Cloudinary is unconfigured)
 
   it('rejects a plain folder that is not under the user folder', async () => {
     await expect(
-      verifyVehicleImage(USER_ID, 'parkmitra/vehicles/not-the-user', `${URL_BASE}/x.jpg`),
+      verifyVehicleImage(USER_ID, 'spotit/vehicles/not-the-user', `${URL_BASE}/x.jpg`),
     ).rejects.toThrow('own folder');
   });
 
@@ -64,8 +64,8 @@ describe('verifyVehicleImage (structural checks when Cloudinary is unconfigured)
 
 describe('vehicle folder constants', () => {
   it('scopes each user to their own folder', () => {
-    expect(vehicleFolderFor('alice')).toBe('parkmitra/vehicles/alice');
-    expect(vehicleFolderFor('bob')).toBe('parkmitra/vehicles/bob');
+    expect(vehicleFolderFor('alice')).toBe('spotit/vehicles/alice');
+    expect(vehicleFolderFor('bob')).toBe('spotit/vehicles/bob');
   });
 
   it('enforces square crop and allowed formats', () => {

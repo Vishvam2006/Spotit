@@ -9,23 +9,23 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: parkmitra-postgres
+    container_name: spotit-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: parkmitra
-      POSTGRES_DB: parkmitra_test
+      POSTGRES_USER: spotit
+      POSTGRES_DB: spotit_test
       # Local-only fixture database; the connection string in .env.test carries
       # no password, so trust auth keeps the two consistent.
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - '5433:5432'
     volumes:
-      - parkmitra-pgdata:/var/lib/postgresql/data
+      - spotit-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U parkmitra -d parkmitra_test']
+      test: ['CMD-SHELL', 'pg_isready -U spotit -d spotit_test']
       interval: 5s
       timeout: 5s
       retries: 10
 
 volumes:
-  parkmitra-pgdata:
+  spotit-pgdata:

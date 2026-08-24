@@ -1,6 +1,6 @@
 # Continuity Engine
 
-> When a booked parking lot fails, ParkMitra records the issue, protects the
+> When a booked parking lot fails, Spotit records the issue, protects the
 > booking, and ensures the case is handled instead of disappearing.
 
 A booking-protection and incident-management workflow — not a prediction model.

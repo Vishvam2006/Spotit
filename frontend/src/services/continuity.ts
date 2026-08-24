@@ -120,7 +120,7 @@ async function fetchEvidenceUploadSignature(): Promise<EvidenceUploadSignature> 
 /**
  * Uploads one evidence photo straight to Cloudinary using a short-lived signed
  * slot from our API, so the image never passes through — or is stored by — the
- * ParkMitra server, and the API secret stays server-side.
+ * Spotit server, and the API secret stays server-side.
  */
 export async function uploadEvidencePhoto(file: File): Promise<string> {
   const signature = await fetchEvidenceUploadSignature();

@@ -141,11 +141,11 @@ const PARKING_LOTS: ParkingLotSeed[] = [
 
 const OWNER_SEEDS = [
   { fullName: "Demo Parking Owner", email: "owner@example.com" },
-  { fullName: "Hiren Patel", email: "hiren.patel@parkmitra.test" },
-  { fullName: "Nisha Shah", email: "nisha.shah@parkmitra.test" },
-  { fullName: "Rakesh Thakkar", email: "rakesh.thakkar@parkmitra.test" },
-  { fullName: "Ananya Desai", email: "ananya.desai@parkmitra.test" },
-  { fullName: "Imran Qureshi", email: "imran.qureshi@parkmitra.test" },
+  { fullName: "Hiren Patel", email: "hiren.patel@spotit.test" },
+  { fullName: "Nisha Shah", email: "nisha.shah@spotit.test" },
+  { fullName: "Rakesh Thakkar", email: "rakesh.thakkar@spotit.test" },
+  { fullName: "Ananya Desai", email: "ananya.desai@spotit.test" },
+  { fullName: "Imran Qureshi", email: "imran.qureshi@spotit.test" },
 ];
 
 const FIRST_NAMES = [
@@ -220,7 +220,7 @@ async function main() {
 
   const adminEmail = process.env.ADMIN_EMAIL ?? "admin@example.com";
   const adminPassword = process.env.ADMIN_PASSWORD ?? "Admin@12345";
-  const adminName = process.env.ADMIN_NAME ?? "ParkMitra Admin";
+  const adminName = process.env.ADMIN_NAME ?? "Spotit Admin";
   const adminHash = await bcrypt.hash(adminPassword, 10);
 
   const admin = await prisma.user.upsert({
@@ -269,7 +269,7 @@ async function main() {
         : `${FIRST_NAMES[i % FIRST_NAMES.length]} ${
             LAST_NAMES[Math.floor(i / FIRST_NAMES.length + i * 3) % LAST_NAMES.length]
           }`;
-    const email = i === 0 ? "user@example.com" : `driver${pad(i, 3)}@parkmitra.test`;
+    const email = i === 0 ? "user@example.com" : `driver${pad(i, 3)}@spotit.test`;
     const phone = `97${pad(10000000 + i * 137911, 8)}`;
 
     users.push(
@@ -329,7 +329,7 @@ async function main() {
         registration,
         type,
         imageUrl: `https://example.com/vehicles/${registration}.jpg`,
-        imagePublicId: `parkmitra/seed/vehicles/${registration}`,
+        imagePublicId: `spotit/seed/vehicles/${registration}`,
         make: brand.make,
         model: pick(brand.models),
         color: pick(VEHICLE_COLORS),

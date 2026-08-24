@@ -36,7 +36,7 @@ vi.mock('cloudinary', async (importOriginal) => {
         upload: vi
           .fn()
           .mockResolvedValue({
-            secure_url: 'https://res.cloudinary.com/parkmitra/image/upload/v1/vehicle.jpg',
+            secure_url: 'https://res.cloudinary.com/spotit/image/upload/v1/vehicle.jpg',
           }),
         destroy: vi.fn().mockResolvedValue({ result: 'ok' }),
       },
@@ -55,14 +55,14 @@ const verifyVehicleImageMock = vi.mocked(verifyVehicleImage);
 const deleteCloudinaryAssetMock = vi.mocked(deleteCloudinaryAsset);
 
 const VEHICLE_IMAGE_URL =
-  'https://res.cloudinary.com/parkmitra/image/upload/v1/vehicle.jpg';
+  'https://res.cloudinary.com/spotit/image/upload/v1/vehicle.jpg';
 
 function vehiclePayload(userId: string, overrides: Record<string, unknown> = {}) {
   return {
     registration: 'GJ01AB1234',
     type: 'FOUR_WHEELER',
     imageUrl: VEHICLE_IMAGE_URL,
-    imagePublicId: `parkmitra/vehicles/${userId}/abc123`,
+    imagePublicId: `spotit/vehicles/${userId}/abc123`,
     make: 'Hyundai',
     model: 'i20',
     color: 'White',
@@ -190,7 +190,7 @@ describe('vehicle management', () => {
 
     const res = await addVehicle(user.token, user.user.id, {
       registration: 'gj01ab1234',
-      imagePublicId: `parkmitra/vehicles/${user.user.id}/xyz`,
+      imagePublicId: `spotit/vehicles/${user.user.id}/xyz`,
     }).expect(409);
 
     expect(res.body.message).toContain('already exists');
@@ -260,12 +260,12 @@ describe('vehicle management', () => {
     const { user } = await setup();
     const vehicle = (await addVehicle(user.token, user.user.id).expect(201)).body.data;
 
-    const newPublicId = `parkmitra/vehicles/${user.user.id}/replacement`;
+    const newPublicId = `spotit/vehicles/${user.user.id}/replacement`;
     const res = await request(app)
       .patch(`/api/vehicles/${vehicle.id}`)
       .set(auth(user.token))
       .send({
-        imageUrl: 'https://res.cloudinary.com/parkmitra/image/upload/v1/new.jpg',
+        imageUrl: 'https://res.cloudinary.com/spotit/image/upload/v1/new.jpg',
         imagePublicId: newPublicId,
       })
       .expect(200);
@@ -578,8 +578,8 @@ describe('booking vehicle snapshot', () => {
       .patch(`/api/vehicles/${vehicle.id}`)
       .set(auth(user.token))
       .send({
-        imageUrl: 'https://res.cloudinary.com/parkmitra/image/upload/v1/new.jpg',
-        imagePublicId: `parkmitra/vehicles/${user.user.id}/replacement`,
+        imageUrl: 'https://res.cloudinary.com/spotit/image/upload/v1/new.jpg',
+        imagePublicId: `spotit/vehicles/${user.user.id}/replacement`,
       })
       .expect(200);
 
@@ -631,7 +631,7 @@ describe('vehicle image upload signature', () => {
   });
 
   it('returns signed upload parameters scoped to the user folder', async () => {
-    process.env.CLOUDINARY_CLOUD_NAME = 'parkmitra';
+    process.env.CLOUDINARY_CLOUD_NAME = 'spotit';
     process.env.CLOUDINARY_API_KEY = 'test-api-key';
     process.env.CLOUDINARY_API_SECRET = 'test-api-secret';
     const { user } = await setup();
@@ -646,7 +646,7 @@ describe('vehicle image upload signature', () => {
     expect(data.apiKey).toBeTruthy();
     expect(data.signature).toBeTruthy();
     expect(data.timestamp).toBeTypeOf('number');
-    expect(data.folder).toBe(`parkmitra/vehicles/${user.user.id}`);
+    expect(data.folder).toBe(`spotit/vehicles/${user.user.id}`);
     expect(data.resourceType).toBe('image');
     expect(JSON.stringify(data)).not.toContain('api_secret');
   });
@@ -663,7 +663,7 @@ describe('parking photo upload signature', () => {
   });
 
   it('returns signed upload parameters scoped to the owner folder', async () => {
-    process.env.CLOUDINARY_CLOUD_NAME = 'parkmitra';
+    process.env.CLOUDINARY_CLOUD_NAME = 'spotit';
     process.env.CLOUDINARY_API_KEY = 'test-api-key';
     process.env.CLOUDINARY_API_SECRET = 'test-api-secret';
     const { owner } = await setup();
@@ -678,7 +678,7 @@ describe('parking photo upload signature', () => {
     expect(data.apiKey).toBeTruthy();
     expect(data.signature).toBeTruthy();
     expect(data.timestamp).toBeTypeOf('number');
-    expect(data.folder).toBe(`parkmitra/parking-lots/${owner.user.id}`);
+    expect(data.folder).toBe(`spotit/parking-lots/${owner.user.id}`);
     expect(data.resourceType).toBe('image');
     expect(JSON.stringify(data)).not.toContain('api_secret');
   });

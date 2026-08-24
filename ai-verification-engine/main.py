@@ -1,5 +1,5 @@
 """
-ParkMitra AI Verification Engine -- HTTP service consumed by the Node backend.
+Spotit AI Verification Engine -- HTTP service consumed by the Node backend.
 
 This file is the transport shell: CORS, auth, upload limits, concurrency and a
 time budget. All verification logic lives in app/, so the pipeline the README
@@ -35,7 +35,7 @@ from app.vision.client import VisionClient
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("AIEngine")
 
-app = FastAPI(title="ParkMitra AI Verification Engine", version=ENGINE_VERSION)
+app = FastAPI(title="Spotit AI Verification Engine", version=ENGINE_VERSION)
 
 ALLOWED_ORIGINS = [
     origin.strip()
@@ -112,7 +112,7 @@ async def require_api_key(request: Request, call_next):
 def read_root():
     return {
         "status": "ok",
-        "service": "ParkMitra AI Verification Engine",
+        "service": "Spotit AI Verification Engine",
         "version": ENGINE_VERSION,
         "textModel": GROQ_MODEL,
         "visionModels": GROQ_VISION_MODELS,

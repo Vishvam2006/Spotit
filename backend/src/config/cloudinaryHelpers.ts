@@ -1,11 +1,11 @@
 import { cloudinary } from './cloudinary';
 
-const VEHICLE_FOLDER_ROOT = process.env.CLOUDINARY_VEHICLE_FOLDER ?? 'parkmitra/vehicles';
-const PARKING_FOLDER_ROOT = process.env.CLOUDINARY_PARKING_FOLDER ?? 'parkmitra/parking-lots';
-const PROFILE_FOLDER_ROOT = process.env.CLOUDINARY_PROFILE_FOLDER ?? 'parkmitra/profiles';
+const VEHICLE_FOLDER_ROOT = process.env.CLOUDINARY_VEHICLE_FOLDER ?? 'spotit/vehicles';
+const PARKING_FOLDER_ROOT = process.env.CLOUDINARY_PARKING_FOLDER ?? 'spotit/parking-lots';
+const PROFILE_FOLDER_ROOT = process.env.CLOUDINARY_PROFILE_FOLDER ?? 'spotit/profiles';
 /** Continuity Engine photo evidence attached to issue reports. */
 const EVIDENCE_FOLDER_ROOT =
-  process.env.CLOUDINARY_EVIDENCE_FOLDER ?? 'parkmitra/evidence';
+  process.env.CLOUDINARY_EVIDENCE_FOLDER ?? 'spotit/evidence';
 
 /** Square, auto-cropped transformation applied to every vehicle image. */
 export const VEHICLE_IMAGE_TRANSFORMATION = 'c_fill,g_auto,w_640,h_640';
@@ -30,7 +30,7 @@ export function isCloudinaryConfigured(): boolean {
   );
 }
 
-/** Folder restricted to a single user: parkmitra/vehicles/{userId} */
+/** Folder restricted to a single user: spotit/vehicles/{userId} */
 export function vehicleFolderFor(userId: string): string {
   return `${VEHICLE_FOLDER_ROOT}/${userId}`;
 }
@@ -44,7 +44,7 @@ export function profileFolderFor(userId: string): string {
   return `${PROFILE_FOLDER_ROOT}/${userId}`;
 }
 
-/** Folder scoped to the reporting user: parkmitra/evidence/{userId} */
+/** Folder scoped to the reporting user: spotit/evidence/{userId} */
 export function evidenceFolderFor(userId: string): string {
   return `${EVIDENCE_FOLDER_ROOT}/${userId}`;
 }

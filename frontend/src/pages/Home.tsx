@@ -71,8 +71,8 @@ export default function Home() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6 md:hidden">
             <div className="flex items-center gap-2">
-              <img src="/logo.jpg" alt="ParkMitra" className="h-8 w-8 rounded-lg object-cover" />
-              <span className="text-xl font-bold tracking-tight text-[var(--pm-color-text)]">ParkMitra</span>
+              <img src="/logo.jpg" alt="Spotit" className="h-8 w-8 rounded-lg object-cover" />
+              <span className="text-xl font-bold tracking-tight text-[var(--pm-color-text)]">Spotit</span>
             </div>
           </div>
 

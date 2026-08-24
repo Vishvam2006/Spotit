@@ -143,7 +143,7 @@ Every check returns a sentence naming the values compared, e.g.
 
 ---
 
-## 🔌 Running the Service for ParkMitra
+## 🔌 Running the Service for Spotit
 
 The Node backend calls this engine over HTTP at `AI_VERIFICATION_URL`
 (default `http://127.0.0.1:8000/verify-documents`), which is served by

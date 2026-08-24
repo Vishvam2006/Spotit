@@ -46,7 +46,7 @@ app.use(
 app.use(express.json({ limit: '50mb' }));
 
 app.get('/', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', message: 'ParkMitra API is running' });
+  res.json({ status: 'ok', message: 'Spotit API is running' });
 });
 
 app.use('/api/auth', authRoutes);

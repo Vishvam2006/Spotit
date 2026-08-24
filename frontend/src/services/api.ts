@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { ApiErrorResponse } from "../types";
 
-export const UNAUTHORIZED_EVENT = "parkmitra:unauthorized";
+export const UNAUTHORIZED_EVENT = "spotit:unauthorized";
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "/api",
@@ -12,7 +12,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("parkmitra_token");
+  const token = localStorage.getItem("spotit_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

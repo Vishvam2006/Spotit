@@ -7,7 +7,7 @@ const evidencePhotoSchema = z
   .trim()
   .url()
   .refine((value) => value.startsWith('https://res.cloudinary.com/'), {
-    message: 'Photo evidence must be uploaded through ParkMitra.',
+    message: 'Photo evidence must be uploaded through Spotit.',
   });
 
 export const reportIssueSchema = z.object({

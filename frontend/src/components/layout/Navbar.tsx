@@ -131,7 +131,7 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             <Logo className="h-9 w-9" />
             <span className="text-xl font-bold tracking-tight text-[var(--pm-color-text)]">
-              ParkMitra
+              Spotit
             </span>
           </div>
 

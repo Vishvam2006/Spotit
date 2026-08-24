@@ -126,7 +126,7 @@ async function uploadPhoto(value: string): Promise<string> {
   }
 
   const result = await cloudinary.uploader.upload(value, {
-    folder: process.env.CLOUDINARY_PARKING_FOLDER ?? "parkmitra/parking-lots",
+    folder: process.env.CLOUDINARY_PARKING_FOLDER ?? "spotit/parking-lots",
     resource_type: "image",
   });
 

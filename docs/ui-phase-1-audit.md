@@ -1,10 +1,10 @@
-# ParkMitra UI Phase 1 Audit
+# Spotit UI Phase 1 Audit
 
 Date: 2026-08-12
 
 ## Product Target
 
-ParkMitra should feel like a polished mobile-first parking app: map-led discovery, fast reservation decisions, clear live booking state, and simple owner operations. The UI benchmark is Uber/Ola-level clarity rather than a marketing-style website.
+Spotit should feel like a polished mobile-first parking app: map-led discovery, fast reservation decisions, clear live booking state, and simple owner operations. The UI benchmark is Uber/Ola-level clarity rather than a marketing-style website.
 
 ## Current App Structure
 
@@ -68,7 +68,7 @@ ParkMitra should feel like a polished mobile-first parking app: map-led discover
 
 ## Phase 2 Foundation Decisions
 
-- Add global ParkMitra design tokens in `index.css`.
+- Add global Spotit design tokens in `index.css`.
 - Add base page defaults for font smoothing, text rendering, tap highlight, and mobile text-size behavior.
 - Add reusable utility classes for app surfaces, cards, subtle dividers, touch targets, and safe bottom padding.
 - Upgrade shared `Button`, `Input`, `Alert`, and `ConfirmDialog` so later screens can be redesigned without duplicating low-level UI rules.
