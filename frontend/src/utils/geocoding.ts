@@ -1,4 +1,3 @@
-import { GOOGLE_MAPS_API_KEY } from '../config/map';
 import type { LatLng } from './geolocation';
 
 const DEMO_LOCATIONS: Record<string, LatLng> = {
@@ -57,28 +56,60 @@ export async function geocodePlaceQuery(query: string): Promise<LatLng | null> {
   const demo = getDemoLocation(trimmed);
   if (demo) return demo;
 
-  if (!GOOGLE_MAPS_API_KEY) return null;
-
-  const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
-  url.searchParams.set('address', trimmed);
-  url.searchParams.set('key', GOOGLE_MAPS_API_KEY);
-
+  // 1. Try Photon (Free OpenStreetMap-powered geocoder, CORS friendly)
   try {
-    const response = await fetch(url.toString());
-    if (!response.ok) return demo;
+    const photonUrl = new URL('https://photon.komoot.io/api/');
+    photonUrl.searchParams.set('q', trimmed);
+    photonUrl.searchParams.set('limit', '1');
+    photonUrl.searchParams.set('lat', '23.0225');
+    photonUrl.searchParams.set('lon', '72.5714');
 
-    const data = (await response.json()) as {
-      status: string;
-      results?: Array<{ geometry: { location: { lat: number; lng: number } } }>;
-    };
+    const response = await fetch(photonUrl.toString(), {
+      headers: { Accept: 'application/json' },
+    });
 
-    if (data.status === 'OK' && data.results?.[0]) {
-      const { lat, lng } = data.results[0].geometry.location;
-      return { lat, lng };
+    if (response.ok) {
+      const data = (await response.json()) as {
+        features?: Array<{ geometry: { coordinates: [number, number] } }>;
+      };
+      if (data.features?.[0]?.geometry?.coordinates) {
+        const [lng, lat] = data.features[0].geometry.coordinates;
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          return { lat, lng };
+        }
+      }
     }
   } catch {
-    return demo;
+    // Proceed to fallback
   }
 
-  return demo;
+  // 2. Try Nominatim (OpenStreetMap Search)
+  try {
+    const nominatimUrl = new URL('https://nominatim.openstreetmap.org/search');
+    nominatimUrl.searchParams.set('format', 'json');
+    nominatimUrl.searchParams.set('q', trimmed);
+    nominatimUrl.searchParams.set('limit', '1');
+
+    const nomRes = await fetch(nominatimUrl.toString(), {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'ParkMitra-Search/1.0',
+      },
+    });
+
+    if (nomRes.ok) {
+      const nomData = (await nomRes.json()) as Array<{ lat: string; lon: string }>;
+      if (nomData[0]) {
+        const lat = Number.parseFloat(nomData[0].lat);
+        const lng = Number.parseFloat(nomData[0].lon);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          return { lat, lng };
+        }
+      }
+    }
+  } catch {
+    // Return null or demo
+  }
+
+  return demo ?? null;
 }
