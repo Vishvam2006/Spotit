@@ -7,15 +7,14 @@ import {
   Zap,
   Warehouse,
   Check,
-  Search,
-  Mic,
   MapPin,
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import ParkingMap from '../components/map/ParkingMap';
-import type { MapLocation } from '../components/map/ParkingMap';
+import type { MapLocation, DestinationLocation } from '../components/map/ParkingMap';
 import ParkingBottomSheet from '../components/map/ParkingBottomSheet';
 import ExploreFiltersModal, { type ExploreFiltersState } from '../components/map/ExploreFiltersModal';
+import SearchAutocomplete from '../components/map/SearchAutocomplete';
 import AddParkingForm from '../components/parking/AddParkingForm';
 import AddParkingDrawer from '../components/parking/AddParkingDrawer';
 import Spinner from '../components/ui/Spinner';
@@ -23,6 +22,7 @@ import Alert from '../components/ui/Alert';
 import { fetchParkingLots } from '../services/parking';
 import { DEFAULT_MAP_CENTER } from '../config/map';
 import { geocodePlaceQuery } from '../utils/geocoding';
+import type { PlaceSuggestion } from '../services/places';
 import { getCurrentPositionDetailed, type LatLng } from '../utils/geolocation';
 import { haversineDistanceKm, isWithinRadiusKm } from '../utils/distance';
 import { notifyError, notifySuccess } from '../utils/notify';
@@ -65,8 +65,7 @@ export default function Explore() {
   const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [submittedSearch, setSubmittedSearch] = useState('');
-  const [searchLocation, setSearchLocation] = useState<LatLng | null>(null);
+  const [destinationLocation, setDestinationLocation] = useState<DestinationLocation | null>(null);
   const [searching, setSearching] = useState(false);
 
   // Fully adjustable filters state
@@ -161,52 +160,27 @@ export default function Explore() {
   useEffect(() => {
     const latParam = searchParams.get('lat');
     const lngParam = searchParams.get('lng');
-    if (latParam === null && lngParam === null) return;
+    const qParam = searchParams.get('q');
 
-    const lat = Number.parseFloat(latParam ?? '');
-    const lng = Number.parseFloat(lngParam ?? '');
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
-
-    // Same one-shot URL-to-state handoff: a lat/lng deep link selects the map
-    // location once per navigation, keyed by the searchParams identity.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSearchLocation({ lat, lng });
-    setSelectedParkingId(null);
-    setSelectedLocation(null);
-    setIsAddingParking(false);
-  }, [searchParams]);
-
-  useEffect(() => {
-    const trimmed = submittedSearch.trim();
-    if (!trimmed) return;
-
-    let active = true;
-
-    geocodePlaceQuery(trimmed)
-      .then((location) => {
-        if (!active) return;
-        if (location) {
-          setSearchLocation(location);
-        } else {
-          notifyError('Could not find that location. Try another search.');
-          setSearchLocation(null);
+    if (latParam !== null && lngParam !== null) {
+      const lat = Number.parseFloat(latParam);
+      const lng = Number.parseFloat(lngParam);
+      if (Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        setDestinationLocation({ lat, lng, title: 'Selected Location' });
+        setSelectedParkingId(null);
+        setSelectedLocation(null);
+        setIsAddingParking(false);
+      }
+    } else if (qParam && qParam.trim()) {
+      const query = qParam.trim();
+      setSearchQuery(query);
+      geocodePlaceQuery(query).then((loc) => {
+        if (loc) {
+          setDestinationLocation({ lat: loc.lat, lng: loc.lng, title: query });
         }
-      })
-      .catch(() => {
-        if (active) {
-          notifyError('Search failed. Please try again.');
-          setSearchLocation(null);
-        }
-      })
-      .finally(() => {
-        if (active) setSearching(false);
       });
-
-    return () => {
-      active = false;
-    };
-  }, [submittedSearch]);
+    }
+  }, [searchParams]);
 
   const parkingClusterCenter = useMemo(
     () => getParkingClusterCenter(allParkingLots),
@@ -214,8 +188,8 @@ export default function Explore() {
   );
 
   const mapCenter = useMemo(
-    () => searchLocation ?? userLocation ?? parkingClusterCenter ?? DEFAULT_MAP_CENTER,
-    [parkingClusterCenter, searchLocation, userLocation],
+    () => destinationLocation ?? userLocation ?? parkingClusterCenter ?? DEFAULT_MAP_CENTER,
+    [parkingClusterCenter, destinationLocation, userLocation],
   );
 
   // Filter lots based on radius and active adjustable filters
@@ -300,14 +274,14 @@ export default function Explore() {
   }, [selectedParking, userLocation]);
 
   const selectedDistanceFromDestination = useMemo(() => {
-    if (!selectedParking || !searchLocation) return undefined;
+    if (!selectedParking || !destinationLocation) return undefined;
     return haversineDistanceKm(
-      searchLocation.lat,
-      searchLocation.lng,
+      destinationLocation.lat,
+      destinationLocation.lng,
       selectedParking.latitude,
       selectedParking.longitude,
     );
-  }, [selectedParking, searchLocation]);
+  }, [selectedParking, destinationLocation]);
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
@@ -322,36 +296,66 @@ export default function Explore() {
     return count;
   }, [filters]);
 
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchQuery(value);
-    setSelectedParkingId(null);
-    if (!value.trim()) {
-      setSubmittedSearch('');
-      setSearchLocation(null);
-      setSearching(false);
+  const handleSelectPlace = useCallback((suggestion: PlaceSuggestion) => {
+    setSearchQuery(suggestion.title);
+    setDestinationLocation({
+      lat: suggestion.location.lat,
+      lng: suggestion.location.lng,
+      title: suggestion.title,
+    });
+    if (suggestion.parkingLot) {
+      setSelectedParkingId(suggestion.parkingLot.id);
+    } else {
+      setSelectedParkingId(null);
     }
-  }, []);
-
-  const handleSearchSubmit = useCallback(() => {
-    const trimmed = searchQuery.trim();
-    setSubmittedSearch(trimmed);
-    setSelectedParkingId(null);
     setSelectedLocation(null);
     setIsAddingParking(false);
-    setSearching(Boolean(trimmed));
-    if (!trimmed) {
-      setSearchLocation(null);
-      void requestUserLocation();
-    }
-  }, [requestUserLocation, searchQuery]);
+    setSearching(false);
+  }, []);
+
+  const handleSearchSubmitText = useCallback((query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    setSearching(true);
+    setSelectedLocation(null);
+    setIsAddingParking(false);
+
+    geocodePlaceQuery(trimmed)
+      .then((location) => {
+        if (location) {
+          setDestinationLocation({
+            lat: location.lat,
+            lng: location.lng,
+            title: trimmed,
+          });
+          setSelectedParkingId(null);
+        } else {
+          notifyError('Could not find that location. Try another search.');
+        }
+      })
+      .catch(() => {
+        notifyError('Search failed. Please try again.');
+      })
+      .finally(() => {
+        setSearching(false);
+      });
+  }, []);
 
   const handleSearchClear = useCallback(() => {
     setSearchQuery('');
-    setSubmittedSearch('');
-    setSearchLocation(null);
+    setDestinationLocation(null);
     setSelectedParkingId(null);
     setSearching(false);
   }, []);
+
+  const handleUseCurrentLocation = useCallback(() => {
+    setSearchQuery('');
+    setDestinationLocation(null);
+    setSelectedParkingId(null);
+    setSearching(false);
+    void requestUserLocation();
+  }, [requestUserLocation]);
 
   const handleViewDetails = useCallback(
     (parking: ParkingLot) => navigate(`/parking/${parking.id}`),
@@ -416,6 +420,7 @@ export default function Explore() {
                 }}
                 mapCenter={mapCenter}
                 userLocation={userLocation}
+                destinationLocation={destinationLocation}
                 isAddingParking={isAddingParking}
                 selectedLocation={selectedLocation}
                 onLocationSelect={handleLocationSelect}
@@ -425,68 +430,20 @@ export default function Explore() {
             {/* Google Maps Style Top Floating Search Pill & Filter Chips */}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-3 sm:px-6">
               <div className="pointer-events-auto mx-auto max-w-3xl">
-                {/* Search Pill */}
-                <div className="flex items-center gap-2.5 rounded-full border border-[#272732] bg-[#121216]/95 px-3.5 py-2.5 shadow-2xl shadow-black/90 backdrop-blur-2xl transition-all">
-                  {/* Left: Back / Location Pin */}
-                  <button
-                    type="button"
-                    onClick={() => navigate(-1)}
-                    aria-label="Back"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-300 hover:bg-[#202028] hover:text-white transition-colors"
-                  >
-                    <MapPin className="h-5 w-5 text-emerald-400 fill-emerald-400/20" />
-                  </button>
-
-                  {/* Input */}
-                  <div className="flex-1 min-w-0">
-                    <input
-                      type="search"
-                      value={searchQuery}
-                      onChange={(e) => handleSearchChange(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleSearchSubmit();
-                        }
-                      }}
-                      placeholder="Search here"
-                      className="w-full bg-transparent text-sm font-semibold text-white placeholder:text-neutral-400 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Right Actions */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={handleSearchClear}
-                        aria-label="Clear search"
-                        className="flex h-7 w-7 items-center justify-center rounded-full text-neutral-400 hover:bg-[#202028] hover:text-white transition-colors"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={handleSearchSubmit}
-                      disabled={searching}
-                      aria-label="Search"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-300 hover:bg-[#202028] hover:text-white transition-colors disabled:opacity-50"
-                    >
-                      <Search className={`h-4 w-4 ${searching ? 'animate-pulse text-emerald-400' : ''}`} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleSearchSubmit}
-                      aria-label="Voice search"
-                      className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full text-neutral-400 hover:bg-[#202028] hover:text-white transition-colors"
-                    >
-                      <Mic className="h-4 w-4" />
-                    </button>
-
-                    {isAddingParking ? (
+                {/* Search Autocomplete Pill */}
+                <SearchAutocomplete
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  onSelectPlace={handleSelectPlace}
+                  onSubmitText={handleSearchSubmitText}
+                  onClear={handleSearchClear}
+                  onUseCurrentLocation={handleUseCurrentLocation}
+                  userLocation={userLocation}
+                  parkingLots={allParkingLots}
+                  placeholder="Search destination, area, or parking..."
+                  isSearching={searching}
+                  rightAction={
+                    isAddingParking ? (
                       <button
                         type="button"
                         onClick={cancelAddParking}
@@ -510,12 +467,28 @@ export default function Explore() {
                       >
                         {user ? (user.fullName?.[0]?.toUpperCase() ?? 'U') : '?'}
                       </button>
-                    )}
-                  </div>
-                </div>
+                    )
+                  }
+                />
 
                 {!isAddingParking && (
                   <div className="mt-2.5 flex items-center gap-2 overflow-x-auto pb-1 pm-scrollbar-none">
+                    {/* Destination Active Indicator Chip */}
+                    {destinationLocation && (
+                      <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-rose-500/20 border border-rose-500/40 px-3 py-1.5 text-xs font-bold text-rose-200 shadow-sm">
+                        <MapPin className="h-3.5 w-3.5 text-rose-400" />
+                        <span className="truncate max-w-[130px]">Near {destinationLocation.title || 'Destination'}</span>
+                        <button
+                          type="button"
+                          onClick={handleSearchClear}
+                          aria-label="Clear destination"
+                          className="ml-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500/40 text-rose-100 hover:bg-rose-500 transition-colors"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </div>
+                    )}
+
                     {/* Main Filters Button */}
                     <button
                       type="button"

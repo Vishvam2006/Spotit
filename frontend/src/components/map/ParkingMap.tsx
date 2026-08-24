@@ -18,6 +18,7 @@ import {
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
 } from '../../config/map';
+import DestinationMarker from './DestinationMarker';
 import ParkingMarker from './ParkingMarker';
 import UserLocationMarker from './UserLocationMarker';
 import MapControls from './MapControls';
@@ -26,6 +27,12 @@ import Spinner from '../ui/Spinner';
 export interface MapLocation {
   lat: number;
   lng: number;
+}
+
+export interface DestinationLocation {
+  lat: number;
+  lng: number;
+  title?: string;
 }
 
 interface ParkingMapProps {
@@ -38,6 +45,7 @@ interface ParkingMapProps {
   selectedLocation?: MapLocation | null;
   mapCenter?: LatLng | null;
   userLocation?: LatLng | null;
+  destinationLocation?: DestinationLocation | null;
 }
 
 export default function ParkingMap({
@@ -50,6 +58,7 @@ export default function ParkingMap({
   selectedLocation = null,
   mapCenter = null,
   userLocation = null,
+  destinationLocation = null,
 }: ParkingMapProps) {
   const [loadError, setLoadError] = useState(false);
   const [mapView, setMapView] = useState<'roadmap' | 'satellite'>('roadmap');
@@ -99,6 +108,13 @@ export default function ParkingMap({
 
           {userLocation && <UserLocationMarker position={userLocation} />}
 
+          {destinationLocation && (
+            <DestinationMarker
+              position={destinationLocation}
+              title={destinationLocation.title}
+            />
+          )}
+
           {selectedLocation && (
             <AdvancedMarker
               position={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
@@ -122,6 +138,7 @@ export default function ParkingMap({
             mapCenter={mapCenter}
             parkingLots={parkingLots}
             selectedParkingId={selectedParkingId}
+            destinationLocation={destinationLocation}
           />
 
           <MapTypeController mapView={mapView} />
@@ -154,25 +171,34 @@ function CameraController({
   mapCenter,
   parkingLots,
   selectedParkingId,
+  destinationLocation,
 }: {
   mapCenter: LatLng | null;
   parkingLots: ParkingLot[];
   selectedParkingId: string | null;
+  destinationLocation?: DestinationLocation | null;
 }) {
   const map = useMap();
 
   useEffect(() => {
-    if (!map || !mapCenter) return;
-    map.panTo(mapCenter);
-    map.setZoom(14);
-  }, [map, mapCenter]);
+    if (!map) return;
+    if (destinationLocation) {
+      map.panTo({ lat: destinationLocation.lat, lng: destinationLocation.lng });
+      map.setZoom(15);
+      return;
+    }
+    if (mapCenter) {
+      map.panTo(mapCenter);
+      map.setZoom(14);
+    }
+  }, [map, mapCenter, destinationLocation]);
 
   useEffect(() => {
     if (!map || !selectedParkingId) return;
     const parking = parkingLots.find((lot) => lot.id === selectedParkingId);
     if (!parking) return;
     map.panTo({ lat: parking.latitude, lng: parking.longitude });
-    map.setZoom(15);
+    map.setZoom(16);
   }, [map, parkingLots, selectedParkingId]);
 
   return null;
