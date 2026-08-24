@@ -45,25 +45,19 @@ export default function App() {
           <Route
             path="/"
             element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
+              <Home />
             }
           />
           <Route
             path="/explore"
             element={
-              <ProtectedRoute>
-                <Explore />
-              </ProtectedRoute>
+              <Explore />
             }
           />
           <Route
             path="/parking/:id"
             element={
-              <ProtectedRoute>
-                <ParkingDetails />
-              </ProtectedRoute>
+              <ParkingDetails />
             }
           />
           <Route

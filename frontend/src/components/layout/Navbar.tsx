@@ -145,57 +145,66 @@ export default function Navbar() {
 
           <div className="flex items-center gap-2">
             <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setAccountOpen((open) => !open)}
-              aria-expanded={accountOpen}
-              aria-haspopup="menu"
-              className="flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--pm-color-action)] text-xs font-bold text-white shadow-md">
-                {initials}
-              </span>
-              <span className="hidden lg:inline">{user?.fullName}</span>
-              <ChevronDown
-                className={`h-4 w-4 text-[var(--pm-color-muted)] transition-transform duration-200 ${accountOpen ? 'rotate-180' : ''
-                  }`}
-              />
-            </button>
-
-            {accountOpen && (
-              <div className="absolute right-0 top-full mt-2 w-60 overflow-hidden rounded-xl bg-[var(--pm-color-surface-raised)] shadow-2xl ring-1 ring-[var(--pm-color-border)]">
-                <div className="flex items-center gap-3 border-b border-[var(--pm-color-border)] px-4 py-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--pm-color-action)] text-sm font-bold text-white">
-                    {initials}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[var(--pm-color-text)]">
-                      {user?.fullName}
-                    </p>
-                    <p className="truncate text-xs text-[var(--pm-color-muted)]">{user?.email}</p>
-                  </div>
-                </div>
-                <div className="px-4 py-2">
-                  <span className="rounded-full bg-[var(--pm-color-action-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--pm-color-action)]">
-                    {user ? ROLE_LABELS[user.role] : ''}
-                  </span>
-                </div>
-                <Link
-                  to="/account"
-                  onClick={() => setAccountOpen(false)}
-                  className="flex min-h-11 w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface)] focus:outline-none"
-                >
-                  <User className="h-4 w-4" />
-                  My Profile
-                </Link>
+            {user ? (
+              <>
                 <button
                   type="button"
-                  onClick={handleLogout}
-                  className="flex min-h-11 w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-500 transition-colors hover:bg-red-500/10 focus:outline-none"
+                  onClick={() => setAccountOpen((open) => !open)}
+                  aria-expanded={accountOpen}
+                  aria-haspopup="menu"
+                  className="flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface-raised)] focus:outline-none"
                 >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--pm-color-action)] text-xs font-bold text-white shadow-md">
+                    {initials}
+                  </span>
+                  <span className="hidden lg:inline">{user?.fullName}</span>
+                  <ChevronDown
+                    className={`h-4 w-4 text-[var(--pm-color-muted)] transition-transform duration-200 ${accountOpen ? 'rotate-180' : ''
+                      }`}
+                  />
                 </button>
+
+                {accountOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-60 overflow-hidden rounded-xl bg-[var(--pm-color-surface-raised)] shadow-2xl ring-1 ring-[var(--pm-color-border)]">
+                    <div className="flex items-center gap-3 border-b border-[var(--pm-color-border)] px-4 py-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--pm-color-action)] text-sm font-bold text-white">
+                        {initials}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--pm-color-text)]">
+                          {user?.fullName}
+                        </p>
+                        <p className="truncate text-xs text-[var(--pm-color-muted)]">{user?.email}</p>
+                      </div>
+                    </div>
+                    <div className="px-4 py-2">
+                      <span className="rounded-full bg-[var(--pm-color-action-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--pm-color-action)]">
+                        {user ? ROLE_LABELS[user.role] : ''}
+                      </span>
+                    </div>
+                    <Link
+                      to="/account"
+                      onClick={() => setAccountOpen(false)}
+                      className="flex min-h-11 w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[var(--pm-color-text)] transition-colors hover:bg-[var(--pm-color-surface)] focus:outline-none"
+                    >
+                      <User className="h-4 w-4" />
+                      My Profile
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex min-h-11 w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-500 transition-colors hover:bg-red-500/10 focus:outline-none"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Link to="/login" className="text-sm font-semibold text-[var(--pm-color-text)] hover:text-[var(--pm-color-action)]">Log in</Link>
+                <Link to="/register" className="rounded-xl bg-[var(--pm-color-action)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--pm-color-action)]/90 transition-colors">Sign up</Link>
               </div>
             )}
             </div>
@@ -231,26 +240,40 @@ export default function Navbar() {
               );
             })}
             
-            <button
-              type="button"
-              onClick={() => setAccountOpen(true)}
-              aria-label="Open account menu"
-              aria-expanded={accountOpen}
-              className={`group relative flex flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 py-2 rounded-xl text-[11px] font-bold leading-none transition-all duration-200 focus:outline-none ${
-                accountOpen ? 'text-[var(--pm-color-text)]' : 'text-[var(--pm-color-muted)] hover:text-[var(--pm-color-text)]'
-              }`}
-            >
-              <span
-                className={`flex h-10 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
-                  accountOpen ? 'bg-[var(--pm-color-action)] text-white shadow-lg' : 'bg-transparent text-[var(--pm-color-muted)]'
+            {user ? (
+              <button
+                type="button"
+                onClick={() => setAccountOpen(true)}
+                aria-label="Open account menu"
+                aria-expanded={accountOpen}
+                className={`group relative flex flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 py-2 rounded-xl text-[11px] font-bold leading-none transition-all duration-200 focus:outline-none ${
+                  accountOpen ? 'text-[var(--pm-color-text)]' : 'text-[var(--pm-color-muted)] hover:text-[var(--pm-color-text)]'
                 }`}
               >
-                <User className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <span className={`mt-1 max-w-full truncate transition-all duration-300 ${accountOpen ? 'opacity-100 scale-100 font-extrabold text-white' : 'opacity-80 scale-95 font-medium'}`}>
-                Account
-              </span>
-            </button>
+                <span
+                  className={`flex h-10 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
+                    accountOpen ? 'bg-[var(--pm-color-action)] text-white shadow-lg' : 'bg-transparent text-[var(--pm-color-muted)]'
+                  }`}
+                >
+                  <User className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className={`mt-1 max-w-full truncate transition-all duration-300 ${accountOpen ? 'opacity-100 scale-100 font-extrabold text-white' : 'opacity-80 scale-95 font-medium'}`}>
+                  Account
+                </span>
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className={`group relative flex flex-1 flex-col items-center justify-center gap-1 overflow-hidden px-1 py-2 rounded-xl text-[11px] font-bold leading-none transition-all duration-200 focus:outline-none text-[var(--pm-color-muted)] hover:text-[var(--pm-color-text)]`}
+              >
+                <span className={`flex h-10 w-12 items-center justify-center rounded-2xl transition-all duration-300 bg-transparent text-[var(--pm-color-muted)]`}>
+                  <User className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className={`mt-1 max-w-full truncate transition-all duration-300 opacity-80 scale-95 font-medium`}>
+                  Login
+                </span>
+              </Link>
+            )}
           </div>
         </nav>
       )}

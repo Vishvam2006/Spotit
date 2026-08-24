@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/auth-context';
 import { useNavigate } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -24,6 +25,7 @@ import { haversineDistanceKm } from '../utils/distance';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [allParkingLots, setAllParkingLots] = useState<ParkingLot[]>([]);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -61,7 +63,10 @@ export default function Home() {
     else if (action === 'vehicles') navigate('/my-vehicles');
     // The add-parking flow lives on the map (you pin the location first), so
     // `addParking=1` is only ever handled by /explore.
-    else if (action === 'list') navigate('/explore?addParking=1');
+    else if (action === 'list') {
+      if (!user) navigate('/login', { state: { from: '/explore?addParking=1' } });
+      else navigate('/explore?addParking=1');
+    }
   };
 
   return (
@@ -121,7 +126,10 @@ export default function Home() {
               
               <QuickActionButton icon={Car} label="Vehicles" onClick={() => handleQuickAction('vehicles')} />
               <QuickActionButton icon={MapPin} label="Saved" onClick={() => {}} />
-              <QuickActionButton icon={AlertTriangle} label="Report" onClick={() => setReportOpen(true)} />
+              <QuickActionButton icon={AlertTriangle} label="Report" onClick={() => {
+                if (!user) navigate('/login');
+                else setReportOpen(true);
+              }} />
               <QuickActionButton icon={PlusCircle} label="List Space" onClick={() => handleQuickAction('list')} badge="New" />
             </div>
           </div>
