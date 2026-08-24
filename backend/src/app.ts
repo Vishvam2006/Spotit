@@ -49,6 +49,14 @@ app.get('/', (_req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'Spotit API is running' });
 });
 
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok',
+    message: 'Spotit API is healthy',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/parking-lots', parkingRoutes);
 app.use('/api/bookings', bookingRoutes);
