@@ -23,4 +23,6 @@ export interface MeResponse {
 export interface ApiErrorResponse {
   success: false;
   message: string;
+  /** Structured, machine-readable reason, e.g. FILE_TOO_LARGE, used to pick controlled copy. */
+  code?: string;
 }

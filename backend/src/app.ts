@@ -174,7 +174,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     res.status(err.statusCode).json({
       success: false,
       message: err.message,
-      code: 'VERIFICATION_ERROR',
+      code: err.code ?? 'VERIFICATION_ERROR',
     });
     return;
   }

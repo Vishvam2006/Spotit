@@ -47,7 +47,7 @@ function uploadDocumentMiddleware(req: Request, res: Response, next: NextFunctio
 
   const match = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
   if (!match) {
-    res.status(400).json({ success: false, message: 'Invalid multipart boundary' });
+    res.status(400).json({ success: false, message: 'Invalid multipart boundary', code: 'INVALID_UPLOAD' });
     return;
   }
 
@@ -78,15 +78,17 @@ function uploadDocumentMiddleware(req: Request, res: Response, next: NextFunctio
 
   req.on('end', () => {
     if (tooLarge) {
-      res
-        .status(413)
-        .json({ success: false, message: 'Upload is too large. Maximum allowed size is 25MB.' });
+      res.status(413).json({
+        success: false,
+        message: 'Upload is too large. Maximum allowed size is 25MB.',
+        code: 'FILE_TOO_LARGE',
+      });
       return;
     }
 
     let uploadedFile: { path: string; originalname: string; mimetype: string } | undefined;
 
-    const finishWithError = (status: number, message: string) => {
+    const finishWithError = (status: number, message: string, code: string) => {
       if (uploadedFile && fs.existsSync(uploadedFile.path)) {
         try {
           fs.unlinkSync(uploadedFile.path);
@@ -94,7 +96,7 @@ function uploadDocumentMiddleware(req: Request, res: Response, next: NextFunctio
           // best-effort cleanup
         }
       }
-      res.status(status).json({ success: false, message });
+      res.status(status).json({ success: false, message, code });
     };
 
     try {
@@ -111,7 +113,7 @@ function uploadDocumentMiddleware(req: Request, res: Response, next: NextFunctio
           parts.push(buffer.subarray(start, idx));
           partCount += 1;
           if (partCount > MAX_PARTS) {
-            finishWithError(400, 'Too many multipart parts.');
+            finishWithError(400, 'Too many multipart parts.', 'TOO_MANY_FILES');
             return;
           }
         }
@@ -142,17 +144,17 @@ function uploadDocumentMiddleware(req: Request, res: Response, next: NextFunctio
 
         if (filenameMatch) {
           if (uploadedFile) {
-            finishWithError(400, 'Only a single document file is allowed per request.');
+            finishWithError(400, 'Only a single document file is allowed per request.', 'TOO_MANY_FILES');
             return;
           }
 
           if (bodyBuffer.length === 0) {
-            finishWithError(400, 'Uploaded file is empty.');
+            finishWithError(400, 'Uploaded file is empty.', 'EMPTY_FILE');
             return;
           }
 
           if (bodyBuffer.length > MAX_FILE_BYTES) {
-            finishWithError(413, 'Uploaded file is too large. Maximum allowed size is 15MB.');
+            finishWithError(413, 'Uploaded file is too large. Maximum allowed size is 15MB.', 'FILE_TOO_LARGE');
             return;
           }
 
@@ -163,6 +165,7 @@ function uploadDocumentMiddleware(req: Request, res: Response, next: NextFunctio
             finishWithError(
               400,
               'Unsupported file type. Allowed: JPG, PNG, WEBP, PDF.',
+              'INVALID_FILE_TYPE',
             );
             return;
           }
@@ -171,6 +174,7 @@ function uploadDocumentMiddleware(req: Request, res: Response, next: NextFunctio
             finishWithError(
               400,
               'Unsupported file extension. Allowed: .jpg, .jpeg, .png, .webp, .pdf.',
+              'INVALID_FILE_TYPE',
             );
             return;
           }
@@ -192,7 +196,7 @@ function uploadDocumentMiddleware(req: Request, res: Response, next: NextFunctio
       }
 
       if (!uploadedFile) {
-        finishWithError(400, 'A document file is required.');
+        finishWithError(400, 'A document file is required.', 'NO_DOCUMENTS');
         return;
       }
 
@@ -215,7 +219,7 @@ function uploadDocumentMiddleware(req: Request, res: Response, next: NextFunctio
       next();
     } catch (err) {
       console.error('[UploadMiddleware] Parse error:', err);
-      finishWithError(500, 'Failed to process document upload');
+      finishWithError(500, 'Failed to process document upload', 'INTERNAL_ERROR');
     }
   });
 }

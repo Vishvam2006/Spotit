@@ -7,8 +7,10 @@ import type { VerificationResultData } from '../../services/verification';
 import StatusIcon from './StatusIcon';
 import {
   type OverallStatus,
-  overallStatusHeadline,
+  deriveResultState,
   overallTone,
+  resultStateGuidance,
+  resultStateHeadline,
   toneClasses,
 } from './verificationTokens';
 
@@ -23,9 +25,13 @@ export default function ResultBanner({ result, onRetry }: Props) {
   const [copied, setCopied] = useState(false);
   const engineDown = result.engineAvailable === false;
   const status = result.overallStatus as OverallStatus;
+  const state = deriveResultState(result);
   const tone = engineDown ? 'warn' : overallTone[status] ?? 'neutral';
   const classes = toneClasses(tone);
   const iconOutcome = engineDown ? 'WARN' : STATUS_AS_OUTCOME[status];
+  // The engine-down column below already spells out "not rejected, never checked",
+  // so only add the inline guidance line for the states that were actually judged.
+  const guidance = engineDown ? null : resultStateGuidance(state);
 
   function copyId() {
     navigator.clipboard?.writeText(result.verificationId).then(() => {
@@ -46,9 +52,12 @@ export default function ResultBanner({ result, onRetry }: Props) {
 
         <div className="min-w-0">
           <h2 className="text-xl font-bold text-[var(--pm-color-text)]">
-            {overallStatusHeadline(status, !engineDown)}
+            {resultStateHeadline(state)}
           </h2>
           <p className="mt-1 text-sm text-[var(--pm-color-muted)]">{result.summary}</p>
+          {guidance && (
+            <p className="mt-2 text-sm font-medium text-[var(--pm-color-text)]">{guidance}</p>
+          )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {!engineDown && <VerificationStatusBadge status={status} size="sm" />}

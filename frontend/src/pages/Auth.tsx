@@ -8,12 +8,14 @@ import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 import Logo from '../components/Logo';
 
-export default function Auth({ defaultMode = 'login' }: { defaultMode?: 'login' | 'register' }) {
-  const { login, register } = useAuth();
+export type AuthMode = 'login' | 'register' | 'forgot-password' | 'verify-otp' | 'reset-password';
+
+export default function Auth({ defaultMode = 'login' }: { defaultMode?: AuthMode }) {
+  const { login, register, forgotPassword, verifyOtp, resetPassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
+  const [mode, setMode] = useState<AuthMode>(defaultMode);
 
   // Update mode if navigation changes (e.g., clicking browser back button)
   useEffect(() => {
@@ -25,6 +27,7 @@ export default function Auth({ defaultMode = 'login' }: { defaultMode?: 'login' 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [otp, setOtp] = useState('');
 
   // Status State
   const [error, setError] = useState('');
@@ -51,9 +54,28 @@ export default function Auth({ defaultMode = 'login' }: { defaultMode?: 'login' 
         setError('Passwords do not match.');
         return;
       }
-    } else {
+    } else if (mode === 'login') {
       if (!email.trim() || !password) {
         setError('Please enter your email and password.');
+        return;
+      }
+    } else if (mode === 'forgot-password') {
+      if (!email.trim()) {
+        setError('Please enter your email.');
+        return;
+      }
+    } else if (mode === 'verify-otp') {
+      if (!otp.trim()) {
+        setError('Please enter the OTP.');
+        return;
+      }
+    } else if (mode === 'reset-password') {
+      if (!password || password.length < 8) {
+        setError('Password must be at least 8 characters.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match.');
         return;
       }
     }
@@ -64,15 +86,32 @@ export default function Auth({ defaultMode = 'login' }: { defaultMode?: 'login' 
         await register(fullName.trim(), email.trim(), password);
         setSuccess('Account created successfully!');
         notifySuccess('Account created successfully! Please sign in.');
-        // After successful registration, switch to login view
         setMode('login');
-        setPassword(''); // Clear password for safety
+        setPassword('');
         setConfirmPassword('');
-        // Update URL to match mode without full reload
         window.history.replaceState(null, '', '/login');
-      } else {
+      } else if (mode === 'login') {
         const user = await login(email.trim(), password);
         notifySuccess('Welcome back!');
+        if (user.role === 'ADMIN') {
+          navigate('/admin/dashboard', { replace: true });
+        } else if (user.role === 'OWNER') {
+          navigate('/dashboard', { replace: true });
+        } else {
+          navigate(from, { replace: true });
+        }
+      } else if (mode === 'forgot-password') {
+        await forgotPassword(email.trim());
+        setSuccess('OTP sent successfully!');
+        notifySuccess('OTP sent successfully! Please check your email.');
+        setMode('verify-otp');
+      } else if (mode === 'verify-otp') {
+        await verifyOtp(email.trim(), otp.trim());
+        setSuccess('OTP verified! You can now reset your password.');
+        setMode('reset-password');
+      } else if (mode === 'reset-password') {
+        const user = await resetPassword(email.trim(), otp.trim(), password);
+        notifySuccess('Password reset successfully. Welcome back!');
         if (user.role === 'ADMIN') {
           navigate('/admin/dashboard', { replace: true });
         } else if (user.role === 'OWNER') {
@@ -127,12 +166,18 @@ export default function Auth({ defaultMode = 'login' }: { defaultMode?: 'login' 
         <div className="w-full rounded-t-[2.5rem] bg-white p-8 pb-12 shadow-2xl lg:rounded-3xl lg:p-12 backdrop-blur-md bg-white/95">
           <div className="mb-8">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-              {mode === 'login' ? 'Welcome back' : 'Create your account'}
+              {mode === 'login' && 'Welcome back'}
+              {mode === 'register' && 'Create your account'}
+              {mode === 'forgot-password' && 'Reset your password'}
+              {mode === 'verify-otp' && 'Verify OTP'}
+              {mode === 'reset-password' && 'Set new password'}
             </h2>
             <p className="mt-2 text-sm text-gray-500">
-              {mode === 'login'
-                ? 'Sign in to your Spotit account to continue.'
-                : 'Join Spotit and start managing your parking sessions.'}
+              {mode === 'login' && 'Sign in to your Spotit account to continue.'}
+              {mode === 'register' && 'Join Spotit and start managing your parking sessions.'}
+              {mode === 'forgot-password' && 'Enter your email to receive an OTP to reset your password.'}
+              {mode === 'verify-otp' && `Enter the 6-digit OTP sent to ${email}.`}
+              {mode === 'reset-password' && 'Enter your new password below.'}
             </p>
           </div>
 
@@ -150,29 +195,46 @@ export default function Auth({ defaultMode = 'login' }: { defaultMode?: 'login' 
               />
             )}
 
-            <Input
-              id="email"
-              label="Email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
+            {(mode === 'login' || mode === 'register' || mode === 'forgot-password') && (
+              <Input
+                id="email"
+                label="Email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            )}
 
-            <Input
-              id="password"
-              label="Password"
-              type="password"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              placeholder={mode === 'login' ? 'Enter your password' : 'At least 8 characters'}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
+            {mode === 'verify-otp' && (
+              <Input
+                id="otp"
+                label="OTP"
+                type="text"
+                autoComplete="one-time-code"
+                placeholder="123456"
+                value={otp}
+                onChange={(event) => setOtp(event.target.value)}
+                required
+              />
+            )}
 
-            {mode === 'register' && (
+            {(mode === 'login' || mode === 'register' || mode === 'reset-password') && (
+              <Input
+                id="password"
+                label="Password"
+                type="password"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                placeholder={mode === 'login' ? 'Enter your password' : 'At least 8 characters'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
+            )}
+
+            {(mode === 'register' || mode === 'reset-password') && (
               <Input
                 id="confirmPassword"
                 label="Confirm Password"
@@ -187,9 +249,16 @@ export default function Auth({ defaultMode = 'login' }: { defaultMode?: 'login' 
 
             {mode === 'login' && (
               <div className="flex items-center justify-end">
-                <a href="#" className="text-sm font-medium text-[var(--pm-color-action)] hover:text-[var(--pm-color-action-hover)]">
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setMode('forgot-password');
+                    setError('');
+                    setSuccess('');
+                  }}
+                  className="text-sm font-medium text-[var(--pm-color-action)] hover:text-[var(--pm-color-action-hover)]">
                   Forgot password?
-                </a>
+                </button>
               </div>
             )}
 
@@ -198,8 +267,20 @@ export default function Auth({ defaultMode = 'login' }: { defaultMode?: 'login' 
 
             <Button type="submit" loading={loading} className="w-full rounded-xl py-3 text-base">
               {loading
-                ? (mode === 'login' ? 'Signing in...' : 'Creating account...')
-                : (mode === 'login' ? 'Log in' : 'Create Account')}
+                ? (
+                  mode === 'login' ? 'Signing in...' : 
+                  mode === 'register' ? 'Creating account...' :
+                  mode === 'forgot-password' ? 'Sending OTP...' :
+                  mode === 'verify-otp' ? 'Verifying...' :
+                  'Resetting...'
+                )
+                : (
+                  mode === 'login' ? 'Log in' : 
+                  mode === 'register' ? 'Create Account' :
+                  mode === 'forgot-password' ? 'Send OTP' :
+                  mode === 'verify-otp' ? 'Verify OTP' :
+                  'Reset Password'
+                )}
             </Button>
           </form>
 
@@ -212,14 +293,34 @@ export default function Auth({ defaultMode = 'login' }: { defaultMode?: 'login' 
           )}
 
           <p className="mt-8 text-center text-sm text-gray-600">
-            {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
-            <button
-              type="button"
-              onClick={toggleMode}
-              className="font-semibold text-[var(--pm-color-action)] hover:text-[var(--pm-color-action-hover)] transition-colors"
-            >
-              {mode === 'login' ? 'Register here' : 'Log in here'}
-            </button>
+            {(mode === 'login' || mode === 'register') && (
+              <>
+                {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
+                <button
+                  type="button"
+                  onClick={toggleMode}
+                  className="font-semibold text-[var(--pm-color-action)] hover:text-[var(--pm-color-action-hover)] transition-colors"
+                >
+                  {mode === 'login' ? 'Register here' : 'Log in here'}
+                </button>
+              </>
+            )}
+            {(mode === 'forgot-password' || mode === 'verify-otp' || mode === 'reset-password') && (
+              <>
+                Remember your password?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login');
+                    setError('');
+                    setSuccess('');
+                  }}
+                  className="font-semibold text-[var(--pm-color-action)] hover:text-[var(--pm-color-action-hover)] transition-colors"
+                >
+                  Back to login
+                </button>
+              </>
+            )}
           </p>
         </div>
       </div>

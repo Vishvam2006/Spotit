@@ -79,17 +79,6 @@ export function overallStatusLabel(status: OverallStatus): string {
   return OVERALL_LABELS[status] ?? 'Not checked';
 }
 
-const OVERALL_HEADLINES: Record<OverallStatus, string> = {
-  VERIFIED: 'Document verified',
-  NEEDS_REVIEW: "We couldn't fully confirm this document",
-  REJECTED: 'This document was not accepted',
-};
-
-export function overallStatusHeadline(status: OverallStatus, engineAvailable = true): string {
-  if (!engineAvailable) return "We couldn't reach the verification engine";
-  return OVERALL_HEADLINES[status] ?? 'Verification complete';
-}
-
 export function confidenceTone(score: number): Tone {
   if (score >= 0.85) return 'pass';
   if (score >= 0.6) return 'warn';
@@ -110,3 +99,78 @@ export const CONFIDENCE_COMPONENT_LABELS: Record<string, string> = {
   legibility: 'Image legibility',
   documentTypeCertainty: 'Document type certainty',
 };
+
+/**
+ * The user-facing result states, finer than the three verdicts the engine
+ * returns. These do NOT change the verdict — they split the two umbrella
+ * verdicts (NEEDS_REVIEW, REJECTED) into the distinct things a user should do
+ * about them, derived from `engineStatus`/`engineAvailable` already on the wire:
+ *
+ *   NEEDS_REVIEW  -> NEEDS_REUPLOAD    (couldn't read it — retake a clearer photo)
+ *                 -> TEMPORARY_FAILURE (engine hiccup — not a verdict, try again)
+ *                 -> NEEDS_REVIEW      (read it, a human should look)
+ *   REJECTED      -> INVALID_DOCUMENT  (wrong kind of document — upload the right one)
+ *                 -> REJECTED          (genuine content mismatch / expired)
+ */
+export type ResultState =
+  | 'VERIFIED'
+  | 'NEEDS_REUPLOAD'
+  | 'TEMPORARY_FAILURE'
+  | 'NEEDS_REVIEW'
+  | 'INVALID_DOCUMENT'
+  | 'REJECTED';
+
+interface ResultStateInput {
+  overallStatus: OverallStatus;
+  engineAvailable?: boolean;
+  documents: { engineStatus?: string }[];
+}
+
+export function deriveResultState(result: ResultStateInput): ResultState {
+  // The engine was never reached: this is explicitly not a verdict.
+  if (result.engineAvailable === false) return 'TEMPORARY_FAILURE';
+  if (result.overallStatus === 'VERIFIED') return 'VERIFIED';
+
+  const engineStatuses = result.documents.map((d) => (d.engineStatus ?? '').toUpperCase());
+
+  if (result.overallStatus === 'REJECTED') {
+    // "Not a recognised document" is a re-upload-the-right-thing case, distinct
+    // from a real mismatch/expiry, so it must not read like a fraud rejection.
+    if (engineStatuses.some((s) => s === 'UNKNOWN_DOCUMENT')) return 'INVALID_DOCUMENT';
+    return 'REJECTED';
+  }
+
+  // NEEDS_REVIEW umbrella.
+  if (engineStatuses.some((s) => s === 'OCR_FAILED')) return 'NEEDS_REUPLOAD';
+  if (engineStatuses.some((s) => s === 'PROCESSING_ERROR')) return 'TEMPORARY_FAILURE';
+  return 'NEEDS_REVIEW';
+}
+
+const RESULT_STATE_HEADLINES: Record<ResultState, string> = {
+  VERIFIED: 'Document verified',
+  NEEDS_REUPLOAD: "We couldn't read this clearly",
+  TEMPORARY_FAILURE: "We couldn't reach the verification engine",
+  NEEDS_REVIEW: "We couldn't fully confirm this document",
+  INVALID_DOCUMENT: "That doesn't look like the right document",
+  REJECTED: 'This document was not accepted',
+};
+
+const RESULT_STATE_GUIDANCE: Record<ResultState, string | null> = {
+  VERIFIED: null,
+  NEEDS_REUPLOAD:
+    'Retake the photo in good light, hold steady, and make sure all four corners and the text are sharp.',
+  TEMPORARY_FAILURE:
+    'Your document was not rejected — it was never checked, and nothing has been recorded. Please try again shortly.',
+  NEEDS_REVIEW: null,
+  INVALID_DOCUMENT:
+    'Upload a clear photo of your Vehicle RC or Driving Licence, not another document or image.',
+  REJECTED: null,
+};
+
+export function resultStateHeadline(state: ResultState): string {
+  return RESULT_STATE_HEADLINES[state] ?? 'Verification complete';
+}
+
+export function resultStateGuidance(state: ResultState): string | null {
+  return RESULT_STATE_GUIDANCE[state] ?? null;
+}

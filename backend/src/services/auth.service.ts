@@ -110,3 +110,83 @@ export async function getUserById(id: string): Promise<SafeUser> {
 
   return user;
 }
+
+const otpStore = new Map<string, { otp: string, expiresAt: number }>();
+
+import nodemailer from 'nodemailer';
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+export async function sendPasswordResetOtp(email: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    throw new AuthError(404, 'User not found');
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  otpStore.set(email, { otp, expiresAt: Date.now() + 15 * 60 * 1000 }); // 15 mins
+  
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn('SMTP credentials not provided. Falling back to console logging.');
+    console.log(`\n\n=== OTP for ${email} is ${otp} ===\n\n`);
+    return;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || '"Spotit Support" <noreply@spotit.example>',
+      to: email,
+      subject: 'Password Reset OTP - Spotit',
+      text: `Your OTP for resetting your password is: ${otp}\nThis OTP is valid for 15 minutes.`,
+      html: `
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2>Password Reset Request</h2>
+          <p>You have requested to reset your password. Use the following OTP to complete the process:</p>
+          <h1 style="color: #071F1C; letter-spacing: 5px;">${otp}</h1>
+          <p>This OTP is valid for 15 minutes.</p>
+          <p>If you did not request this, please ignore this email.</p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    throw new AuthError(500, 'Failed to send OTP email');
+  }
+}
+
+export async function verifyPasswordResetOtp(email: string, otp: string): Promise<void> {
+  const record = otpStore.get(email);
+  if (!record) {
+    throw new AuthError(400, 'Invalid or expired OTP');
+  }
+  if (record.otp !== otp) {
+    throw new AuthError(400, 'Invalid OTP');
+  }
+  if (Date.now() > record.expiresAt) {
+    otpStore.delete(email);
+    throw new AuthError(400, 'OTP has expired');
+  }
+}
+
+export async function resetPasswordWithOtp(data: import('../validators/auth.validator').ResetPasswordInput): Promise<SafeUser> {
+  await verifyPasswordResetOtp(data.email, data.otp);
+
+  const passwordHash = await bcrypt.hash(data.newPassword, BCRYPT_ROUNDS);
+
+  const user = await prisma.user.update({
+    where: { email: data.email },
+    data: { passwordHash },
+    select: safeUserSelect,
+  });
+
+  otpStore.delete(data.email);
+
+  return user;
+}

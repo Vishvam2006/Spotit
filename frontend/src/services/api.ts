@@ -53,6 +53,18 @@ export function getApiFailureKind(error: unknown): ApiFailureKind {
   return "client";
 }
 
+/**
+ * The structured error code the backend attaches (e.g. FILE_TOO_LARGE), when
+ * present. Lets a feature map a failure to its own controlled copy instead of
+ * surfacing the raw server message.
+ */
+export function getApiErrorCode(error: unknown): string | undefined {
+  if (axios.isAxiosError<ApiErrorResponse>(error)) {
+    return error.response?.data?.code;
+  }
+  return undefined;
+}
+
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
     const { response } = error;

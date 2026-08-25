@@ -39,17 +39,33 @@ function decodeVerificationFile(file: VerificationFile): Buffer {
   const buffer = Buffer.from(base64Content, 'base64');
 
   if (buffer.length === 0) {
-    throw new VerificationError(400, 'Uploaded document is empty.');
+    throw new VerificationError(400, 'Uploaded document is empty.', 'EMPTY_FILE');
   }
 
   if (buffer.length > MAX_FILE_BYTES) {
-    throw new VerificationError(413, 'Uploaded document is too large. Maximum allowed size is 15MB.');
+    throw new VerificationError(
+      413,
+      'Uploaded document is too large. Maximum allowed size is 15MB.',
+      'FILE_TOO_LARGE',
+    );
   }
 
   if (!isAllowedImageFormat(buffer)) {
+    // A non-empty buffer too short to carry any real document signature is a
+    // truncated/corrupted upload rather than a wrong file type.
+    if (buffer.length < 12) {
+      throw new VerificationError(
+        400,
+        'This file looks incomplete or corrupted and could not be read.',
+        'CORRUPTED_FILE',
+      );
+    }
+    // The bytes match no JPG/PNG/WEBP/PDF signature, so renaming another file
+    // to a .jpg extension cannot slip past this content-based check.
     throw new VerificationError(
       400,
       'Uploaded file is not a valid JPG, PNG, WEBP, or PDF document.',
+      'INVALID_FILE_TYPE',
     );
   }
 
@@ -69,8 +85,27 @@ export interface VerifyPayload {
   expectedName?: string;
 }
 
+/**
+ * Machine-readable reasons a document upload is rejected before verification
+ * even starts. The frontend maps these to controlled, user-facing copy so a
+ * raw backend message never reaches the screen.
+ */
+export type VerificationErrorCode =
+  | 'NO_DOCUMENTS'
+  | 'TOO_MANY_FILES'
+  | 'EMPTY_FILE'
+  | 'FILE_TOO_LARGE'
+  | 'INVALID_FILE_TYPE'
+  | 'CORRUPTED_FILE';
+
 export class VerificationError extends Error {
-  constructor(public statusCode: number, message: string) {
+  constructor(
+    public statusCode: number,
+    message: string,
+    // Undefined for generic errors, which the central handler reports as the
+    // existing `VERIFICATION_ERROR` code (backwards compatible).
+    public code?: VerificationErrorCode,
+  ) {
     super(message);
     this.name = 'VerificationError';
   }
@@ -202,11 +237,19 @@ function engineUnavailableResult(
 
 export async function processDocumentVerification(payload: VerifyPayload) {
   if (!payload.files || payload.files.length === 0) {
-    throw new VerificationError(400, 'At least one document image must be uploaded.');
+    throw new VerificationError(
+      400,
+      'At least one document image must be uploaded.',
+      'NO_DOCUMENTS',
+    );
   }
 
   if (payload.files.length > MAX_FILES_PER_REQUEST) {
-    throw new VerificationError(400, `At most ${MAX_FILES_PER_REQUEST} documents can be verified per request.`);
+    throw new VerificationError(
+      400,
+      `At most ${MAX_FILES_PER_REQUEST} documents can be verified per request.`,
+      'TOO_MANY_FILES',
+    );
   }
 
   for (const file of payload.files) {

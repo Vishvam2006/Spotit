@@ -88,6 +88,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const forgotPassword = useCallback(async (email: string) => {
+    await api.post("/auth/forgot-password", { email });
+  }, []);
+
+  const verifyOtp = useCallback(async (email: string, otp: string) => {
+    await api.post("/auth/verify-otp", { email, otp });
+  }, []);
+
+  const resetPassword = useCallback(async (email: string, otp: string, newPassword: string) => {
+    const { data } = await api.post<AuthResponse>("/auth/reset-password", {
+      email,
+      otp,
+      newPassword,
+    });
+    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
+    return data.user;
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
@@ -112,9 +133,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isInitializing,
       login,
       register,
+      forgotPassword,
+      verifyOtp,
+      resetPassword,
       logout,
     }),
-    [user, token, isInitializing, login, register, logout]
+    [user, token, isInitializing, login, register, forgotPassword, verifyOtp, resetPassword, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
