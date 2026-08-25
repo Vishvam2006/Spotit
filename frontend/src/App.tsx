@@ -3,8 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import GuestRoute from './components/GuestRoute';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import Auth from './pages/Auth';
 import Home from './pages/Home';
 import ParkingDetails from './pages/ParkingDetails';
 import BookingConfirm from './pages/BookingConfirm';
@@ -30,7 +29,7 @@ export default function App() {
             path="/login"
             element={
               <GuestRoute>
-                <Login />
+                <Auth defaultMode="login" />
               </GuestRoute>
             }
           />
@@ -38,7 +37,7 @@ export default function App() {
             path="/register"
             element={
               <GuestRoute>
-                <Register />
+                <Auth defaultMode="register" />
               </GuestRoute>
             }
           />
