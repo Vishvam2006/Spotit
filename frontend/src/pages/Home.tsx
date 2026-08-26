@@ -32,7 +32,7 @@ export default function Home() {
   const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
-    fetchParkingLots().then((lots) => setAllParkingLots(lots)).catch(() => {});
+    fetchParkingLots().then((lots) => setAllParkingLots(lots)).catch(() => { });
     getCurrentPositionDetailed().then((res) => {
       if (res.ok) setUserLocation(res.coords);
     });
@@ -89,7 +89,7 @@ export default function Home() {
           </div>
 
           {/* Main Search Area */}
-          <div 
+          <div
             onClick={handleSearchClick}
             className="flex items-center justify-between gap-3 rounded-[2rem] bg-[var(--pm-color-surface-raised)] p-3 pl-5 pm-neumorphic cursor-text mb-4"
           >
@@ -106,7 +106,7 @@ export default function Home() {
           </div>
 
           {/* Recent Destination Card */}
-          <div 
+          <div
             onClick={handleSearchClick}
             className="flex items-center justify-between rounded-2xl bg-[var(--pm-color-surface)] p-4 pm-neumorphic pm-neumorphic-active mb-8 cursor-pointer transition-all"
           >
@@ -130,9 +130,9 @@ export default function Home() {
               <QuickActionButton icon={Search} label="Find Park" onClick={() => handleQuickAction('explore')} badge="Fast" />
               <QuickActionButton icon={Compass} label="Nearby" onClick={() => handleQuickAction('explore')} />
               <QuickActionButton icon={CalendarDays} label="Bookings" onClick={() => handleQuickAction('bookings')} />
-              
+
               <QuickActionButton icon={Car} label="Vehicles" onClick={() => handleQuickAction('vehicles')} />
-              <QuickActionButton icon={MapPin} label="Saved" onClick={() => {}} />
+              <QuickActionButton icon={MapPin} label="Saved" onClick={() => { }} />
               <QuickActionButton icon={AlertTriangle} label="Report" onClick={() => {
                 if (!user) navigate('/login');
                 else setReportOpen(true);
@@ -201,7 +201,7 @@ function QuickActionButton({ icon: Icon, label, onClick, badge }: { icon: Lucide
 
 function NearbyParkingCard({ lot, onClick }: { lot: ParkingLot, onClick: () => void }) {
   return (
-    <article 
+    <article
       onClick={onClick}
       className="w-[280px] shrink-0 rounded-2xl bg-[var(--pm-color-surface)] overflow-hidden pm-neumorphic pm-neumorphic-active cursor-pointer transition-all"
     >

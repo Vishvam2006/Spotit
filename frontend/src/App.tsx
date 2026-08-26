@@ -70,25 +70,19 @@ export default function App() {
           <Route
             path="/bookings"
             element={
-              <ProtectedRoute>
-                <Bookings />
-              </ProtectedRoute>
+              <Bookings />
             }
           />
           <Route
             path="/my-parkings"
             element={
-              <ProtectedRoute>
-                <MyParkings />
-              </ProtectedRoute>
+              <MyParkings />
             }
           />
           <Route
             path="/my-vehicles"
             element={
-              <ProtectedRoute>
-                <MyVehicles />
-              </ProtectedRoute>
+              <MyVehicles />
             }
           />
           <Route
@@ -102,9 +96,7 @@ export default function App() {
           <Route
             path="/verification"
             element={
-              <ProtectedRoute>
-                <AIVerification />
-              </ProtectedRoute>
+              <AIVerification />
             }
           />
           <Route

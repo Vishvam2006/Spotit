@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { api, UNAUTHORIZED_EVENT } from "../services/api";
 import type { AuthResponse, MeResponse, User } from "../types";
-import { AuthContext } from "./auth-context";
+import { AuthContext, type OpenAuthModalOptions } from "./auth-context";
+import AuthModal from "../components/auth/AuthModal";
 
 const TOKEN_KEY = "spotit_token";
 const USER_KEY = "spotit_user";
@@ -23,6 +24,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [user, setUser] = useState<User | null>(() => readStoredUser());
   const [isInitializing, setIsInitializing] = useState(true);
+
+  // Global Auth Modal State
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [modalOptions, setModalOptions] = useState<OpenAuthModalOptions>({});
+
+  const openAuthModal = useCallback((options?: OpenAuthModalOptions) => {
+    setModalOptions(options || {});
+    setIsAuthModalOpen(true);
+  }, []);
+
+  const closeAuthModal = useCallback(() => {
+    setIsAuthModalOpen(false);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -137,9 +151,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyOtp,
       resetPassword,
       logout,
+      openAuthModal,
+      closeAuthModal,
     }),
-    [user, token, isInitializing, login, register, forgotPassword, verifyOtp, resetPassword, logout]
+    [
+      user,
+      token,
+      isInitializing,
+      login,
+      register,
+      forgotPassword,
+      verifyOtp,
+      resetPassword,
+      logout,
+      openAuthModal,
+      closeAuthModal,
+    ]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={closeAuthModal}
+        title={modalOptions.title}
+        subtitle={modalOptions.subtitle}
+        initialMode={modalOptions.initialMode}
+        onSuccess={modalOptions.onSuccess}
+      />
+    </AuthContext.Provider>
+  );
 }

@@ -38,13 +38,15 @@ interface ResultFile {
 const MAX_FILES = 10;
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+import { useAuth } from '../context/auth-context';
 
 export function AIVerification() {
+  const { user, openAuthModal } = useAuth();
   const [searchParams] = useSearchParams();
   const targetVehicleParam = searchParams.get('vehicleId');
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loadingVehicles, setLoadingVehicles] = useState(true);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [vehiclesError, setVehiclesError] = useState<string | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState(targetVehicleParam || '');
   const [files, setFiles] = useState<LocalFileItem[]>([]);
@@ -60,6 +62,11 @@ export function AIVerification() {
   const abortRef = useRef<AbortController | null>(null);
 
   const loadUserVehicles = useCallback(async () => {
+    if (!user) {
+      setLoadingVehicles(false);
+      return;
+    }
+    setLoadingVehicles(true);
     try {
       const list = await fetchVehicles();
       setVehicles(list);
@@ -76,30 +83,15 @@ export function AIVerification() {
     } finally {
       setLoadingVehicles(false);
     }
-  }, [targetVehicleParam]);
+  }, [user, targetVehicleParam]);
 
   useEffect(() => {
-    let active = true;
-    fetchVehicles()
-      .then((list) => {
-        if (!active) return;
-        setVehicles(list);
-        const preferred =
-          (targetVehicleParam && list.find((v) => v.id === targetVehicleParam)) ||
-          list.find((v) => v.isDefault) ||
-          list[0];
-        if (preferred) setSelectedVehicleId(preferred.id);
-      })
-      .catch((err) => {
-        if (active) setVehiclesError(getErrorMessage(err));
-      })
-      .finally(() => {
-        if (active) setLoadingVehicles(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [targetVehicleParam]);
+    if (!user) {
+      setLoadingVehicles(false);
+      return;
+    }
+    void loadUserVehicles();
+  }, [user, loadUserVehicles]);
 
   // Revoke any preview URLs still held when the page unmounts.
   useEffect(
@@ -269,7 +261,32 @@ export function AIVerification() {
           </div>
         )}
 
-        {showUpload && (
+        {!user ? (
+          <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-sm text-center max-w-lg mx-auto">
+            <h2 className="text-xl font-bold text-slate-900">Sign in for AI Vehicle Verification</h2>
+            <p className="mt-2 text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
+              Upload your vehicle RC or driving license to get verified with AI and unlock fast-track parking access.
+            </p>
+
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => openAuthModal({ title: 'Sign in for AI Verification', onSuccess: loadUserVehicles })}
+                className="w-full sm:w-auto rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-emerald-700 active:scale-[0.99] transition-all"
+              >
+                Sign In / Register
+              </button>
+              <Link
+                to="/explore"
+                className="w-full sm:w-auto rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100 transition-all text-center"
+              >
+                Explore Map
+              </Link>
+            </div>
+          </div>
+        ) : null}
+
+        {user && showUpload && (
           <div className="mt-6 space-y-6 rounded-2xl bg-[var(--pm-color-surface)] p-6 shadow-sm ring-1 ring-[var(--pm-color-border)]">
             <h2 className="text-lg font-bold text-[var(--pm-color-text)]">Upload your document</h2>
 
