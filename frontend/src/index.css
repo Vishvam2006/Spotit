@@ -47,10 +47,10 @@
   --pm-color-border-strong: #cbd5e1;
   --pm-color-text: #0f172a;
   --pm-color-muted: #64748b;
-  --pm-color-action: #0f9f8c;
-  --pm-color-action-hover: #0c897a;
-  --pm-color-action-soft: rgba(15, 159, 140, 0.12);
-  --pm-color-focus: #0d9488;
+  --pm-color-action: #14A08F;
+  --pm-color-action-hover: #0f7a6d;
+  --pm-color-action-soft: rgba(20, 160, 143, 0.12);
+  --pm-color-focus: #14A08F;
   --pm-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.06);
   --pm-shadow-sheet: 0 -12px 32px rgba(15, 23, 42, 0.14);
   --pm-neumorphic-light: rgba(255, 255, 255, 0.9);

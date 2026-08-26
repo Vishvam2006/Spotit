@@ -11,6 +11,8 @@ import AnalysisProgress, {
 import DocumentResultCard from '../components/verification/DocumentResultCard';
 import ResultBanner from '../components/verification/ResultBanner';
 import VehicleCrossReference from '../components/verification/VehicleCrossReference';
+import { describeVerificationError } from '../components/verification/verificationErrors';
+import { deriveResultState } from '../components/verification/verificationTokens';
 import { getErrorMessage } from '../services/api';
 import { fetchVehicles } from '../services/vehicles';
 import { verifyUploadedDocuments, type VerificationResultData } from '../services/verification';
@@ -186,13 +188,22 @@ export function AIVerification() {
       setResult(response);
       setIsAnalyzing(false);
 
-      if (response.engineAvailable === false) {
-        notifyError('The verification engine could not be reached. Nothing was checked.');
-      } else if (response.overallStatus === 'VERIFIED') {
+      // Split the two umbrella verdicts into the distinct thing the user should
+      // do about them, without treating a technical failure as a rejection.
+      const state = deriveResultState(response);
+      if (state === 'VERIFIED') {
         notifySuccess('Document verified.');
         void loadUserVehicles();
+      } else if (state === 'TEMPORARY_FAILURE') {
+        notifyError('The verification engine could not be reached. Nothing was checked — please try again.');
+      } else if (state === 'NEEDS_REUPLOAD') {
+        notifyInfo("We couldn't read that clearly. Retake a sharper photo and try again.");
+      } else if (state === 'INVALID_DOCUMENT') {
+        notifyError("That doesn't look like an RC or licence. Please upload the correct document.");
+      } else if (state === 'NEEDS_REVIEW') {
+        notifyInfo(response.summary || 'This document needs a manual review.');
       } else {
-        notifyError(response.summary || 'Verification did not pass.');
+        notifyError(response.summary || 'This document was not accepted.');
       }
     } catch (err) {
       setIsAnalyzing(false);
@@ -200,9 +211,10 @@ export function AIVerification() {
         notifyInfo('Verification cancelled.');
         return;
       }
-      const message = getErrorMessage(err);
-      setErrorMsg(message);
-      notifyError(message);
+      // Map to controlled copy: a raw backend/AI error must never reach the user.
+      const friendly = describeVerificationError(err);
+      setErrorMsg(friendly.message);
+      notifyError(friendly.message);
     } finally {
       abortRef.current = null;
     }

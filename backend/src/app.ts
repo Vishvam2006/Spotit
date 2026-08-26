@@ -49,6 +49,14 @@ app.get('/', (_req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'Spotit API is running' });
 });
 
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok',
+    message: 'Spotit API is healthy',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/parking-lots', parkingRoutes);
 app.use('/api/bookings', bookingRoutes);
@@ -166,7 +174,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     res.status(err.statusCode).json({
       success: false,
       message: err.message,
-      code: 'VERIFICATION_ERROR',
+      code: err.code ?? 'VERIFICATION_ERROR',
     });
     return;
   }
