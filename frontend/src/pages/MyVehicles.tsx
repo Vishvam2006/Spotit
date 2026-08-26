@@ -15,9 +15,12 @@ import {
 } from '../services/vehicles';
 import { getErrorMessage } from '../services/api';
 import { notifyError, notifySuccess } from '../utils/notify';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/auth-context';
 import type { Vehicle } from '../types/vehicle';
 
 export default function MyVehicles() {
+  const { user, openAuthModal } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -30,6 +33,10 @@ export default function MyVehicles() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const loadVehicles = useCallback(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     let active = true;
     fetchVehicles()
       .then((result) => {
@@ -44,9 +51,15 @@ export default function MyVehicles() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user]);
 
-  useEffect(() => loadVehicles(), [loadVehicles]);
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    loadVehicles();
+  }, [user, loadVehicles]);
 
   const openAdd = () => {
     setFormError(null);
@@ -176,7 +189,30 @@ export default function MyVehicles() {
         )}
 
         <div className="mt-6">
-          {loading ? (
+          {!user ? (
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-sm text-center max-w-lg mx-auto">
+              <h2 className="text-xl font-bold text-slate-900">Sign in to manage your vehicles</h2>
+              <p className="mt-2 text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
+                Add license plates, enable automated FASTag checkpoint check-in, and select vehicles during booking.
+              </p>
+
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => openAuthModal({ title: 'Sign in to manage Vehicles', onSuccess: loadVehicles })}
+                  className="w-full sm:w-auto rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-emerald-700 active:scale-[0.99] transition-all"
+                >
+                  Sign In / Register
+                </button>
+                <Link
+                  to="/explore"
+                  className="w-full sm:w-auto rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100 transition-all text-center"
+                >
+                  Explore Map
+                </Link>
+              </div>
+            </div>
+          ) : loading ? (
             <div className="flex items-center justify-center py-24">
               <Spinner className="h-8 w-8 text-emerald-600" />
             </div>

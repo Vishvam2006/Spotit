@@ -11,6 +11,7 @@ import { cancelBooking, fetchBookings } from '../services/bookings';
 import { notifyError, notifySuccess } from '../utils/notify';
 import ReportIssueForm from '../components/continuity/ReportIssueForm';
 import BookingTimeline from '../components/continuity/BookingTimeline';
+import { useAuth } from '../context/auth-context';
 import type { Booking, BookingStatus } from '../types/booking';
 
 const LIVE_STATUSES: BookingStatus[] = ['RESERVED', 'ACTIVE'];
@@ -36,6 +37,7 @@ const TABS: { key: TabKey; label: string; statuses: BookingStatus[] }[] = [
 const REPORTABLE: BookingStatus[] = ['RESERVED', 'ACTIVE', 'COMPLETED', 'EXPIRED'];
 
 export default function Bookings() {
+  const { user, openAuthModal } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +48,10 @@ export default function Bookings() {
   const [openTimelineId, setOpenTimelineId] = useState<string | null>(null);
 
   const loadBookings = useCallback(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     let active = true;
 
     fetchBookings()
@@ -62,9 +68,15 @@ export default function Bookings() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user]);
 
-  useEffect(() => loadBookings(), [loadBookings]);
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    loadBookings();
+  }, [user, loadBookings]);
 
   const hasLiveBookings = bookings.some((booking) => LIVE_STATUSES.includes(booking.status));
 
@@ -129,7 +141,30 @@ export default function Bookings() {
           </div>
         )}
 
-        {loading ? (
+        {!user ? (
+          <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-sm text-center max-w-lg mx-auto">
+            <h2 className="text-xl font-bold text-slate-900">Sign in to view your bookings</h2>
+            <p className="mt-2 text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
+              Track live parking sessions, view countdown timers, and manage previous receipts seamlessly.
+            </p>
+
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => openAuthModal({ title: 'Sign in to view Bookings', onSuccess: loadBookings })}
+                className="w-full sm:w-auto rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-emerald-700 active:scale-[0.99] transition-all"
+              >
+                Sign In / Register
+              </button>
+              <Link
+                to="/explore"
+                className="w-full sm:w-auto rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100 transition-all text-center"
+              >
+                Explore Map
+              </Link>
+            </div>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-24">
             <Spinner className="h-8 w-8 text-emerald-600" />
           </div>

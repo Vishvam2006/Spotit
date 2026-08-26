@@ -45,25 +45,19 @@ export default function App() {
           <Route
             path="/"
             element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
+              <Home />
             }
           />
           <Route
             path="/explore"
             element={
-              <ProtectedRoute>
-                <Explore />
-              </ProtectedRoute>
+              <Explore />
             }
           />
           <Route
             path="/parking/:id"
             element={
-              <ProtectedRoute>
-                <ParkingDetails />
-              </ProtectedRoute>
+              <ParkingDetails />
             }
           />
           <Route
@@ -77,25 +71,19 @@ export default function App() {
           <Route
             path="/bookings"
             element={
-              <ProtectedRoute>
-                <Bookings />
-              </ProtectedRoute>
+              <Bookings />
             }
           />
           <Route
             path="/my-parkings"
             element={
-              <ProtectedRoute>
-                <MyParkings />
-              </ProtectedRoute>
+              <MyParkings />
             }
           />
           <Route
             path="/my-vehicles"
             element={
-              <ProtectedRoute>
-                <MyVehicles />
-              </ProtectedRoute>
+              <MyVehicles />
             }
           />
           <Route
@@ -109,9 +97,7 @@ export default function App() {
           <Route
             path="/verification"
             element={
-              <ProtectedRoute>
-                <AIVerification />
-              </ProtectedRoute>
+              <AIVerification />
             }
           />
           <Route

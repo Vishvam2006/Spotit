@@ -8,7 +8,7 @@ const port = Number(process.env.PORT) || 5001;
 const sweeper = startSessionSweeper();
 
 const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`ParkMitra server running on port ${port}`);
+  console.log(`Spotit server running on port ${port}`);
 });
 
 function shutdown(signal: string) {

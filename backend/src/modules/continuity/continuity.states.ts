@@ -4,7 +4,7 @@ import type { BookingStatus, ParkingLotStatus } from '@prisma/client';
  * The booking state machine at the heart of the Continuity Engine.
  *
  * Naming note: the spec for this engine calls the "space is held for you"
- * state CONFIRMED. ParkMitra already shipped that state as RESERVED, in the
+ * state CONFIRMED. Spotit already shipped that state as RESERVED, in the
  * database, the API and the UI, so RESERVED *is* CONFIRMED here. There is no
  * PENDING/PAYMENT_FAILED pair because bookings are not paid for up front —
  * a booking is either created (and holding a space) or it failed to be

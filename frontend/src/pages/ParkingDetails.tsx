@@ -27,12 +27,12 @@ const DURATION_OPTIONS = [
 export default function ParkingDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, openAuthModal } = useAuth();
   const [parking, setParking] = useState<ParkingLot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [vehiclesLoading, setVehiclesLoading] = useState(true);
+  const [vehiclesLoading, setVehiclesLoading] = useState(false);
   const [vehiclesError, setVehiclesError] = useState<string | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(120);
@@ -62,7 +62,15 @@ export default function ParkingDetails() {
   }, [id]);
 
   useEffect(() => {
+    if (!user) {
+      setVehicles([]);
+      setSelectedVehicleId(null);
+      setVehiclesLoading(false);
+      return;
+    }
+
     let active = true;
+    setVehiclesLoading(true);
 
     fetchVehicles()
       .then((result) => {
@@ -83,7 +91,7 @@ export default function ParkingDetails() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user]);
 
   const selectedOption =
     DURATION_OPTIONS.find((option) => option.minutes === durationMinutes) ??
@@ -96,6 +104,14 @@ export default function ParkingDetails() {
   const handleBook = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitError(null);
+
+    if (!user) {
+      openAuthModal({
+        title: 'Sign in to Reserve Spot',
+        subtitle: 'Login or register to select vehicle and confirm booking.',
+      });
+      return;
+    }
 
     if (!selectedVehicleId) {
       setSubmitError('Please choose a vehicle to book with.');

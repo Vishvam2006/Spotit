@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/auth-context';
 import AppLayout from '../components/layout/AppLayout';
 import ParkingForm from '../components/parking/ParkingForm';
 import Alert from '../components/ui/Alert';
@@ -20,6 +21,7 @@ type FormMode = 'create' | 'edit' | null;
 
 export default function MyParkings() {
   const navigate = useNavigate();
+  const { user, openAuthModal } = useAuth();
   const [parkings, setParkings] = useState<Parking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +33,11 @@ export default function MyParkings() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     let active = true;
 
     getMyParkings()
@@ -47,7 +54,7 @@ export default function MyParkings() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user]);
 
   const openCreateForm = () => {
     // Creating a lot requires pinning it on the map, which only /explore can do.
@@ -154,7 +161,30 @@ export default function MyParkings() {
           </div>
         )}
 
-        {loading ? (
+        {!user ? (
+          <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-sm text-center max-w-lg mx-auto">
+            <h2 className="text-xl font-bold text-slate-900">Sign in to manage your parking spaces</h2>
+            <p className="mt-2 text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
+              List parking spots, set hourly/monthly rates, and track real-time occupancy and earnings.
+            </p>
+
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => openAuthModal({ title: 'Sign in to Manage Parkings' })}
+                className="w-full sm:w-auto rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-emerald-700 active:scale-[0.99] transition-all"
+              >
+                Sign In / Register
+              </button>
+              <Link
+                to="/explore"
+                className="w-full sm:w-auto rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-100 transition-all text-center"
+              >
+                Explore Map
+              </Link>
+            </div>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-24">
             <Spinner className="h-8 w-8 text-emerald-600" />
           </div>

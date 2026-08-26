@@ -10,7 +10,7 @@ import {
   auth,
 } from './helpers';
 
-const EVIDENCE = 'https://res.cloudinary.com/parkmitra/image/upload/v1/evidence/full-lot.jpg';
+const EVIDENCE = 'https://res.cloudinary.com/spotit/image/upload/v1/evidence/full-lot.jpg';
 
 describe('continuity engine', () => {
   beforeEach(resetDb);

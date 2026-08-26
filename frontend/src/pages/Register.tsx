@@ -63,7 +63,7 @@ export default function Register() {
         <div className="relative flex items-center gap-3">
           <Logo className="h-11 w-11" />
           <span className="text-2xl font-bold tracking-tight text-white">
-            ParkMitra
+            Spotit
           </span>
         </div>
 
@@ -78,7 +78,7 @@ export default function Register() {
         </div>
 
         <p className="relative text-sm text-emerald-200">
-          &copy; {new Date().getFullYear()} ParkMitra. All rights reserved.
+          &copy; {new Date().getFullYear()} Spotit. All rights reserved.
         </p>
       </aside>
 
@@ -89,7 +89,7 @@ export default function Register() {
             <Logo className="h-14 w-14" />
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-tight text-[var(--pm-color-text)]">
-                ParkMitra
+                Spotit
               </h1>
               <p className="text-sm text-[var(--pm-color-muted)]">
                 Smart Parking Made Simple
@@ -102,7 +102,7 @@ export default function Register() {
               Create your account
             </h2>
             <p className="mt-1.5 text-sm text-[var(--pm-color-muted)]">
-              Join ParkMitra and start managing your parking sessions.
+              Join Spotit and start managing your parking sessions.
             </p>
 
             <form

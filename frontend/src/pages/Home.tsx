@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/auth-context';
 import { useNavigate } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -21,15 +22,17 @@ import { fetchParkingLots } from '../services/parking';
 import type { ParkingLot } from '../types/parking';
 import { getCurrentPositionDetailed, type LatLng } from '../utils/geolocation';
 import { haversineDistanceKm } from '../utils/distance';
+import LandingPage from '../components/landing/LandingPage';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { user, isInitializing } = useAuth();
   const [allParkingLots, setAllParkingLots] = useState<ParkingLot[]>([]);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
-    fetchParkingLots().then((lots) => setAllParkingLots(lots)).catch(() => {});
+    fetchParkingLots().then((lots) => setAllParkingLots(lots)).catch(() => { });
     getCurrentPositionDetailed().then((res) => {
       if (res.ok) setUserLocation(res.coords);
     });
@@ -61,8 +64,17 @@ export default function Home() {
     else if (action === 'vehicles') navigate('/my-vehicles');
     // The add-parking flow lives on the map (you pin the location first), so
     // `addParking=1` is only ever handled by /explore.
-    else if (action === 'list') navigate('/explore?addParking=1');
+    else if (action === 'list') {
+      if (!user) navigate('/login', { state: { from: '/explore?addParking=1' } });
+      else navigate('/explore?addParking=1');
+    }
   };
+
+  if (isInitializing) return null;
+
+  if (!user) {
+    return <LandingPage />;
+  }
 
   return (
     <AppLayout maxWidth="max-w-none">
@@ -71,13 +83,13 @@ export default function Home() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6 md:hidden">
             <div className="flex items-center gap-2">
-              <img src="/logo.jpg" alt="ParkMitra" className="h-8 w-8 rounded-lg object-cover" />
-              <span className="text-xl font-bold tracking-tight text-[var(--pm-color-text)]">ParkMitra</span>
+              <img src="/logo.jpg" alt="Spotit" className="h-8 w-8 rounded-lg object-cover" />
+              <span className="text-xl font-bold tracking-tight text-[var(--pm-color-text)]">Spotit</span>
             </div>
           </div>
 
           {/* Main Search Area */}
-          <div 
+          <div
             onClick={handleSearchClick}
             className="flex items-center justify-between gap-3 rounded-[2rem] bg-[var(--pm-color-surface-raised)] p-3 pl-5 pm-neumorphic cursor-text mb-4"
           >
@@ -94,7 +106,7 @@ export default function Home() {
           </div>
 
           {/* Recent Destination Card */}
-          <div 
+          <div
             onClick={handleSearchClick}
             className="flex items-center justify-between rounded-2xl bg-[var(--pm-color-surface)] p-4 pm-neumorphic pm-neumorphic-active mb-8 cursor-pointer transition-all"
           >
@@ -118,10 +130,13 @@ export default function Home() {
               <QuickActionButton icon={Search} label="Find Park" onClick={() => handleQuickAction('explore')} badge="Fast" />
               <QuickActionButton icon={Compass} label="Nearby" onClick={() => handleQuickAction('explore')} />
               <QuickActionButton icon={CalendarDays} label="Bookings" onClick={() => handleQuickAction('bookings')} />
-              
+
               <QuickActionButton icon={Car} label="Vehicles" onClick={() => handleQuickAction('vehicles')} />
-              <QuickActionButton icon={MapPin} label="Saved" onClick={() => {}} />
-              <QuickActionButton icon={AlertTriangle} label="Report" onClick={() => setReportOpen(true)} />
+              <QuickActionButton icon={MapPin} label="Saved" onClick={() => { }} />
+              <QuickActionButton icon={AlertTriangle} label="Report" onClick={() => {
+                if (!user) navigate('/login');
+                else setReportOpen(true);
+              }} />
               <QuickActionButton icon={PlusCircle} label="List Space" onClick={() => handleQuickAction('list')} badge="New" />
             </div>
           </div>
@@ -186,7 +201,7 @@ function QuickActionButton({ icon: Icon, label, onClick, badge }: { icon: Lucide
 
 function NearbyParkingCard({ lot, onClick }: { lot: ParkingLot, onClick: () => void }) {
   return (
-    <article 
+    <article
       onClick={onClick}
       className="w-[280px] shrink-0 rounded-2xl bg-[var(--pm-color-surface)] overflow-hidden pm-neumorphic pm-neumorphic-active cursor-pointer transition-all"
     >

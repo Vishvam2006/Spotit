@@ -183,8 +183,8 @@ describe('smart suggest backing data', () => {
         userId: user.user.id,
         registration: 'KA01AB9999',
         type: 'FOUR_WHEELER',
-        imageUrl: 'https://res.cloudinary.com/parkmitra/image/upload/v1/test/vehicle.jpg',
-        imagePublicId: 'parkmitra/vehicles/test/vehicle',
+        imageUrl: 'https://res.cloudinary.com/spotit/image/upload/v1/test/vehicle.jpg',
+        imagePublicId: 'spotit/vehicles/test/vehicle',
         // createBooking only accepts a verified vehicle; this test is about
         // lot suggestion, not the verification gate.
         verificationStatus: 'VERIFIED',

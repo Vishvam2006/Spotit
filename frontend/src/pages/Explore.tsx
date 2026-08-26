@@ -56,7 +56,7 @@ function getParkingClusterCenter(lots: ParkingLot[]): LatLng | null {
 
 export default function Explore() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isInitializing } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [allParkingLots, setAllParkingLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,6 +137,12 @@ export default function Explore() {
 
   useEffect(() => {
     if (searchParams.get('addParking') !== '1') return;
+    if (isInitializing) return;
+    
+    if (!user) {
+      navigate('/login', { state: { from: '/explore?addParking=1' }, replace: true });
+      return;
+    }
 
     // Consuming a one-shot navigation instruction from the URL. It runs once and
     // clears the param below, so it cannot cascade; there is no render-time
@@ -149,7 +155,7 @@ export default function Explore() {
     setAddSessionId((id) => id + 1);
     setSearchParams({}, { replace: true });
     void requestUserLocation();
-  }, [requestUserLocation, searchParams, setSearchParams]);
+  }, [requestUserLocation, searchParams, setSearchParams, user, navigate, isInitializing]);
 
   useEffect(() => {
     const latParam = searchParams.get('lat');
@@ -357,13 +363,17 @@ export default function Explore() {
   );
 
   const startAddParking = useCallback(() => {
+    if (!user) {
+      navigate('/login', { state: { from: '/explore?addParking=1' } });
+      return;
+    }
     setIsAddingParking(true);
     setSelectedParkingId(null);
     setSelectedLocation(null);
     setReturnToMyParkings(false);
     setAddSessionId((id) => id + 1);
     void requestUserLocation();
-  }, [requestUserLocation]);
+  }, [requestUserLocation, user, navigate]);
 
   const cancelAddParking = useCallback(() => {
     setIsAddingParking(false);
@@ -445,11 +455,17 @@ export default function Explore() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => navigate(user?.role === 'OWNER' ? '/dashboard' : '/bookings')}
+                        onClick={() => {
+                          if (!user) {
+                            navigate('/login', { state: { from: '/explore' } });
+                          } else {
+                            navigate(user.role === 'OWNER' ? '/dashboard' : '/bookings');
+                          }
+                        }}
                         aria-label="Profile"
                         className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 font-bold text-white text-xs ring-2 ring-emerald-400/40 shadow-sm transition-transform active:scale-95"
                       >
-                        {user?.fullName?.[0]?.toUpperCase() ?? 'U'}
+                        {user ? (user.fullName?.[0]?.toUpperCase() ?? 'U') : '?'}
                       </button>
                     )
                   }

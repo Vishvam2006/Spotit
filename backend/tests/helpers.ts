@@ -132,7 +132,7 @@ export interface VehicleOverrides {
   verificationStatus?: string | null;
 }
 
-export const testVehicleImageUrl = 'https://res.cloudinary.com/parkmitra/image/upload/v1/test/vehicle.jpg';
+export const testVehicleImageUrl = 'https://res.cloudinary.com/spotit/image/upload/v1/test/vehicle.jpg';
 
 /**
  * Creates a Vehicle row directly in the database. Used by booking/owner
@@ -149,7 +149,7 @@ export async function createVehicleRecord(
       registration: overrides.registration ?? 'KA01AB1234',
       type: overrides.type ?? 'FOUR_WHEELER',
       imageUrl: overrides.imageUrl ?? testVehicleImageUrl,
-      imagePublicId: overrides.imagePublicId ?? `parkmitra/vehicles/${userId}/vehicle-1`,
+      imagePublicId: overrides.imagePublicId ?? `spotit/vehicles/${userId}/vehicle-1`,
       make: overrides.make ?? 'Hyundai',
       model: overrides.model ?? 'i20',
       color: overrides.color ?? 'White',

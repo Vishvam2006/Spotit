@@ -1,8 +1,8 @@
-# ParkMitra Priority Roadmap
+# Spotit Priority Roadmap
 
 ## 1. Strategic Focus
 
-ParkMitra is not only a parking reservation app. Its differentiator is the Continuity Engine: a workflow that captures evidence when parking fails, protects booking records, maintains accurate capacity, recalculates lot reliability, and gives admins an accountable resolution process.
+Spotit is not only a parking reservation app. Its differentiator is the Continuity Engine: a workflow that captures evidence when parking fails, protects booking records, maintains accurate capacity, recalculates lot reliability, and gives admins an accountable resolution process.
 
 Before the demo, prioritize visible trust, reliable booking integrity, and one complete driver-to-admin resolution flow. Do not expand into unrelated features.
 
@@ -303,7 +303,7 @@ These are valid future directions, but they do not strengthen the main demo as m
 
 ## 9. Definition of Demo Ready
 
-### ParkMitra is Demo Ready When:
+### Spotit is Demo Ready When:
 
 - The test suite collects more than zero tests and passes.
 - `--passWithNoTests` is removed.
@@ -321,4 +321,4 @@ These are valid future directions, but they do not strengthen the main demo as m
 - Loading, empty, and error states work for booking/report screens.
 
 Primary demo message:
-“ParkMitra does not only help users reserve parking. When parking fails in the real world, ParkMitra preserves evidence, protects booking integrity, maintains accurate capacity, and routes the issue into an accountable resolution workflow.”
+“Spotit does not only help users reserve parking. When parking fails in the real world, Spotit preserves evidence, protects booking integrity, maintains accurate capacity, and routes the issue into an accountable resolution workflow.”

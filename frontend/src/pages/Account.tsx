@@ -275,7 +275,7 @@ export default function Account() {
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--pm-status-fail-border)] bg-[var(--pm-status-fail-soft)] px-4 py-3 font-semibold text-[var(--pm-status-fail)] transition-colors hover:bg-[var(--pm-status-fail)] hover:text-white"
           >
             <LogOut className="h-5 w-5" />
-            Sign out of ParkMitra
+            Sign out of Spotit
           </button>
         </section>
 

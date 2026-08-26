@@ -1,6 +1,13 @@
 import { createContext, useContext } from 'react';
 import type { User } from '../types';
 
+export interface OpenAuthModalOptions {
+  title?: string;
+  subtitle?: string;
+  initialMode?: 'login' | 'register';
+  onSuccess?: () => void;
+}
+
 export interface AuthContextValue {
   user: User | null;
   token: string | null;
@@ -9,6 +16,8 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<User>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  openAuthModal: (options?: OpenAuthModalOptions) => void;
+  closeAuthModal: () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
