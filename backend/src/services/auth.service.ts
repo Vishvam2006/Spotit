@@ -113,17 +113,8 @@ export async function getUserById(id: string): Promise<SafeUser> {
 
 const otpStore = new Map<string, { otp: string, expiresAt: number }>();
 
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
 export async function sendPasswordResetOtp(email: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
@@ -133,16 +124,21 @@ export async function sendPasswordResetOtp(email: string): Promise<void> {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore.set(email, { otp, expiresAt: Date.now() + 15 * 60 * 1000 }); // 15 mins
   
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('SMTP credentials not provided. Falling back to console logging.');
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+
+  if (!apiKey) {
+    console.warn('[AuthService] RESEND_API_KEY not provided. Falling back to console logging.');
     console.log(`\n\n=== OTP for ${email} is ${otp} ===\n\n`);
     return;
   }
 
+  const resend = new Resend(apiKey);
+
   try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || '"Spotit Support" <noreply@spotit.example>',
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
+      to: [email],
       subject: 'Password Reset OTP - Spotit',
       text: `Your OTP for resetting your password is: ${otp}\nThis OTP is valid for 15 minutes.`,
       html: `
@@ -155,9 +151,24 @@ export async function sendPasswordResetOtp(email: string): Promise<void> {
         </div>
       `,
     });
+
+    if (error) {
+      console.error('[AuthService] Resend API rejected the email:', {
+        message: error.message,
+        name: error.name,
+      });
+      throw new AuthError(500, 'Failed to send OTP email. Email service rejected the request.');
+    }
+    
+    console.log(`[AuthService] Successfully sent OTP email to ${email}. ID: ${data?.id}`);
   } catch (error) {
-    console.error('Failed to send email:', error);
-    throw new AuthError(500, 'Failed to send OTP email');
+    if (error instanceof AuthError) {
+      throw error;
+    }
+    console.error('[AuthService] Unexpected error while sending OTP email via Resend:', 
+      error instanceof Error ? { message: error.message, name: error.name } : 'Unknown error'
+    );
+    throw new AuthError(500, 'Failed to send OTP email due to an internal service error.');
   }
 }
 
