@@ -32,9 +32,12 @@ const app = express();
 app.use(helmet());
 app.set("trust proxy", 1);
 
-const corsOrigins = process.env.CORS_ORIGINS ?? process.env.WEB_APP_URL ?? 'http://localhost:5173';
-const allowedOrigins = corsOrigins
-  .split(',')
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://spotit-park.vercel.app',
+  ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []),
+  ...(process.env.WEB_APP_URL ? process.env.WEB_APP_URL.split(',') : []),
+]
   .map((origin) => origin.trim())
   .filter(Boolean);
 
@@ -43,6 +46,7 @@ app.use(
     origin: allowedOrigins,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   }),
 );
 app.use(express.json({ limit: '50mb' }));
