@@ -15,6 +15,7 @@ import adminRoutes from './modules/admin/admin.routes';
 import complaintRoutes from './modules/complaints/complaint.routes';
 import continuityRoutes from './modules/continuity/continuity.routes';
 import userRoutes from './modules/user/user.routes';
+import paymentRoutes from './modules/payment/payment.routes';
 import { AuthError } from './services/auth.service';
 import { BookingError } from './modules/booking/booking.service';
 import { ParkingError } from './modules/parking/parking.service';
@@ -24,6 +25,7 @@ import { VerificationError } from './modules/verification/verification.service';
 import { AdminError } from './modules/admin/admin.service';
 import { ComplaintError } from './modules/complaints/complaint.service';
 import { ContinuityError } from './modules/continuity/continuity.states';
+import { PaymentError } from './modules/payment/payment.service';
 
 const app = express();
 
@@ -68,6 +70,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/continuity', continuityRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/payments', paymentRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({
@@ -139,6 +142,15 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       success: false,
       message: err.message,
       code: 'BOOKING_ERROR',
+    });
+    return;
+  }
+
+  if (err instanceof PaymentError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      code: 'PAYMENT_ERROR',
     });
     return;
   }

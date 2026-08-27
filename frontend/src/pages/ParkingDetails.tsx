@@ -10,7 +10,8 @@ import ConfidenceBadge from '../components/continuity/ConfidenceBadge';
 import { getErrorMessage } from '../services/api';
 import { fetchParkingLot } from '../services/parking';
 import { fetchVehicles } from '../services/vehicles';
-import { createBooking } from '../services/bookings';
+import { createPaymentOrder, verifyPayment } from '../services/payment';
+import { useRazorpay } from '../hooks/useRazorpay';
 import { formatDateTime, formatINR } from '../utils/format';
 import { notifyError, notifySuccess } from '../utils/notify';
 import { useAuth } from '../context/auth-context';
@@ -28,6 +29,7 @@ export default function ParkingDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, openAuthModal } = useAuth();
+  const { openCheckout } = useRazorpay();
   const [parking, setParking] = useState<ParkingLot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,16 +126,49 @@ export default function ParkingDetails() {
     submittingRef.current = true;
     setSubmitting(true);
     try {
-      const booking = await createBooking({
+      // Step 1: Create a Razorpay order on the backend
+      const order = await createPaymentOrder({
         parkingLotId: parking.id,
         vehicleId: selectedVehicleId,
         durationMinutes,
       });
-      notifySuccess('Booking confirmed! Your spot is reserved.');
+
+      // Step 2: Open Razorpay Checkout modal
+      const razorpayResponse = await openCheckout({
+        keyId: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        orderId: order.razorpayOrderId,
+        name: 'Spotit Parking',
+        description: `${selectedOption.label} at ${order.parkingLotName}`,
+        prefill: {
+          name: user?.fullName ?? '',
+          email: user?.email ?? '',
+        },
+      });
+
+      // Step 3: Verify payment and create booking
+      const result = await verifyPayment({
+        razorpayPaymentId: razorpayResponse.razorpay_payment_id,
+        razorpayOrderId: razorpayResponse.razorpay_order_id,
+        razorpaySignature: razorpayResponse.razorpay_signature,
+        parkingLotId: parking.id,
+        vehicleId: selectedVehicleId,
+        durationMinutes,
+      });
+
+      const booking = result.booking as { id: string };
+      notifySuccess('Payment successful! Your spot is reserved.');
       navigate(`/booking/confirm/${booking.id}`, { replace: true });
     } catch (err) {
-      setSubmitError(getErrorMessage(err));
-      notifyError(err);
+      // Don't show error toast if user just closed the modal
+      const message = err instanceof Error ? err.message : '';
+      if (message === 'Payment was cancelled') {
+        setSubmitError('Payment was cancelled. No booking was created.');
+      } else {
+        setSubmitError(getErrorMessage(err));
+        notifyError(err);
+      }
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -349,7 +384,7 @@ export default function ParkingDetails() {
                 disabled={submitting || vehicles.length === 0}
                 className="flex min-h-14 items-center justify-center rounded-2xl bg-[var(--pm-color-surface-raised)] px-8 text-base font-bold text-[var(--pm-color-action)] transition-all active:scale-[0.98] disabled:opacity-50 pm-neumorphic pm-neumorphic-active"
               >
-                {submitting ? <Spinner className="h-5 w-5 text-[var(--pm-color-text)]" /> : 'Start parking'}
+                {submitting ? <Spinner className="h-5 w-5 text-[var(--pm-color-text)]" /> : 'Pay & Book'}
               </button>
             </div>
           </div>

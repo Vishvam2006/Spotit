@@ -52,4 +52,10 @@ export interface Booking {
   updatedAt: string;
   parkingLot: ParkingLot;
   vehicle: BookingVehicle;
+  payment?: {
+    razorpayPaymentId: string;
+    razorpayOrderId: string;
+    amount: number;
+    status: string;
+  };
 }

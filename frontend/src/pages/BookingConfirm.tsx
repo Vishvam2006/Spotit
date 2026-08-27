@@ -46,12 +46,41 @@ export default function BookingConfirm() {
         ) : (
           <div>
             <div className="rounded-2xl bg-emerald-600 p-6 text-white">
-              <h1 className="text-2xl font-bold">Booking confirmed!</h1>
-              <p className="mt-1 text-sm text-emerald-100">
-                Check in within {new Date(booking.checkInDeadline).toLocaleString()} to keep
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">Payment Successful!</h1>
+                  <p className="mt-0.5 text-sm text-emerald-100">
+                    Booking confirmed — your spot is reserved.
+                  </p>
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-emerald-100">
+                Check in before {new Date(booking.checkInDeadline).toLocaleString()} to keep
                 your spot at {booking.parkingLot.name}.
               </p>
             </div>
+
+            {booking.payment && (
+              <div className="mt-4 rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-700">Payment Reference</p>
+                    <p className="mt-0.5 text-sm font-mono text-emerald-900">{booking.payment.razorpayPaymentId}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-semibold text-emerald-700">Amount Paid</p>
+                    <p className="mt-0.5 text-lg font-black text-emerald-900">
+                      ₹{(booking.payment.amount / 100).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="mt-6">
               <BookingSummary booking={booking} />

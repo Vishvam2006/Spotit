@@ -22,7 +22,17 @@ export class BookingError extends Error {
   }
 }
 
-const bookingInclude = { parkingLot: true } as const;
+const bookingInclude = {
+  parkingLot: true,
+  payment: {
+    select: {
+      razorpayPaymentId: true,
+      razorpayOrderId: true,
+      amount: true,
+      status: true,
+    },
+  },
+} as const;
 
 export interface BookingVehicle {
   id: string | null;
@@ -62,12 +72,22 @@ function toVehicle(
   };
 }
 
+export interface BookingPayment {
+  razorpayPaymentId: string | null;
+  razorpayOrderId: string;
+  amount: number;
+  status: string;
+}
+
 export type BookingWithLot = Booking & {
   parkingLot: ParkingLot;
   vehicle: BookingVehicle;
+  payment?: BookingPayment | null;
 };
 
-function mapBooking(booking: Booking & { parkingLot: ParkingLot }): BookingWithLot {
+function mapBooking(
+  booking: Booking & { parkingLot: ParkingLot; payment?: BookingPayment | null },
+): BookingWithLot {
   return { ...booking, vehicle: toVehicle(booking) };
 }
 

@@ -105,22 +105,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Recent Destination Card */}
-          <div
-            onClick={handleSearchClick}
-            className="flex items-center justify-between rounded-2xl bg-[var(--pm-color-surface)] p-4 pm-neumorphic pm-neumorphic-active mb-8 cursor-pointer transition-all"
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--pm-color-surface-raised)]">
-                <Clock className="h-5 w-5 text-[var(--pm-color-muted)]" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-[var(--pm-color-text)]">CG Road Multilevel Parking</h3>
-                <p className="text-sm text-[var(--pm-color-muted)]">Navrangpura, Ahmedabad</p>
-              </div>
-            </div>
-            <ChevronRight className="h-5 w-5 text-[var(--pm-color-muted)]" />
-          </div>
+        
+        
 
           {/* Quick Actions */}
           <div className="mb-8">

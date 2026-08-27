@@ -23,6 +23,7 @@ model User {
   vehicles      Vehicle[]
   verifications VerificationRequest[]
   complaints    Complaint[]
+  payments      Payment[]
 }
 
 model ParkingLot {
@@ -142,6 +143,7 @@ model Booking {
   locationAudit    LocationAudit[]
   complaints       Complaint[]
   continuityEvents ContinuityEvent[]
+  payment          Payment?
 
   @@index([userId, status])
   @@index([parkingLotId, status])
@@ -313,4 +315,34 @@ enum ContinuityEventType {
   LOT_UNDER_REVIEW
   LOT_REINSTATED
   LOT_DEACTIVATED
+}
+
+/// Tracks the Razorpay payment lifecycle for a booking.
+enum PaymentStatus {
+  CREATED
+  CAPTURED
+  FAILED
+  REFUNDED
+}
+
+/// One payment per booking. Stores the Razorpay order and payment IDs so the
+/// backend can verify signatures and the frontend can show a receipt.
+model Payment {
+  id                  String        @id @default(cuid())
+  bookingId           String?       @unique
+  userId              String
+  razorpayOrderId     String        @unique
+  razorpayPaymentId   String?
+  razorpaySignature   String?
+  amount              Int           // Amount in paise (₹100 = 10000)
+  currency            String        @default("INR")
+  status              PaymentStatus @default(CREATED)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  booking             Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([razorpayOrderId])
 }
