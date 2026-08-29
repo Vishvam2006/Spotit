@@ -32,19 +32,19 @@ export default function ConfidenceLearnMoreModal({
   const getLevelIcon = (level: AvailabilityConfidence) => {
     switch (level) {
       case 'HIGH':
-        return <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />;
+        return <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />;
       case 'MEDIUM':
-        return <Info className="h-5 w-5 text-amber-600 shrink-0" />;
+        return <Info className="h-4 w-4 text-amber-600 shrink-0" />;
       case 'LOW':
-        return <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0" />;
+        return <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0" />;
       case 'UNDER_REVIEW':
-        return <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />;
+        return <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />;
     }
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 animate-fadeIn"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confidence-modal-title"
@@ -52,25 +52,22 @@ export default function ConfidenceLearnMoreModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-2xl transition-all">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200/60">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="h-5 w-5 text-slate-700" />
             <div>
-              <h2 id="confidence-modal-title" className="text-lg font-extrabold text-slate-900">
-                Availability Confidence
+              <h2 id="confidence-modal-title" className="text-base font-semibold text-slate-900">
+                Availability Confidence Verification
               </h2>
-              <p className="text-xs text-slate-500">How Spotit verifies parking spot reliability</p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
             aria-label="Close modal"
           >
             <X className="h-4 w-4" />
@@ -78,30 +75,30 @@ export default function ConfidenceLearnMoreModal({
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 pm-scrollbar-none">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 text-sm">
           {/* Core Rule Explanation Card */}
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4">
-            <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+            <div className="flex items-start gap-2.5">
+              <Info className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-blue-950">How Confidence is Computed</p>
-                <p className="mt-1 text-xs text-blue-800 leading-relaxed">
+                <p className="font-medium text-slate-900">Computation Methodology</p>
+                <p className="mt-1 text-slate-600">
                   {CONFIDENCE_TOOLTIP_TEXT}
                 </p>
-                <p className="mt-2 text-[11px] text-blue-700/90 font-medium">
-                  We deliberately refrain from claiming &ldquo;real-time&rdquo; or &ldquo;live telemetry&rdquo; unless physical automated hardware is deployed. Instead, our Continuity Engine dynamically scores each location based on authentic driver experiences.
+                <p className="mt-2 text-xs text-slate-500">
+                  Note: The platform refrains from claiming live telemetry without physical automated hardware. The Continuity Engine scores each location algorithmically based on verifiable driver interactions and operator inputs.
                 </p>
               </div>
             </div>
           </div>
 
           {/* 4 State Cards */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Confidence States &amp; What They Mean
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
+              Confidence States Reference
             </h3>
 
-            <div className="grid gap-3.5 sm:grid-cols-1">
+            <div className="grid gap-3 sm:grid-cols-1">
               {levels.map((lvl) => {
                 const detail = CONFIDENCE_DETAILS[lvl];
                 const isSelected = initialHighlight === lvl;
@@ -109,35 +106,29 @@ export default function ConfidenceLearnMoreModal({
                 return (
                   <div
                     key={lvl}
-                    className={`rounded-2xl border p-4.5 transition-all ${
+                    className={`rounded-md border p-4 ${
                       isSelected
-                        ? 'border-emerald-500 bg-emerald-50/30 ring-2 ring-emerald-500/20'
-                        : 'border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300'
+                        ? 'border-slate-400 bg-slate-50'
+                        : 'border-slate-200 bg-white'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2">
                         {getLevelIcon(lvl)}
-                        <span className="text-sm font-bold text-slate-900">{detail.title}</span>
+                        <span className="font-semibold text-slate-900">{detail.title}</span>
                       </div>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${detail.styles}`}
-                      >
+                      <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 border border-slate-200">
                         {detail.badgeShort}
                       </span>
                     </div>
 
-                    <p className="mt-2 text-xs font-medium text-slate-700 leading-relaxed">
+                    <p className="mt-2 text-slate-600">
                       {detail.meaning}
                     </p>
 
-                    {/* Example Box */}
-                    <div className="mt-3 rounded-xl bg-white border border-slate-200/80 p-3 shadow-xs">
-                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                        Real-world Example:
-                      </p>
-                      <p className="mt-0.5 text-xs text-slate-800 italic">
-                        &ldquo;{detail.example}&rdquo;
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                      <p className="text-xs text-slate-500">
+                        <span className="font-medium">Example case:</span> {detail.example}
                       </p>
                     </div>
                   </div>
@@ -147,13 +138,13 @@ export default function ConfidenceLearnMoreModal({
           </div>
 
           {/* Last Updated Time Explanation */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-start gap-3">
-              <Clock className="h-5 w-5 text-slate-600 shrink-0 mt-0.5" />
+          <div className="rounded-md border border-slate-200 bg-white p-4">
+            <div className="flex items-start gap-2.5">
+              <Clock className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-bold text-slate-900">Last Updated Timestamp</p>
-                <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                  Every parking location displays a relative timestamp (such as <em>&ldquo;Last updated: 5 minutes ago&rdquo;</em>). This reflects the last recorded capacity change, completed driver checkout, or owner update received by the platform.
+                <p className="font-medium text-slate-900">Last Updated Timestamp</p>
+                <p className="mt-1 text-slate-600">
+                  Relative timestamps (e.g., "Last updated: 5 minutes ago") reflect the last recorded capacity change, completed checkout, or operator system update.
                 </p>
               </div>
             </div>
@@ -161,13 +152,13 @@ export default function ConfidenceLearnMoreModal({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-100 bg-slate-50/80 px-6 py-4 flex items-center justify-end">
+        <div className="border-t border-slate-200 px-5 py-4 flex items-center justify-end bg-slate-50">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-white hover:bg-slate-800 transition-colors"
+            className="rounded-md bg-white border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
           >
-            Got it
+            Close
           </button>
         </div>
       </div>
