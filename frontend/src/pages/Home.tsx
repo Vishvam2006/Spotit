@@ -12,14 +12,17 @@ import {
   PlusCircle,
   AlertTriangle,
   Clock3,
+  Clock,
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import ComplaintForm from '../components/complaint/ComplaintForm';
 import ConfidenceBadge from '../components/continuity/ConfidenceBadge';
+import ConfidenceLearnMoreModal from '../components/continuity/ConfidenceLearnMoreModal';
 import { fetchParkingLots } from '../services/parking';
 import type { ParkingLot } from '../types/parking';
 import { getCurrentPositionDetailed, type LatLng } from '../utils/geolocation';
 import { haversineDistanceKm } from '../utils/distance';
+import { formatLastUpdated } from '../utils/format';
 import LandingPage from '../components/landing/LandingPage';
 
 export default function Home() {
@@ -28,6 +31,7 @@ export default function Home() {
   const [allParkingLots, setAllParkingLots] = useState<ParkingLot[]>([]);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [confidenceModalOpen, setConfidenceModalOpen] = useState(false);
 
   useEffect(() => {
     fetchParkingLots().then((lots) => setAllParkingLots(lots)).catch(() => { });
@@ -151,10 +155,16 @@ export default function Home() {
             </div>
             <div>
               <h3 className="text-base font-bold text-[var(--pm-color-text)]">Parking availability you can trust</h3>
-              <p className="mt-1 text-sm text-[var(--pm-color-muted)]">
-                Live availability updates from verified parking partners.
+              <p className="mt-1 text-sm text-[var(--pm-color-muted)] leading-relaxed">
+                Availability confidence is calculated from completed driver check-ins, operator updates, and unresolved issue reports.
               </p>
-              <button className="mt-2 text-sm font-semibold text-[var(--pm-color-action)]">Learn more</button>
+              <button
+                type="button"
+                onClick={() => setConfidenceModalOpen(true)}
+                className="mt-2 text-sm font-semibold text-[var(--pm-color-action)] hover:underline focus:outline-none"
+              >
+                Learn more
+              </button>
             </div>
           </div>
 
@@ -163,6 +173,10 @@ export default function Home() {
       {reportOpen && (
         <ComplaintForm onClose={() => setReportOpen(false)} />
       )}
+      <ConfidenceLearnMoreModal
+        isOpen={confidenceModalOpen}
+        onClose={() => setConfidenceModalOpen(false)}
+      />
     </AppLayout>
   );
 }
@@ -203,13 +217,20 @@ function NearbyParkingCard({ lot, onClick }: { lot: ParkingLot, onClick: () => v
         <p className="text-sm text-[var(--pm-color-muted)]">
           {lot.distanceKm !== undefined ? `${lot.distanceKm.toFixed(1)} km away` : lot.address}
         </p>
-        {lot.availabilityConfidence !== 'HIGH' && (
+        
+        <div className="mt-2.5 flex items-center justify-between gap-1 flex-wrap">
           <ConfidenceBadge
             confidence={lot.availabilityConfidence}
             size="sm"
-            className="mt-2"
           />
-        )}
+          {lot.updatedAt && (
+            <span className="flex items-center gap-1 text-[10px] text-[var(--pm-color-muted)]">
+              <Clock className="h-3 w-3 shrink-0" />
+              {formatLastUpdated(lot.updatedAt)}
+            </span>
+          )}
+        </div>
+
         <div className="mt-3 flex items-center justify-between">
           <div>
             <p className="text-xs text-[var(--pm-color-muted)]">Price</p>

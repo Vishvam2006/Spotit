@@ -1,8 +1,9 @@
-import { MapPin, Navigation } from 'lucide-react';
+import { MapPin, Navigation, Clock } from 'lucide-react';
 import ConfidenceBadge from '../continuity/ConfidenceBadge';
 import type { ParkingLot } from '../../types/parking';
 import { formatDistanceKm } from '../../utils/distance';
 import { getMarkerAvailability } from '../../utils/markerAvailability';
+import { formatLastUpdated } from '../../utils/format';
 
 interface ParkingCardProps {
   parking: ParkingLot;
@@ -61,13 +62,18 @@ export default function ParkingCard({
               {parking.address}, {parking.city}
             </span>
           </p>
-          {parking.availabilityConfidence !== 'HIGH' && (
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
             <ConfidenceBadge
               confidence={parking.availabilityConfidence}
               size="sm"
-              className="mt-2"
             />
-          )}
+            {parking.updatedAt && (
+              <span className="flex items-center gap-1 text-[11px] text-[var(--pm-color-muted)]">
+                <Clock className="h-3 w-3 shrink-0" />
+                {formatLastUpdated(parking.updatedAt)}
+              </span>
+            )}
+          </div>
         </div>
         <span
           className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${badgeStyles[color]}`}

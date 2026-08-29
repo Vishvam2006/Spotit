@@ -256,6 +256,9 @@ export default function ParkingDetails() {
                   confidence={parking.availabilityConfidence}
                   size="sm"
                   withBasis
+                  showLearnMoreButton
+                  updatedAt={parking.updatedAt}
+                  showLastUpdated
                   className="text-right"
                 />
               </div>

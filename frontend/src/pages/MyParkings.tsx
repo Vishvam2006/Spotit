@@ -165,7 +165,7 @@ export default function MyParkings() {
           <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-sm text-center max-w-lg mx-auto">
             <h2 className="text-xl font-bold text-slate-900">Sign in to manage your parking spaces</h2>
             <p className="mt-2 text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
-              List parking spots, set hourly/monthly rates, and track real-time occupancy and earnings.
+              List parking spots, set hourly/monthly rates, and track occupancy and earnings.
             </p>
 
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
