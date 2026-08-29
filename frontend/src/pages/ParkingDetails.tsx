@@ -233,7 +233,7 @@ export default function ParkingDetails() {
           {/* Title Card */}
           <div className="rounded-2xl bg-[var(--pm-color-surface)] p-5 shadow-lg ring-1 ring-[var(--pm-color-border)]">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h1 className="text-2xl font-black text-[var(--pm-color-text)]">{parking.name}</h1>
                 <p className="mt-1 flex items-start gap-1.5 text-sm text-[var(--pm-color-muted)]">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--pm-color-action)]" aria-hidden="true" />
@@ -241,6 +241,16 @@ export default function ParkingDetails() {
                     {parking.address}, {parking.city}
                   </span>
                 </p>
+                <div className="mt-3">
+                  <ConfidenceBadge
+                    confidence={parking.availabilityConfidence}
+                    size="sm"
+                    withBasis
+                    showLearnMoreButton
+                    updatedAt={parking.updatedAt}
+                    showLastUpdated
+                  />
+                </div>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <span
@@ -252,15 +262,6 @@ export default function ParkingDetails() {
                 >
                   {canBook ? 'Available' : 'Full'}
                 </span>
-                <ConfidenceBadge
-                  confidence={parking.availabilityConfidence}
-                  size="sm"
-                  withBasis
-                  showLearnMoreButton
-                  updatedAt={parking.updatedAt}
-                  showLastUpdated
-                  className="text-right"
-                />
               </div>
             </div>
 
