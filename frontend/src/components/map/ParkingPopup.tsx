@@ -49,10 +49,15 @@ export default function ParkingPopup({
               {parking.status.toLowerCase().replace('_', ' ')}
             </dd>
           </div>
-          <div className="flex items-center justify-between gap-6">
-            <dt>Reliability</dt>
+          <div className="flex items-center justify-between gap-4">
+            <dt>Confidence</dt>
             <dd>
-              <ConfidenceBadge confidence={parking.availabilityConfidence} size="sm" />
+              <ConfidenceBadge
+                confidence={parking.availabilityConfidence}
+                size="sm"
+                updatedAt={parking.updatedAt}
+                showLastUpdated
+              />
             </dd>
           </div>
         </dl>

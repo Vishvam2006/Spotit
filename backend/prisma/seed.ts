@@ -1,4 +1,5 @@
 import {
+  AvailabilityConfidence,
   BookingStatus,
   ComplaintStatus,
   ParkingLotStatus,
@@ -281,20 +282,62 @@ async function main() {
     );
   }
 
+  const PARKING_PHOTOS = [
+    "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1573348722427-f1d6819fdf98?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1617886322207-6f504e7472c5?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1562920618-5eabfa519544?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1587301705423-a1c1d0fbbfa9?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1508974239320-0a029497e820?w=800&auto=format&fit=crop&q=80",
+  ];
+
+  const CAR_PHOTOS = [
+    "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=800&auto=format&fit=crop&q=80",
+  ];
+
+  const BIKE_PHOTOS = [
+    "https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80",
+  ];
+
   // --- parking lots ---------------------------------------------------------
   await prisma.parkingLot.createMany({
-    data: PARKING_LOTS.map((lot) => {
+    data: PARKING_LOTS.map((lot, index) => {
       const { owner, ...rest } = lot;
+      const primaryPhoto = PARKING_PHOTOS[index % PARKING_PHOTOS.length];
+      const secondaryPhoto = PARKING_PHOTOS[(index + 1) % PARKING_PHOTOS.length];
+
+      let confidence = AvailabilityConfidence.HIGH;
+      let lotStatus = rest.status;
+      let underReviewSince: Date | null = null;
+
+      if (index === 11 || rest.id === "sarkhej-roza-parking") {
+        confidence = AvailabilityConfidence.UNDER_REVIEW;
+        lotStatus = ParkingLotStatus.UNDER_REVIEW;
+        underReviewSince = new Date(now - randInt(2, 48) * HOUR);
+      } else if (index % 7 === 0) {
+        confidence = AvailabilityConfidence.LOW;
+      } else if (index % 4 === 0) {
+        confidence = AvailabilityConfidence.MEDIUM;
+      }
+
       return {
         ...rest,
+        status: lotStatus,
+        availabilityConfidence: confidence,
+        underReviewSince,
         city: CITY,
         ownerId: owners[owner].id,
         availableSpaces: rest.totalSpaces,
-        imageUrl: `https://example.com/parking/${rest.id}.jpg`,
-        photos: [
-          `https://example.com/parking/${rest.id}-1.jpg`,
-          `https://example.com/parking/${rest.id}-2.jpg`,
-        ],
+        imageUrl: primaryPhoto,
+        photos: [primaryPhoto, secondaryPhoto],
+        updatedAt: new Date(now - randInt(2, 60) * MINUTE),
       };
     }),
   });
@@ -321,6 +364,8 @@ async function main() {
       const type = rand() < 0.45 ? VehicleType.TWO_WHEELER : VehicleType.FOUR_WHEELER;
       const brand = pick(VEHICLE_MAKES[type]);
       const registration = makeRegistration(regIndex);
+      const photoPool = type === VehicleType.TWO_WHEELER ? BIKE_PHOTOS : CAR_PHOTOS;
+      const vehicleImg = photoPool[regIndex % photoPool.length];
       regIndex += 1;
 
       vehicles.push({
@@ -328,7 +373,7 @@ async function main() {
         userId: user.id,
         registration,
         type,
-        imageUrl: `https://example.com/vehicles/${registration}.jpg`,
+        imageUrl: vehicleImg,
         imagePublicId: `spotit/seed/vehicles/${registration}`,
         make: brand.make,
         model: pick(brand.models),

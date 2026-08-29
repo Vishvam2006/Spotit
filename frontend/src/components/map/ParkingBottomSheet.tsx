@@ -197,7 +197,7 @@ export default function ParkingBottomSheet({
                   </p>
                 </div>
 
-                <div className="flex shrink-0 flex-col items-end gap-1">
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <span
                     className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold shadow-sm"
                     style={{
@@ -209,13 +209,13 @@ export default function ParkingBottomSheet({
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: markerColor }} />
                     {label}
                   </span>
-                  {parking.availabilityConfidence !== 'HIGH' && (
-                    <ConfidenceBadge
-                      confidence={parking.availabilityConfidence}
-                      size="sm"
-                      className="text-right"
-                    />
-                  )}
+                  <ConfidenceBadge
+                    confidence={parking.availabilityConfidence}
+                    size="sm"
+                    updatedAt={parking.updatedAt}
+                    showLastUpdated
+                    className="text-right"
+                  />
                 </div>
               </div>
 
