@@ -218,7 +218,7 @@ export default function MyVehicles() {
             </div>
           ) : loadError ? (
             <Alert variant="error" message={loadError} />
-          ) : vehicles.length === 0 ? (
+          ) : vehicles.length === 0 && !adding ? (
             <div className="rounded-2xl border border-dashed border-[var(--pm-color-border-strong)] bg-[var(--pm-color-surface)] p-10 text-center">
               <p className="text-sm text-[var(--pm-color-muted)]">You have no vehicles yet.</p>
               <Button className="mx-auto mt-4 max-w-xs" onClick={openAdd}>
