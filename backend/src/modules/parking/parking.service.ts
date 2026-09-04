@@ -3,10 +3,11 @@ import { prisma } from "../../config/prisma";
 import { recordEvent } from "../continuity/continuity.events";
 import { releaseCapacity, refreshLotReliability } from "../continuity/continuity.service";
 import * as paymentService from "../payment/payment.service";
+import { findAndHoldCandidate } from "../reassignment/reassignment.service";
 import { cloudinary } from "../../config/cloudinary";
 import { isCloudinaryConfigured } from "../../config/cloudinaryHelpers";
 
-import { haversineDistanceKm } from "../../utils/distance";
+import { sortByDistance as sortByDistanceShared } from "../../utils/distance";
 import type {
   CreateParkingInput,
   UpdateParkingInput,
@@ -70,12 +71,7 @@ function sortByDistance(
   lat: number,
   lng: number,
 ): ParkingLotWithDistance[] {
-  return parkingLots
-    .map((parking) => ({
-      ...parking,
-      distanceKm: haversineDistanceKm(lat, lng, parking.latitude, parking.longitude),
-    }))
-    .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+  return sortByDistanceShared(parkingLots, lat, lng);
 }
 
 export async function getActiveParking(
@@ -303,7 +299,10 @@ export async function updateParking(
       return { parking: current, cancelledBookingIds: [] as string[] };
     }
 
-    const cancelledBookingIds = await cancelUpcomingBookingsForDeactivation(tx, id);
+    const cancelledBookingIds = await cancelUpcomingBookingsForDeactivation(tx, id, {
+      latitude: parking.latitude,
+      longitude: parking.longitude,
+    });
 
     await recordEvent(tx, {
       type: "LOT_DEACTIVATED",
@@ -340,22 +339,26 @@ export async function updateParking(
 async function cancelUpcomingBookingsForDeactivation(
   tx: Prisma.TransactionClient,
   parkingId: string,
+  anchor: { latitude: number; longitude: number },
 ): Promise<string[]> {
   const now = new Date();
 
+  // PENDING_REASSIGNMENT is included so a booking that is itself the held
+  // alternative for someone else's cancelled booking is caught here too, if
+  // its own lot is the one being deactivated -- otherwise its capacity hold
+  // would be orphaned.
   const affected = await tx.booking.findMany({
     where: {
       parkingLotId: parkingId,
-      status: "RESERVED",
+      status: { in: ["RESERVED", "PENDING_REASSIGNMENT"] },
       checkInDeadline: { gt: now },
     },
-    select: { id: true },
   });
 
   const cancelledIds: string[] = [];
   for (const booking of affected) {
     const result = await tx.booking.updateMany({
-      where: { id: booking.id, status: "RESERVED" },
+      where: { id: booking.id, status: booking.status },
       data: {
         status: "CANCELLED",
         cancellationReason: "PARKING_DEACTIVATED",
@@ -367,6 +370,33 @@ async function cancelUpcomingBookingsForDeactivation(
 
     cancelledIds.push(booking.id);
     await releaseCapacity(tx, parkingId);
+
+    if (booking.status === "PENDING_REASSIGNMENT") {
+      // This booking WAS the alternative automatically held for someone
+      // else's deactivated booking, and its own lot has now also been
+      // deactivated. Release the offer instead of orphaning it. v1 does not
+      // chain a second reassignment attempt -- the original booking simply
+      // falls back to SmartSuggest.
+      const declined = await tx.bookingReassignment.updateMany({
+        where: { candidateBookingId: booking.id, status: "PENDING" },
+        data: { status: "DECLINED", respondAt: now },
+      });
+
+      if (declined.count === 1) {
+        await recordEvent(tx, {
+          type: "REASSIGNMENT_DECLINED",
+          bookingId: booking.id,
+          parkingLotId: parkingId,
+          reason:
+            "The held alternative's own lot was deactivated before the user responded.",
+        });
+      }
+      continue;
+    }
+
+    // A RESERVED booking cancelled by this deactivation: try to hold the
+    // nearest alternative for the user before falling back to SmartSuggest.
+    await findAndHoldCandidate(tx, booking, parkingId, anchor);
   }
 
   return cancelledIds;
@@ -392,7 +422,7 @@ export async function deleteParking(
   const activeBooking = await prisma.booking.findFirst({
     where: {
       parkingLotId: id,
-      status: { in: ["RESERVED", "ACTIVE"] },
+      status: { in: ["RESERVED", "ACTIVE", "PENDING_REASSIGNMENT"] },
     },
     select: { id: true },
   });

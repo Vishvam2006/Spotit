@@ -12,7 +12,14 @@ export type BookingStatus =
   | 'COMPLETED'
   | 'CANCELLED'
   | 'EXPIRED'
-  | 'DISPUTED';
+  | 'DISPUTED'
+  /**
+   * Auto-Reassignment: a candidate booking the engine automatically held on
+   * another lot, awaiting the user's accept/decline (or the 5-minute
+   * auto-accept). Deliberately absent from every Bookings-page tab -- the
+   * user interacts with it through the app-wide offer popup, not a list card.
+   */
+  | 'PENDING_REASSIGNMENT';
 
 /**
  * Snapshot of the vehicle at the time the booking was created. Old bookings
@@ -27,6 +34,19 @@ export interface BookingVehicle {
   make: string | null;
   model: string | null;
   color: string | null;
+}
+
+/**
+ * At most one of these is ever set for a given booking -- it's either
+ * someone's cancelled original (role ORIGINAL) or someone's held candidate
+ * (role CANDIDATE), never both.
+ */
+export interface BookingReassignmentSummary {
+  id: string;
+  status: 'PENDING' | 'ACCEPTED' | 'AUTO_ACCEPTED' | 'DECLINED';
+  role: 'ORIGINAL' | 'CANDIDATE';
+  decisionDeadline: string | null;
+  linkedBookingId: string | null;
 }
 
 export interface Booking {
@@ -58,4 +78,5 @@ export interface Booking {
     amount: number;
     status: string;
   };
+  reassignment?: BookingReassignmentSummary | null;
 }

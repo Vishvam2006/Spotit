@@ -74,6 +74,12 @@ enum BookingStatus {
   /// The user reported that the lot failed them. The booking is never deleted
   /// or silently cancelled: it is frozen as evidence for owner/admin review.
   DISPUTED
+  /// Auto-Reassignment: a candidate booking created when the engine holds a
+  /// nearby lot for a user whose original booking was cancelled by a
+  /// deactivation. Holds a real space with no payment captured yet -- a
+  /// deliberate, narrow exception to "a booking either holds a space with a
+  /// captured payment or doesn't exist." See BookingReassignment.
+  PENDING_REASSIGNMENT
 }
 
 enum VehicleType {
@@ -145,12 +151,49 @@ model Booking {
   continuityEvents ContinuityEvent[]
   payment          Payment?
 
+  /// Set when this booking was cancelled by a deactivation and an alternative
+  /// was found and held for it.
+  reassignmentAsOriginal  BookingReassignment? @relation("ReassignmentOriginal")
+  /// Set when this booking IS the held alternative for some other booking.
+  reassignmentAsCandidate BookingReassignment? @relation("ReassignmentCandidate")
+
   @@index([userId, status])
   @@index([parkingLotId, status])
   @@index([vehicleId])
   @@index([status, checkInDeadline])
   @@index([status, createdAt])
   @@index([createdAt])
+}
+
+enum ReassignmentStatus {
+  PENDING
+  ACCEPTED
+  AUTO_ACCEPTED
+  DECLINED
+}
+
+/// Links a booking cancelled by a lot deactivation to the nearby alternative
+/// the Continuity Engine automatically held for it. A row only exists when a
+/// candidate lot was actually found and its capacity claimed -- the
+/// no-candidate case creates nothing, so that path stays identical to the
+/// engine's original "just suggest nearby lots" behaviour.
+model BookingReassignment {
+  id                 String             @id @default(cuid())
+  originalBookingId  String             @unique
+  candidateBookingId String?            @unique
+  candidateLotId     String?
+  status             ReassignmentStatus @default(PENDING)
+  offeredAt          DateTime           @default(now())
+  decisionDeadline   DateTime?
+  respondAt          DateTime?
+  distanceKm         Float?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  originalBooking  Booking  @relation("ReassignmentOriginal", fields: [originalBookingId], references: [id], onDelete: Cascade)
+  candidateBooking Booking? @relation("ReassignmentCandidate", fields: [candidateBookingId], references: [id], onDelete: SetNull)
+
+  @@index([status, decisionDeadline])
 }
 
 model VerificationRequest {
@@ -316,6 +359,10 @@ enum ContinuityEventType {
   LOT_REINSTATED
   LOT_DEACTIVATED
   PAYMENT_REFUNDED
+  REASSIGNMENT_OFFERED
+  REASSIGNMENT_ACCEPTED
+  REASSIGNMENT_AUTO_ACCEPTED
+  REASSIGNMENT_DECLINED
 }
 
 /// Tracks the Razorpay payment lifecycle for a booking.
@@ -329,22 +376,22 @@ enum PaymentStatus {
 /// One payment per booking. Stores the Razorpay order and payment IDs so the
 /// backend can verify signatures and the frontend can show a receipt.
 model Payment {
-  id                  String        @id @default(cuid())
-  bookingId           String?       @unique
-  userId              String
-  razorpayOrderId     String        @unique
-  razorpayPaymentId   String?
-  razorpaySignature   String?
-  amount              Int           // Amount in paise (₹100 = 10000)
-  currency            String        @default("INR")
-  status              PaymentStatus @default(CREATED)
-  razorpayRefundId    String?
-  refundedAt          DateTime?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  bookingId         String?       @unique
+  userId            String
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?
+  razorpaySignature String?
+  amount            Int // Amount in paise (₹100 = 10000)
+  currency          String        @default("INR")
+  status            PaymentStatus @default(CREATED)
+  razorpayRefundId  String?
+  refundedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  booking             Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([razorpayOrderId])

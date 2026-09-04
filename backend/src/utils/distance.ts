@@ -19,3 +19,22 @@ export function haversineDistanceKm(
 
   return EARTH_RADIUS_KM * c;
 }
+
+/**
+ * Sorts anything with lat/lng nearest-first, tagging each item with its
+ * distance from the reference point. Shared by parking search (`sort=nearest`)
+ * and the reassignment engine's nearest-candidate lookup so both use the same
+ * definition of "nearest".
+ */
+export function sortByDistance<T extends { latitude: number; longitude: number }>(
+  items: T[],
+  lat: number,
+  lng: number,
+): (T & { distanceKm: number })[] {
+  return items
+    .map((item) => ({
+      ...item,
+      distanceKm: haversineDistanceKm(lat, lng, item.latitude, item.longitude),
+    }))
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+}

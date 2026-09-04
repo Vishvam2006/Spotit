@@ -18,3 +18,11 @@ export const verifyPaymentSchema = z.object({
 });
 
 export type VerifyPaymentInput = z.infer<typeof verifyPaymentSchema>;
+
+export const verifyReassignmentPaymentSchema = z.object({
+  razorpayPaymentId: z.string().min(1),
+  razorpayOrderId: z.string().min(1),
+  razorpaySignature: z.string().min(1),
+});
+
+export type VerifyReassignmentPaymentInput = z.infer<typeof verifyReassignmentPaymentSchema>;

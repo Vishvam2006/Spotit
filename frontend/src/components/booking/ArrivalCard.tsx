@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Booking } from '../../types/booking';
 import {
   checkInBooking,
@@ -12,6 +12,7 @@ import { notifyError, notifySuccess } from '../../utils/notify';
 import { getBookingStatusStyles } from '../../utils/bookingStatus';
 import { useParkingGeofence } from '../../hooks/useParkingGeofence';
 import { useBookingHeartbeat } from '../../hooks/useBookingHeartbeat';
+import { useCountdown, formatCountdown } from '../../hooks/useCountdown';
 import type { LatLng } from '../../utils/geolocation';
 import Button from '../ui/Button';
 import Alert from '../ui/Alert';
@@ -33,44 +34,6 @@ function farAwayCoords(origin: LatLng): LatLng {
     lat: origin.lat + 0.015,
     lng: origin.lng + 0.015,
   };
-}
-
-function useCountdown(
-  targetTime: number,
-  enabled: boolean,
-  onDone: () => void,
-): number {
-  const [now, setNow] = useState(() => Date.now());
-  const doneRef = useRef(false);
-
-  useEffect(() => {
-    if (!enabled) return;
-    doneRef.current = false;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, [targetTime, enabled]);
-
-  const remaining = Math.max(0, targetTime - now);
-
-  useEffect(() => {
-    if (enabled && remaining === 0 && !doneRef.current) {
-      doneRef.current = true;
-      onDone();
-    }
-  }, [enabled, remaining, onDone]);
-
-  return remaining;
-}
-
-function formatCountdown(ms: number): string {
-  const totalSeconds = Math.ceil(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return hours > 0
-    ? `${hours}:${pad(minutes)}:${pad(seconds)}`
-    : `${pad(minutes)}:${pad(seconds)}`;
 }
 
 export default function ArrivalCard({

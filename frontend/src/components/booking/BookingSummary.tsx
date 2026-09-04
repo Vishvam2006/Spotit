@@ -3,12 +3,14 @@ import { formatDateTime, formatINR } from '../../utils/format';
 import { getBookingStatusLabel, getBookingStatusStyles } from '../../utils/bookingStatus';
 import VehicleDetails from '../vehicle/VehicleDetails';
 import SmartSuggest from './SmartSuggest';
+import CompleteReassignmentPaymentBanner from './CompleteReassignmentPaymentBanner';
 
 interface BookingSummaryProps {
   booking: Booking;
+  onRefresh?: () => void;
 }
 
-export default function BookingSummary({ booking }: BookingSummaryProps) {
+export default function BookingSummary({ booking, onRefresh }: BookingSummaryProps) {
   const amount =
     booking.status === 'COMPLETED' && booking.finalAmount !== null
       ? booking.finalAmount
@@ -19,6 +21,17 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
     (booking.status === 'CANCELLED' || booking.status === 'EXPIRED') &&
     Boolean(booking.payment);
   const refundStatus = booking.payment?.status;
+
+  // Auto-Reassignment: once an alternative has been held (or accepted/
+  // auto-accepted), don't also show SmartSuggest's manual pick-one-yourself
+  // panel on the cancelled original -- only show it once there is truly
+  // nothing else in play (no reassignment ever attempted, or it was declined).
+  const reassignment = booking.reassignment;
+  const hasActiveReassignment =
+    reassignment?.role === 'ORIGINAL' &&
+    (reassignment.status === 'PENDING' ||
+      reassignment.status === 'ACCEPTED' ||
+      reassignment.status === 'AUTO_ACCEPTED');
 
   return (
     <div className="overflow-hidden rounded-2xl bg-[var(--pm-color-surface)] shadow-sm ring-1 ring-[var(--pm-color-border)]">
@@ -73,6 +86,24 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
           )}
         </div>
       )}
+
+      {hasActiveReassignment && (
+        <div className="mx-6 mt-4 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800 ring-1 ring-emerald-100">
+          {reassignment!.status === 'PENDING' ? (
+            <p>
+              <span className="font-semibold">We've automatically held a nearby spot for you.</span>{' '}
+              Check the popup on your screen to accept or decline it.
+            </p>
+          ) : (
+            <p>
+              <span className="font-semibold">You've been moved to a new spot.</span> Check your
+              Bookings for the new reservation.
+            </p>
+          )}
+        </div>
+      )}
+
+      <CompleteReassignmentPaymentBanner booking={booking} onPaid={() => onRefresh?.()} />
 
       {booking.status === 'DISPUTED' && (
         <div className="mx-6 mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-100">
@@ -137,11 +168,13 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
         </div>
       </dl>
 
-      {booking.status === 'CANCELLED' && booking.cancellationReason === 'PARKING_DEACTIVATED' && (
-        <div className="px-6 pb-6">
-          <SmartSuggest booking={booking} />
-        </div>
-      )}
+      {booking.status === 'CANCELLED' &&
+        booking.cancellationReason === 'PARKING_DEACTIVATED' &&
+        !hasActiveReassignment && (
+          <div className="px-6 pb-6">
+            <SmartSuggest booking={booking} />
+          </div>
+        )}
     </div>
   );
 }

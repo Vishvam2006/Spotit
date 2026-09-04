@@ -2,8 +2,9 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { prisma } from '../../config/prisma';
 import * as bookingService from '../booking/booking.service';
+import * as reassignmentService from '../reassignment/reassignment.service';
 import { recordEvent } from '../continuity/continuity.events';
-import type { CreateOrderInput, VerifyPaymentInput } from './payment.validation';
+import type { CreateOrderInput, VerifyPaymentInput, VerifyReassignmentPaymentInput } from './payment.validation';
 import type { BookingWithLot } from '../booking/booking.service';
 
 export class PaymentError extends Error {
@@ -245,4 +246,224 @@ export async function refundBookingPayments(
   for (const bookingId of bookingIds) {
     await refundBookingPayment(bookingId, reason);
   }
+}
+
+/**
+ * Creates a Razorpay order for a held reassignment offer. No booking has a
+ * captured payment attached yet -- the Payment row (status CREATED) is only
+ * linked to the candidate booking once /verify succeeds, exactly like the
+ * normal booking flow's createOrder/verifyAndBook pair above.
+ */
+export async function createReassignmentOrder(
+  userId: string,
+  reassignmentId: string,
+): Promise<{
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  keyId: string;
+  parkingLotName: string;
+}> {
+  const offer = await reassignmentService.getReassignmentOwnedByUser(userId, reassignmentId);
+
+  if (offer.status !== 'PENDING') {
+    throw new PaymentError(
+      409,
+      `This offer is ${offer.status.toLowerCase().replace('_', ' ')} and cannot be paid for.`,
+    );
+  }
+
+  if (offer.decisionDeadline && offer.decisionDeadline.getTime() < Date.now()) {
+    // Server-side deadline check -- the frontend countdown is a display
+    // convenience only and is never trusted for correctness.
+    throw new PaymentError(409, 'This offer has expired.');
+  }
+
+  if (!offer.candidateBookingId) {
+    throw new PaymentError(409, 'This offer has no held booking to pay for.');
+  }
+
+  const candidateBooking = await prisma.booking.findUnique({
+    where: { id: offer.candidateBookingId },
+    include: { parkingLot: true },
+  });
+
+  if (!candidateBooking) {
+    throw new PaymentError(404, 'Held booking not found');
+  }
+
+  const estimatedRupees =
+    candidateBooking.parkingLot.pricePerHour * (candidateBooking.durationMinutes / 60);
+  const amountPaise = Math.round(estimatedRupees * 100);
+
+  if (amountPaise < 100) {
+    throw new PaymentError(400, 'Order amount is too small');
+  }
+
+  const order = await razorpay.orders.create({
+    amount: amountPaise,
+    currency: 'INR',
+    receipt: `spotit_reassign_${Date.now()}`,
+    notes: {
+      reassignmentId,
+      candidateBookingId: candidateBooking.id,
+      userId,
+    },
+  });
+
+  await prisma.payment.create({
+    data: {
+      userId,
+      razorpayOrderId: order.id,
+      amount: amountPaise,
+      currency: 'INR',
+      status: 'CREATED',
+    },
+  });
+
+  return {
+    razorpayOrderId: order.id,
+    amount: amountPaise,
+    currency: 'INR',
+    keyId: keyId!,
+    parkingLotName: candidateBooking.parkingLot.name,
+  };
+}
+
+/**
+ * Verifies payment for a reassignment offer. Covers two distinct cases that
+ * both end up here:
+ *
+ *  - Explicit accept: the offer is still PENDING, so this call also performs
+ *    the PENDING -> ACCEPTED transition (via reassignmentService.accept,
+ *    which is what actually decides the race against the auto-accept
+ *    sweeper -- this function never assumes it "won").
+ *  - Deferred payment: the offer already auto-accepted at the 5-minute
+ *    timeout, the candidate booking is already RESERVED, and this call only
+ *    captures the payment the sweeper pre-created for it.
+ *
+ * If the offer resolved to anything else (e.g. DECLINED), payment is
+ * refused -- there is no booking left to attach it to.
+ */
+export async function verifyReassignmentPayment(
+  userId: string,
+  reassignmentId: string,
+  input: VerifyReassignmentPaymentInput,
+): Promise<{
+  booking: BookingWithLot;
+  payment: { razorpayPaymentId: string; amount: number; status: string };
+}> {
+  const expectedSignature = crypto
+    .createHmac('sha256', keySecret!)
+    .update(`${input.razorpayOrderId}|${input.razorpayPaymentId}`)
+    .digest('hex');
+
+  if (expectedSignature !== input.razorpaySignature) {
+    await prisma.payment.updateMany({
+      where: { razorpayOrderId: input.razorpayOrderId },
+      data: { status: 'FAILED' },
+    });
+    throw new PaymentError(400, 'Payment verification failed. The payment signature is invalid.');
+  }
+
+  const payment = await prisma.payment.findUnique({
+    where: { razorpayOrderId: input.razorpayOrderId },
+  });
+
+  if (!payment) {
+    throw new PaymentError(404, 'Payment order not found');
+  }
+
+  if (payment.userId !== userId) {
+    throw new PaymentError(403, 'Payment does not belong to you');
+  }
+
+  if (payment.status === 'CAPTURED') {
+    throw new PaymentError(409, 'This payment has already been captured');
+  }
+
+  const offer = await reassignmentService.getReassignmentOwnedByUser(userId, reassignmentId);
+  let candidateBookingId = offer.candidateBookingId;
+
+  if (offer.status === 'PENDING') {
+    const accepted = await reassignmentService.acceptReassignment(userId, reassignmentId);
+    candidateBookingId = accepted.id;
+  } else if (offer.status === 'AUTO_ACCEPTED') {
+    if (!candidateBookingId || (payment.bookingId && payment.bookingId !== candidateBookingId)) {
+      throw new PaymentError(409, 'This payment does not match the reserved booking.');
+    }
+  } else {
+    throw new PaymentError(
+      409,
+      `This offer is ${offer.status.toLowerCase().replace('_', ' ')} and cannot be paid for.`,
+    );
+  }
+
+  if (!candidateBookingId) {
+    throw new PaymentError(404, 'Candidate booking not found for this offer.');
+  }
+
+  const updatedPayment = await prisma.payment.update({
+    where: { razorpayOrderId: input.razorpayOrderId },
+    data: {
+      bookingId: candidateBookingId,
+      razorpayPaymentId: input.razorpayPaymentId,
+      razorpaySignature: input.razorpaySignature,
+      status: 'CAPTURED',
+    },
+  });
+
+  const booking = await bookingService.getBookingById(userId, candidateBookingId);
+
+  return {
+    booking,
+    payment: {
+      razorpayPaymentId: updatedPayment.razorpayPaymentId!,
+      amount: updatedPayment.amount,
+      status: updatedPayment.status,
+    },
+  };
+}
+
+/**
+ * Called by reassignmentSweeper.ts right after a held offer auto-accepts.
+ * There is no live Checkout session to capture against at timeout -- this
+ * pre-creates the order + an uncaptured Payment row (status CREATED) so the
+ * booking's RESERVED + Payment:CREATED combination is the signal the
+ * frontend uses to show a "complete payment to keep this spot" banner. The
+ * Razorpay call happens after the caller's own transaction has committed,
+ * for the same reason every other payment-adjacent call in this codebase
+ * runs outside the DB transaction: it is slow, external, and must never
+ * hold a row lock or risk rolling back a state change that already took
+ * effect.
+ */
+export async function createUncapturedOrderForBooking(booking: BookingWithLot): Promise<void> {
+  const estimatedRupees = booking.parkingLot.pricePerHour * (booking.durationMinutes / 60);
+  const amountPaise = Math.round(estimatedRupees * 100);
+
+  if (amountPaise < 100) {
+    return;
+  }
+
+  const order = await razorpay.orders.create({
+    amount: amountPaise,
+    currency: 'INR',
+    receipt: `spotit_reassign_auto_${Date.now()}`,
+    notes: {
+      bookingId: booking.id,
+      userId: booking.userId,
+      reason: 'REASSIGNMENT_AUTO_ACCEPTED',
+    },
+  });
+
+  await prisma.payment.create({
+    data: {
+      bookingId: booking.id,
+      userId: booking.userId,
+      razorpayOrderId: order.id,
+      amount: amountPaise,
+      currency: 'INR',
+      status: 'CREATED',
+    },
+  });
 }

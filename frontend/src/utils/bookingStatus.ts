@@ -7,6 +7,7 @@ const statusStyles: Record<BookingStatus, string> = {
   CANCELLED: 'bg-red-100 text-red-700',
   EXPIRED: 'bg-orange-100 text-orange-700',
   DISPUTED: 'bg-amber-100 text-amber-800',
+  PENDING_REASSIGNMENT: 'bg-amber-100 text-amber-700',
 };
 
 /** Short, plain-language label shown next to the raw status. */
@@ -17,6 +18,7 @@ const statusLabels: Record<BookingStatus, string> = {
   CANCELLED: 'Cancelled',
   EXPIRED: 'Expired',
   DISPUTED: 'Under review',
+  PENDING_REASSIGNMENT: 'Awaiting your response',
 };
 
 export function getBookingStatusLabel(status: BookingStatus): string {

@@ -24,10 +24,18 @@ const BOOKING_TRANSITIONS: Record<BookingStatus, readonly BookingStatus[]> = {
   CANCELLED: [],
   EXPIRED: [],
   DISPUTED: [],
+  // Auto-Reassignment: a held candidate either becomes the user's real
+  // reservation (accept or auto-accept timeout) or gets released back to the
+  // lot (decline, or the candidate lot itself gets deactivated).
+  PENDING_REASSIGNMENT: ['RESERVED', 'CANCELLED'],
 };
 
 /** Statuses in which the booking still holds a space in the lot's counter. */
-const CAPACITY_HOLDING_STATUSES: readonly BookingStatus[] = ['RESERVED', 'ACTIVE'];
+const CAPACITY_HOLDING_STATUSES: readonly BookingStatus[] = [
+  'RESERVED',
+  'ACTIVE',
+  'PENDING_REASSIGNMENT',
+];
 
 /** Statuses a user may still report an issue against. */
 const REPORTABLE_STATUSES: readonly BookingStatus[] = [

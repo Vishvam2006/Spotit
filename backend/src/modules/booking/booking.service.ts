@@ -23,7 +23,7 @@ export class BookingError extends Error {
   }
 }
 
-const bookingInclude = {
+export const bookingInclude = {
   parkingLot: true,
   payment: {
     select: {
@@ -32,6 +32,15 @@ const bookingInclude = {
       amount: true,
       status: true,
     },
+  },
+  // Auto-Reassignment: at most one of these is ever set for a given booking
+  // (it's either someone's cancelled original or someone's held candidate,
+  // never both), so the DTO exposes a single unified `reassignment` field.
+  reassignmentAsOriginal: {
+    select: { id: true, status: true, candidateBookingId: true, decisionDeadline: true },
+  },
+  reassignmentAsCandidate: {
+    select: { id: true, status: true, originalBookingId: true, decisionDeadline: true },
   },
 } as const;
 
@@ -80,16 +89,84 @@ export interface BookingPayment {
   status: string;
 }
 
+export interface BookingReassignmentSummary {
+  id: string;
+  status: 'PENDING' | 'ACCEPTED' | 'AUTO_ACCEPTED' | 'DECLINED';
+  /** Whether this booking is the one that got cancelled, or the alternative held for it. */
+  role: 'ORIGINAL' | 'CANDIDATE';
+  decisionDeadline: Date | null;
+  /** The other booking in this reassignment pair. */
+  linkedBookingId: string | null;
+}
+
+type ReassignmentAsOriginal = {
+  id: string;
+  status: string;
+  candidateBookingId: string | null;
+  decisionDeadline: Date | null;
+} | null;
+
+type ReassignmentAsCandidate = {
+  id: string;
+  status: string;
+  originalBookingId: string;
+  decisionDeadline: Date | null;
+} | null;
+
+/**
+ * A booking is the original side of at most one reassignment and the
+ * candidate side of at most one other -- never both -- so the DTO exposes a
+ * single unified field regardless of which relation is populated.
+ */
+function toReassignmentSummary(booking: {
+  reassignmentAsOriginal?: ReassignmentAsOriginal;
+  reassignmentAsCandidate?: ReassignmentAsCandidate;
+}): BookingReassignmentSummary | null {
+  if (booking.reassignmentAsOriginal) {
+    const r = booking.reassignmentAsOriginal;
+    return {
+      id: r.id,
+      status: r.status as BookingReassignmentSummary['status'],
+      role: 'ORIGINAL',
+      decisionDeadline: r.decisionDeadline,
+      linkedBookingId: r.candidateBookingId,
+    };
+  }
+
+  if (booking.reassignmentAsCandidate) {
+    const r = booking.reassignmentAsCandidate;
+    return {
+      id: r.id,
+      status: r.status as BookingReassignmentSummary['status'],
+      role: 'CANDIDATE',
+      decisionDeadline: r.decisionDeadline,
+      linkedBookingId: r.originalBookingId,
+    };
+  }
+
+  return null;
+}
+
 export type BookingWithLot = Booking & {
   parkingLot: ParkingLot;
   vehicle: BookingVehicle;
   payment?: BookingPayment | null;
+  reassignment?: BookingReassignmentSummary | null;
 };
 
-function mapBooking(
-  booking: Booking & { parkingLot: ParkingLot; payment?: BookingPayment | null },
+export function mapBooking(
+  booking: Booking & {
+    parkingLot: ParkingLot;
+    payment?: BookingPayment | null;
+    reassignmentAsOriginal?: ReassignmentAsOriginal;
+    reassignmentAsCandidate?: ReassignmentAsCandidate;
+  },
 ): BookingWithLot {
-  return { ...booking, vehicle: toVehicle(booking) };
+  return {
+    ...booking,
+    vehicle: toVehicle(booking),
+    reassignment: toReassignmentSummary(booking),
+  };
 }
 
 /**

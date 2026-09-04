@@ -55,3 +55,36 @@ export async function verifyPayment(
   const { data } = await api.post<Envelope>('/payments/verify', payload);
   return unwrap<{ booking: unknown; payment: PaymentInfo }>(data);
 }
+
+export interface VerifyReassignmentPaymentPayload {
+  razorpayPaymentId: string;
+  razorpayOrderId: string;
+  razorpaySignature: string;
+}
+
+/** Creates a fresh order for a still-PENDING offer (the explicit-accept path). */
+export async function createReassignmentOrder(
+  reassignmentId: string,
+): Promise<CreateOrderResponse> {
+  const { data } = await api.post<Envelope>(
+    `/payments/reassignment/${reassignmentId}/create-order`,
+  );
+  return unwrap<CreateOrderResponse>(data);
+}
+
+/**
+ * Verifies payment for a reassignment offer. Handles both the explicit-accept
+ * path (offer still PENDING) and the deferred-payment path (offer already
+ * AUTO_ACCEPTED at timeout, capturing the order the backend pre-created) --
+ * the backend decides which case applies.
+ */
+export async function verifyReassignmentPayment(
+  reassignmentId: string,
+  payload: VerifyReassignmentPaymentPayload,
+): Promise<{ booking: unknown; payment: PaymentInfo }> {
+  const { data } = await api.post<Envelope>(
+    `/payments/reassignment/${reassignmentId}/verify`,
+    payload,
+  );
+  return unwrap<{ booking: unknown; payment: PaymentInfo }>(data);
+}

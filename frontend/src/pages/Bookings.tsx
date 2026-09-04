@@ -246,7 +246,7 @@ export default function Bookings() {
                         onExpired={handleExpired}
                       />
                     ) : (
-                      <BookingSummary booking={booking} />
+                      <BookingSummary booking={booking} onRefresh={loadBookings} />
                     )}
 
                     <div className="mt-3 flex flex-wrap justify-end gap-2">

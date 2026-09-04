@@ -19,6 +19,7 @@ import AdminOverview from './pages/admin/AdminOverview';
 import AdminComplaints from './pages/admin/AdminComplaints';
 import AdminComplaintDetails from './pages/admin/AdminComplaintDetails';
 import AdminBookings from './pages/admin/AdminBookings';
+import ReassignmentOfferMount from './components/reassignment/ReassignmentOfferMount';
 
 export default function App() {
   return (
@@ -123,6 +124,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <ReassignmentOfferMount />
         <Toaster
           position="top-right"
           toastOptions={{
