@@ -23,6 +23,19 @@ export class BookingError extends Error {
   }
 }
 
+/**
+ * Deliberately free of any Auto-Reassignment relations.
+ *
+ * This include is shared by every booking endpoint -- create, check-in/out,
+ * heartbeat, cancel and list -- so anything referenced here becomes a
+ * dependency of booking *checkout itself*. Wiring the reassignment relations
+ * in here once already took down booking creation in production when the
+ * deployed Prisma Client lagged the schema: the client rejected the unknown
+ * include keys and every one of those endpoints started failing.
+ *
+ * Reassignment context is attached separately by `attachReassignments`, which
+ * is allowed to fail without taking a booking with it.
+ */
 export const bookingInclude = {
   parkingLot: true,
   payment: {
@@ -32,15 +45,6 @@ export const bookingInclude = {
       amount: true,
       status: true,
     },
-  },
-  // Auto-Reassignment: at most one of these is ever set for a given booking
-  // (it's either someone's cancelled original or someone's held candidate,
-  // never both), so the DTO exposes a single unified `reassignment` field.
-  reassignmentAsOriginal: {
-    select: { id: true, status: true, candidateBookingId: true, decisionDeadline: true },
-  },
-  reassignmentAsCandidate: {
-    select: { id: true, status: true, originalBookingId: true, decisionDeadline: true },
   },
 } as const;
 
@@ -99,54 +103,6 @@ export interface BookingReassignmentSummary {
   linkedBookingId: string | null;
 }
 
-type ReassignmentAsOriginal = {
-  id: string;
-  status: string;
-  candidateBookingId: string | null;
-  decisionDeadline: Date | null;
-} | null;
-
-type ReassignmentAsCandidate = {
-  id: string;
-  status: string;
-  originalBookingId: string;
-  decisionDeadline: Date | null;
-} | null;
-
-/**
- * A booking is the original side of at most one reassignment and the
- * candidate side of at most one other -- never both -- so the DTO exposes a
- * single unified field regardless of which relation is populated.
- */
-function toReassignmentSummary(booking: {
-  reassignmentAsOriginal?: ReassignmentAsOriginal;
-  reassignmentAsCandidate?: ReassignmentAsCandidate;
-}): BookingReassignmentSummary | null {
-  if (booking.reassignmentAsOriginal) {
-    const r = booking.reassignmentAsOriginal;
-    return {
-      id: r.id,
-      status: r.status as BookingReassignmentSummary['status'],
-      role: 'ORIGINAL',
-      decisionDeadline: r.decisionDeadline,
-      linkedBookingId: r.candidateBookingId,
-    };
-  }
-
-  if (booking.reassignmentAsCandidate) {
-    const r = booking.reassignmentAsCandidate;
-    return {
-      id: r.id,
-      status: r.status as BookingReassignmentSummary['status'],
-      role: 'CANDIDATE',
-      decisionDeadline: r.decisionDeadline,
-      linkedBookingId: r.originalBookingId,
-    };
-  }
-
-  return null;
-}
-
 export type BookingWithLot = Booking & {
   parkingLot: ParkingLot;
   vehicle: BookingVehicle;
@@ -158,15 +114,75 @@ export function mapBooking(
   booking: Booking & {
     parkingLot: ParkingLot;
     payment?: BookingPayment | null;
-    reassignmentAsOriginal?: ReassignmentAsOriginal;
-    reassignmentAsCandidate?: ReassignmentAsCandidate;
   },
 ): BookingWithLot {
-  return {
-    ...booking,
-    vehicle: toVehicle(booking),
-    reassignment: toReassignmentSummary(booking),
-  };
+  return { ...booking, vehicle: toVehicle(booking) };
+}
+
+/**
+ * Attaches Auto-Reassignment context to already-loaded bookings.
+ *
+ * Kept out of `bookingInclude` and deliberately best-effort: a booking is
+ * real, paid-for state, while a reassignment banner is decoration. If this
+ * lookup fails for any reason -- a deployed Prisma Client lagging the schema
+ * being the one that actually bit us -- the user loses the banner, not their
+ * booking. A booking is the original side of at most one reassignment and the
+ * candidate side of at most one other, never both, so the DTO carries a
+ * single unified field either way.
+ */
+async function attachReassignments(bookings: BookingWithLot[]): Promise<BookingWithLot[]> {
+  if (bookings.length === 0) {
+    return bookings;
+  }
+
+  const bookingIds = bookings.map((booking) => booking.id);
+
+  try {
+    const rows = await prisma.bookingReassignment.findMany({
+      where: {
+        OR: [
+          { originalBookingId: { in: bookingIds } },
+          { candidateBookingId: { in: bookingIds } },
+        ],
+      },
+      select: {
+        id: true,
+        status: true,
+        decisionDeadline: true,
+        originalBookingId: true,
+        candidateBookingId: true,
+      },
+    });
+
+    const byBookingId = new Map<string, BookingReassignmentSummary>();
+    for (const row of rows) {
+      byBookingId.set(row.originalBookingId, {
+        id: row.id,
+        status: row.status,
+        role: 'ORIGINAL',
+        decisionDeadline: row.decisionDeadline,
+        linkedBookingId: row.candidateBookingId,
+      });
+
+      if (row.candidateBookingId) {
+        byBookingId.set(row.candidateBookingId, {
+          id: row.id,
+          status: row.status,
+          role: 'CANDIDATE',
+          decisionDeadline: row.decisionDeadline,
+          linkedBookingId: row.originalBookingId,
+        });
+      }
+    }
+
+    return bookings.map((booking) => ({
+      ...booking,
+      reassignment: byBookingId.get(booking.id) ?? null,
+    }));
+  } catch (error) {
+    console.error('[Booking] Failed to attach reassignment context:', error);
+    return bookings.map((booking) => ({ ...booking, reassignment: null }));
+  }
 }
 
 /**
@@ -484,7 +500,8 @@ export async function getBookings(userId: string): Promise<BookingWithLot[]> {
     await paymentService.refundBookingPayments(expiredBookingIds, 'EXPIRED');
   }
 
-  return bookings;
+  // Attached outside the transaction, and best-effort: see attachReassignments.
+  return attachReassignments(bookings);
 }
 
 export async function getBookingById(
@@ -513,7 +530,8 @@ export async function getBookingById(
     await paymentService.refundBookingPayments(expiredBookingIds, 'EXPIRED');
   }
 
-  return booking;
+  const [withReassignment] = await attachReassignments([booking]);
+  return withReassignment;
 }
 
 export async function checkInBooking(

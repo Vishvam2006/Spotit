@@ -177,19 +177,35 @@ export interface ReassignmentOfferDTO {
   };
 }
 
-/** The current user's still-open offer, or null if they don't have one. */
+/**
+ * The current user's still-open offer, or null if they don't have one.
+ *
+ * Every authenticated page polls this every 15 seconds, so it is the single
+ * most-called endpoint in the app -- which makes it the worst possible place
+ * to throw. A failure here (a deployed Prisma Client lagging the schema being
+ * the one that actually happened) must degrade to "no offer" rather than
+ * spraying 500s across every screen: the cost of the former is a popup that
+ * appears late, the cost of the latter is a console full of errors on pages
+ * that have nothing to do with this feature.
+ */
 export async function getPendingReassignmentForUser(
   userId: string,
 ): Promise<ReassignmentOfferDTO | null> {
-  const offer = await prisma.bookingReassignment.findFirst({
-    where: {
-      status: 'PENDING',
-      originalBooking: { userId },
-    },
-    include: {
-      candidateBooking: { include: { parkingLot: true } },
-    },
-  });
+  let offer;
+  try {
+    offer = await prisma.bookingReassignment.findFirst({
+      where: {
+        status: 'PENDING',
+        originalBooking: { userId },
+      },
+      include: {
+        candidateBooking: { include: { parkingLot: true } },
+      },
+    });
+  } catch (error) {
+    console.error('[Reassignment] Failed to load pending offer:', error);
+    return null;
+  }
 
   if (!offer || !offer.candidateBooking) {
     return null;
