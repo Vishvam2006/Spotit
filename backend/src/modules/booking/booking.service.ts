@@ -5,6 +5,7 @@ import type { CreateBookingInput } from './booking.validation';
 import { verifyLocationSample, type LocationSample } from './booking.geofence';
 import { recordEvent } from '../continuity/continuity.events';
 import { releaseCapacity } from '../continuity/continuity.service';
+import * as paymentService from '../payment/payment.service';
 
 const CHECK_IN_EVENT = 'CHECK_IN_READING';
 const CHECK_OUT_EVENT = 'CHECK_OUT_READING';
@@ -91,7 +92,13 @@ function mapBooking(
   return { ...booking, vehicle: toVehicle(booking) };
 }
 
-async function expireReservedBookings(tx: Prisma.TransactionClient) {
+/**
+ * Returns the ids of bookings that were actually expired by this sweep, so
+ * callers can refund their captured payments once the surrounding
+ * transaction has committed (the Razorpay call must never happen from
+ * inside the DB transaction that holds these rows).
+ */
+async function expireReservedBookings(tx: Prisma.TransactionClient): Promise<string[]> {
   const now = new Date();
 
   const expired = await tx.booking.findMany({
@@ -101,6 +108,8 @@ async function expireReservedBookings(tx: Prisma.TransactionClient) {
     },
     select: { id: true, parkingLotId: true },
   });
+
+  const expiredIds: string[] = [];
 
   for (const booking of expired) {
     const result = await tx.booking.updateMany({
@@ -113,6 +122,7 @@ async function expireReservedBookings(tx: Prisma.TransactionClient) {
     });
 
     if (result.count === 1) {
+      expiredIds.push(booking.id);
       await releaseCapacity(tx, booking.parkingLotId);
 
       await recordEvent(tx, {
@@ -131,6 +141,8 @@ async function expireReservedBookings(tx: Prisma.TransactionClient) {
       });
     }
   }
+
+  return expiredIds;
 }
 
 async function completeStaleSessions(tx: Prisma.TransactionClient) {
@@ -239,8 +251,10 @@ export async function createBooking(
   userId: string,
   input: CreateBookingInput,
 ): Promise<BookingWithLot> {
-  return prisma.$transaction(async (tx) => {
-    await expireReservedBookings(tx);
+  let expiredBookingIds: string[] = [];
+
+  const booking = await prisma.$transaction(async (tx) => {
+    expiredBookingIds = await expireReservedBookings(tx);
     await completeStaleSessions(tx);
 
     const vehicle = await tx.vehicle.findFirst({
@@ -367,40 +381,62 @@ export async function createBooking(
 
     return mapBooking(booking);
   });
+
+  if (expiredBookingIds.length > 0) {
+    await paymentService.refundBookingPayments(expiredBookingIds, 'EXPIRED');
+  }
+
+  return booking;
 }
 
 export async function getBookings(userId: string): Promise<BookingWithLot[]> {
-  return prisma.$transaction(async (tx) => {
-    await expireReservedBookings(tx);
+  let expiredBookingIds: string[] = [];
+
+  const bookings = await prisma.$transaction(async (tx) => {
+    expiredBookingIds = await expireReservedBookings(tx);
     await completeStaleSessions(tx);
 
     return tx.booking.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       include: bookingInclude,
-    }).then((bookings) => bookings.map(mapBooking));
+    }).then((rows) => rows.map(mapBooking));
   });
+
+  if (expiredBookingIds.length > 0) {
+    await paymentService.refundBookingPayments(expiredBookingIds, 'EXPIRED');
+  }
+
+  return bookings;
 }
 
 export async function getBookingById(
   userId: string,
   bookingId: string,
 ): Promise<BookingWithLot> {
-  return prisma.$transaction(async (tx) => {
-    await expireReservedBookings(tx);
+  let expiredBookingIds: string[] = [];
+
+  const booking = await prisma.$transaction(async (tx) => {
+    expiredBookingIds = await expireReservedBookings(tx);
     await completeStaleSessions(tx);
 
-    const booking = await tx.booking.findFirst({
+    const found = await tx.booking.findFirst({
       where: { id: bookingId, userId },
       include: bookingInclude,
     });
 
-    if (!booking) {
+    if (!found) {
       throw new BookingError(404, 'Booking not found');
     }
 
-    return mapBooking(booking);
+    return mapBooking(found);
   });
+
+  if (expiredBookingIds.length > 0) {
+    await paymentService.refundBookingPayments(expiredBookingIds, 'EXPIRED');
+  }
+
+  return booking;
 }
 
 export async function checkInBooking(
@@ -834,8 +870,10 @@ export async function heartbeatBooking(
   bookingId: string,
   sample?: LocationSample,
 ): Promise<BookingWithLot> {
-  return prisma.$transaction(async (tx) => {
-    await expireReservedBookings(tx);
+  let expiredBookingIds: string[] = [];
+
+  const result = await prisma.$transaction(async (tx) => {
+    expiredBookingIds = await expireReservedBookings(tx);
     await completeStaleSessions(tx);
 
     const booking = await tx.booking.findFirst({
@@ -877,13 +915,19 @@ export async function heartbeatBooking(
 
     return mapBooking(heartbeatBooking);
   });
+
+  if (expiredBookingIds.length > 0) {
+    await paymentService.refundBookingPayments(expiredBookingIds, 'EXPIRED');
+  }
+
+  return result;
 }
 
 export async function cancelBooking(
   userId: string,
   bookingId: string,
 ): Promise<BookingWithLot> {
-  return prisma.$transaction(async (tx) => {
+  const booking = await prisma.$transaction(async (tx) => {
     const now = new Date();
     const updated = await tx.booking.updateMany({
       where: { id: bookingId, userId, status: 'RESERVED' },
@@ -934,4 +978,8 @@ export async function cancelBooking(
 
     return mapBooking(booking);
   });
+
+  await paymentService.refundBookingPayment(booking.id, 'USER_CANCELLED');
+
+  return booking;
 }

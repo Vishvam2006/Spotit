@@ -1,7 +1,8 @@
 import { Prisma, type ParkingLot } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { recordEvent } from "../continuity/continuity.events";
-import { releaseCapacity } from "../continuity/continuity.service";
+import { releaseCapacity, refreshLotReliability } from "../continuity/continuity.service";
+import * as paymentService from "../payment/payment.service";
 import { cloudinary } from "../../config/cloudinary";
 import { isCloudinaryConfigured } from "../../config/cloudinaryHelpers";
 
@@ -150,13 +151,32 @@ export async function createParking(ownerId: string, data: CreateParkingInput) {
   const { photos, imageUrl } = await resolvePhotos(data.photos);
   const { photos: _photos, imageUrl: _imageUrl, ...rest } = data;
 
-  return prisma.parkingLot.create({
-    data: {
-      ...rest,
-      photos,
-      imageUrl: imageUrl || _imageUrl,
-      ownerId,
-    },
+  return prisma.$transaction(async (tx) => {
+    const parkingLot = await tx.parkingLot.create({
+      data: {
+        ...rest,
+        photos,
+        imageUrl: imageUrl || _imageUrl,
+        ownerId,
+      },
+    });
+
+    // Listing a lot is what makes someone an owner in this app, but nothing
+    // else ever promotes a plain USER to OWNER. Without this, anyone who
+    // registers normally and adds a parking lot is permanently locked out of
+    // the owner dashboard (gated to OWNER/ADMIN) even though "My Parkings"
+    // still works for them.
+    const owner = await tx.user.findUniqueOrThrow({ where: { id: ownerId } });
+    let promotedOwner: { id: string; role: "OWNER" } | undefined;
+    if (owner.role === "USER") {
+      await tx.user.update({
+        where: { id: ownerId },
+        data: { role: "OWNER" },
+      });
+      promotedOwner = { id: ownerId, role: "OWNER" };
+    }
+
+    return { parkingLot, promotedOwner };
   });
 }
 
@@ -249,10 +269,26 @@ export async function updateParking(
       });
     }
 
+    // A status change is exactly the kind of edit that can put a lot back in
+    // front of users (e.g. INACTIVE -> ACTIVE). Recompute reliability so a
+    // lot that still has 2+ open serious reports re-escalates to
+    // UNDER_REVIEW immediately instead of quietly reappearing in search with
+    // a stale confidence value. Idempotent and a no-op when nothing about
+    // the open-report count has changed.
+    if (updateData.status !== undefined) {
+      await refreshLotReliability(id, {
+        actorId: ownerId,
+        actorRole: isAdmin ? 'ADMIN' : 'OWNER',
+        reason: 'Owner updated the lot listing.',
+      });
+      const refreshed = await prisma.parkingLot.findUniqueOrThrow({ where: { id } });
+      return { parking: refreshed, cancelledBookings: 0 };
+    }
+
     return { parking: updatedParking, cancelledBookings: 0 };
   }
 
-  return prisma.$transaction(async (tx) => {
+  const deactivated = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "ParkingLot" WHERE id = ${id} FOR UPDATE`;
 
     const updated = await tx.parkingLot.updateMany({
@@ -264,10 +300,10 @@ export async function updateParking(
       // A concurrent deactivation already flipped the lot to INACTIVE.
       // Idempotent: do not cancel bookings again or touch counters again.
       const current = await tx.parkingLot.findUniqueOrThrow({ where: { id } });
-      return { parking: current, cancelledBookings: 0 };
+      return { parking: current, cancelledBookingIds: [] as string[] };
     }
 
-    const cancelledBookings = await cancelUpcomingBookingsForDeactivation(tx, id);
+    const cancelledBookingIds = await cancelUpcomingBookingsForDeactivation(tx, id);
 
     await recordEvent(tx, {
       type: "LOT_DEACTIVATED",
@@ -277,18 +313,34 @@ export async function updateParking(
       fromStatus: parking.status,
       toStatus: "INACTIVE",
       reason: "Lot deactivated by its owner.",
-      metadata: { cancelledBookings },
+      metadata: { cancelledBookings: cancelledBookingIds.length },
     });
 
     const current = await tx.parkingLot.findUniqueOrThrow({ where: { id } });
-    return { parking: current, cancelledBookings };
+    return { parking: current, cancelledBookingIds };
   });
+
+  // Refund every driver whose reservation was just cancelled out from under
+  // them. This runs after the transaction above has committed: the Razorpay
+  // call is slow and external, and must never hold the row lock or risk
+  // rolling back a deactivation that has already taken effect.
+  if (deactivated.cancelledBookingIds.length > 0) {
+    await paymentService.refundBookingPayments(
+      deactivated.cancelledBookingIds,
+      "PARKING_DEACTIVATED",
+    );
+  }
+
+  return {
+    parking: deactivated.parking,
+    cancelledBookings: deactivated.cancelledBookingIds.length,
+  };
 }
 
 async function cancelUpcomingBookingsForDeactivation(
   tx: Prisma.TransactionClient,
   parkingId: string,
-): Promise<number> {
+): Promise<string[]> {
   const now = new Date();
 
   const affected = await tx.booking.findMany({
@@ -300,7 +352,7 @@ async function cancelUpcomingBookingsForDeactivation(
     select: { id: true },
   });
 
-  let cancelled = 0;
+  const cancelledIds: string[] = [];
   for (const booking of affected) {
     const result = await tx.booking.updateMany({
       where: { id: booking.id, status: "RESERVED" },
@@ -313,11 +365,11 @@ async function cancelUpcomingBookingsForDeactivation(
 
     if (result.count !== 1) continue;
 
-    cancelled += 1;
+    cancelledIds.push(booking.id);
     await releaseCapacity(tx, parkingId);
   }
 
-  return cancelled;
+  return cancelledIds;
 }
 
 export async function deleteParking(

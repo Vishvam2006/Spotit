@@ -19,6 +19,7 @@ export interface AuthContextValue {
   verifyOtp: (email: string, otp: string) => Promise<void>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<User>;
   logout: () => void;
+  applySession: (token: string, user: User) => void;
   openAuthModal: (options?: OpenAuthModalOptions) => void;
   closeAuthModal: () => void;
 }

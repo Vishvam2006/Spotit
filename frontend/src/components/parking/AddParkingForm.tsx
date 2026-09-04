@@ -5,6 +5,7 @@ import Button from '../ui/Button';
 import Alert from '../ui/Alert';
 import { getErrorMessage } from '../../services/api';
 import { createParkingLot } from '../../services/parking';
+import { useAuth } from '../../context/auth-context';
 import type { ParkingLotStatus } from '../../types/parking';
 import PhotoUploader, { MIN_PARKING_PHOTOS } from './PhotoUploader';
 
@@ -55,6 +56,7 @@ export default function AddParkingForm({
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { applySession } = useAuth();
 
   const updateField = (field: keyof FormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -107,7 +109,7 @@ export default function AddParkingForm({
 
     setSubmitting(true);
     try {
-      await createParkingLot({
+      const { session } = await createParkingLot({
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         address: form.address.trim(),
@@ -120,6 +122,7 @@ export default function AddParkingForm({
         status: form.status,
         photos,
       });
+      if (session) applySession(session.token, session.user);
       onCreated();
     } catch (error) {
       setSubmitError(getErrorMessage(error));

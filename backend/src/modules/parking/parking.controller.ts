@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import * as parkingService from "./parking.service";
 import { ParkingError } from "./parking.service";
+import { getUserById } from "../../services/auth.service";
+import { generateToken } from "../../utils/generateToken";
 
 import {
   createParkingSchema,
@@ -68,11 +70,32 @@ export async function createParkingLot(req: Request, res: Response) {
 
   const ownerId = req.user!.id;
 
-  const parkingLot = await parkingService.createParking(ownerId, result.data);
+  const { parkingLot, promotedOwner } = await parkingService.createParking(
+    ownerId,
+    result.data
+  );
+
+  if (!promotedOwner) {
+    res.status(201).json({
+      success: true,
+      data: parkingLot,
+    });
+    return;
+  }
+
+  // The role change took effect in the DB, but the caller's existing JWT
+  // still carries the old role, so any owner-only route would keep 403'ing
+  // (and the frontend's role check would keep redirecting away) until they
+  // logged out and back in. Issue a fresh token/user so the client can swap
+  // in the new session immediately, the same way login/register do.
+  const user = await getUserById(promotedOwner.id);
+  const token = generateToken({ id: user.id, email: user.email, role: user.role });
 
   res.status(201).json({
     success: true,
     data: parkingLot,
+    token,
+    user,
   });
 }
 

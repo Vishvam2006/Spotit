@@ -451,7 +451,19 @@ export async function getParkingStatus(
   };
 }
 
-function paymentStatusFor(status: string, hasFinalAmount: boolean): string {
+function paymentStatusFor(
+  status: string,
+  hasFinalAmount: boolean,
+  paymentStatus: string | undefined,
+): string {
+  // Payment is captured up front at reservation time (before check-in), so
+  // this takes priority over the booking status below: a CANCELLED or
+  // EXPIRED booking was still charged, it just may or may not have been
+  // refunded yet.
+  if (paymentStatus === 'REFUNDED') {
+    return 'REFUNDED';
+  }
+
   switch (status) {
     case 'COMPLETED':
       return hasFinalAmount ? 'PAID' : 'NOT_CHARGED';
@@ -461,7 +473,7 @@ function paymentStatusFor(status: string, hasFinalAmount: boolean): string {
       return 'PENDING';
     case 'CANCELLED':
     case 'EXPIRED':
-      return 'NOT_CHARGED';
+      return paymentStatus === 'CAPTURED' ? 'REFUND_PENDING' : 'NOT_CHARGED';
     default:
       return 'UNKNOWN';
   }
@@ -477,6 +489,7 @@ export async function getOwnerBookings(
     take: limit,
     include: {
       user: { select: { fullName: true } },
+      payment: { select: { status: true } },
     },
   });
 
@@ -496,7 +509,7 @@ export async function getOwnerBookings(
       endTime: booking.sessionEndsAt ?? booking.checkOutTime,
       durationMinutes: booking.durationMinutes,
       amount,
-      paymentStatus: paymentStatusFor(booking.status, hasFinalAmount),
+      paymentStatus: paymentStatusFor(booking.status, hasFinalAmount, booking.payment?.status),
       status: booking.status,
     };
   });

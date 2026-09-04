@@ -130,6 +130,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  // For server-side session changes outside login/register (e.g. a user gets
+  // promoted to OWNER after creating their first parking lot) — swaps in a
+  // fresh token/user without a full re-login.
+  const applySession = useCallback((nextToken: string, nextUser: User) => {
+    localStorage.setItem(TOKEN_KEY, nextToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    setToken(nextToken);
+    setUser(nextUser);
+  }, []);
+
   useEffect(() => {
     const handleUnauthorized = () => {
       logout();
@@ -151,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyOtp,
       resetPassword,
       logout,
+      applySession,
       openAuthModal,
       closeAuthModal,
     }),
@@ -164,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyOtp,
       resetPassword,
       logout,
+      applySession,
       openAuthModal,
       closeAuthModal,
     ]

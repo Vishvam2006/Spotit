@@ -131,9 +131,15 @@ export async function reportBookingIssue(
     // Checked before the state guard: once the first report has moved the
     // booking to DISPUTED, "a disputed booking cannot be reported" would be a
     // confusing way to say "you already told us".
+    //
+    // Scoped to the lot, not just this booking: a direct lot report (no
+    // booking attached) counts against the same lot's open-serious total, so
+    // checking only `bookingId` would let one user file both a booking report
+    // and a direct report for the same incident and single-handedly supply
+    // two of the two reports needed to escalate a lot to UNDER_REVIEW.
     const existingOpenReport = await tx.complaint.findFirst({
       where: {
-        bookingId,
+        parkingLotId: booking.parkingLotId,
         userId,
         status: { in: [...OPEN_REPORT_STATUSES] },
       },
@@ -143,7 +149,7 @@ export async function reportBookingIssue(
     if (existingOpenReport) {
       throw new ContinuityError(
         409,
-        'You already have an open report for this booking. We are on it.',
+        'You already have an open report for this parking lot. We are on it.',
       );
     }
 
@@ -324,12 +330,15 @@ export async function reportLotIssue(
       throw new ContinuityError(403, 'You must be near the parking lot to report it directly.');
     }
 
-    // 3. Prevent Spam: Check if user already has an open direct report for this lot.
+    // 3. Prevent Spam: check if the user already has an open report for this
+    // lot, from either channel — a booking-linked report already counts
+    // against this lot's open-serious total, so it must block a second,
+    // direct report for the same incident just as a second direct report
+    // would.
     const existingOpenReport = await tx.complaint.findFirst({
       where: {
         parkingLotId,
         userId,
-        bookingId: null,
         status: { in: [...OPEN_REPORT_STATUSES] },
       },
       select: { id: true },

@@ -12,6 +12,8 @@ function PaymentBadge({ status }: { status: string }) {
     PAID: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
     PENDING: 'bg-amber-50 text-amber-700 ring-amber-200',
     NOT_CHARGED: 'bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)] ring-[var(--pm-color-border)]',
+    REFUNDED: 'bg-sky-50 text-sky-700 ring-sky-200',
+    REFUND_PENDING: 'bg-amber-50 text-amber-700 ring-amber-200',
   };
   const cls = styles[status] ?? 'bg-[var(--pm-color-surface-raised)] text-[var(--pm-color-muted)] ring-[var(--pm-color-border)]';
   return (

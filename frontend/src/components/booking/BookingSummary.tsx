@@ -15,6 +15,11 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
       : booking.estimatedAmount;
   const parkingImageUrl = booking.parkingLot.photos?.[0] ?? booking.parkingLot.imageUrl;
 
+  const wasChargedAndUnfulfilled =
+    (booking.status === 'CANCELLED' || booking.status === 'EXPIRED') &&
+    Boolean(booking.payment);
+  const refundStatus = booking.payment?.status;
+
   return (
     <div className="overflow-hidden rounded-2xl bg-[var(--pm-color-surface)] shadow-sm ring-1 ring-[var(--pm-color-border)]">
       {parkingImageUrl && (
@@ -47,6 +52,25 @@ export default function BookingSummary({ booking }: BookingSummaryProps) {
           <span>
             This booking was cancelled because the parking owner deactivated this location.
           </span>
+        </div>
+      )}
+
+      {wasChargedAndUnfulfilled && (
+        <div
+          className={`mx-6 mt-4 rounded-xl p-4 text-sm ring-1 ${
+            refundStatus === 'REFUNDED'
+              ? 'bg-sky-50 text-sky-800 ring-sky-100'
+              : 'bg-amber-50 text-amber-900 ring-amber-100'
+          }`}
+        >
+          {refundStatus === 'REFUNDED' ? (
+            <p>Your payment for this booking has been refunded.</p>
+          ) : (
+            <p>
+              Your payment for this booking is being refunded to your original
+              payment method. This can take a few days to reflect.
+            </p>
+          )}
         </div>
       )}
 

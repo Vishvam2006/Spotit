@@ -2,6 +2,7 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { prisma } from '../../config/prisma';
 import * as bookingService from '../booking/booking.service';
+import { recordEvent } from '../continuity/continuity.events';
 import type { CreateOrderInput, VerifyPaymentInput } from './payment.validation';
 import type { BookingWithLot } from '../booking/booking.service';
 
@@ -177,4 +178,71 @@ export async function verifyAndBook(
       status: updatedPayment.status,
     },
   };
+}
+
+/**
+ * Refunds the captured payment behind a single booking, if one exists.
+ *
+ * Payment is captured up front at reservation time (see `verifyAndBook`
+ * above), so any booking that ends in CANCELLED or EXPIRED without ever
+ * being checked in has money sitting with Razorpay and nothing to show for
+ * it. This is the one place that unwinds that — called after cancellation,
+ * never as part of it: cancelling a booking must never fail or roll back
+ * because the payment gateway is slow or down, so the gateway call always
+ * happens after the booking's own transaction has already committed.
+ *
+ * Best-effort: a Razorpay failure is logged, not thrown. The Payment row is
+ * left at CAPTURED so it's easy to find and retry/reconcile manually; the
+ * booking's own cancellation already succeeded and stands regardless.
+ */
+export async function refundBookingPayment(
+  bookingId: string,
+  reason: string,
+): Promise<void> {
+  const payment = await prisma.payment.findUnique({ where: { bookingId } });
+
+  if (!payment || payment.status !== 'CAPTURED' || !payment.razorpayPaymentId) {
+    return;
+  }
+
+  try {
+    const refund = await razorpay.payments.refund(payment.razorpayPaymentId, {
+      amount: payment.amount,
+      speed: 'normal',
+      notes: { bookingId, reason },
+    });
+
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'REFUNDED',
+        razorpayRefundId: refund.id,
+        refundedAt: new Date(),
+      },
+    });
+
+    await recordEvent(prisma, {
+      type: 'PAYMENT_REFUNDED',
+      bookingId,
+      reason,
+      metadata: { amount: payment.amount, razorpayRefundId: refund.id },
+    });
+  } catch (error) {
+    console.error(`[Payment] Failed to refund booking ${bookingId}:`, error);
+  }
+}
+
+/**
+ * Refunds a batch of bookings cancelled together (e.g. every RESERVED
+ * booking on a lot an owner just deactivated, or a sweep of expired
+ * reservations). Sequential and per-booking best-effort, so one failure
+ * never stops the rest from being refunded.
+ */
+export async function refundBookingPayments(
+  bookingIds: string[],
+  reason: string,
+): Promise<void> {
+  for (const bookingId of bookingIds) {
+    await refundBookingPayment(bookingId, reason);
+  }
 }

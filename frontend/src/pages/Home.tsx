@@ -13,11 +13,13 @@ import {
   AlertTriangle,
   Clock3,
   Clock,
+  HelpCircle,
 } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import ComplaintForm from '../components/complaint/ComplaintForm';
 import ConfidenceBadge from '../components/continuity/ConfidenceBadge';
 import ConfidenceLearnMoreModal from '../components/continuity/ConfidenceLearnMoreModal';
+import HowItWorksModal from '../components/home/HowItWorksModal';
 import { fetchParkingLots } from '../services/parking';
 import type { ParkingLot } from '../types/parking';
 import { getCurrentPositionDetailed, type LatLng } from '../utils/geolocation';
@@ -32,6 +34,7 @@ export default function Home() {
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [confidenceModalOpen, setConfidenceModalOpen] = useState(false);
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
   useEffect(() => {
     fetchParkingLots().then((lots) => setAllParkingLots(lots)).catch(() => { });
@@ -126,27 +129,11 @@ export default function Home() {
                 else setReportOpen(true);
               }} />
               <QuickActionButton icon={PlusCircle} label="List Space" onClick={() => handleQuickAction('list')} badge="New" />
+              <QuickActionButton icon={HelpCircle} label="How it Works" onClick={() => setHowItWorksOpen(true)} />
             </div>
           </div>
 
-          {/* How Spotit Works Section */}
-          <div className="mb-8">
-            <h2 className="mb-4 text-xl font-bold text-[var(--pm-color-text)]">How Spotit works</h2>
-            <div className="pm-scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-4 md:mx-0 md:grid md:grid-cols-4 md:px-0 md:overflow-visible">
-              <HowItWorksCard image="/images/how-it-works/step1.jpg" title="1. Find a lot" desc="" />
-              <HowItWorksCard image="/images/how-it-works/step2.jpg" title="2. Reserve a space" desc="" />
-              <HowItWorksCard image="/images/how-it-works/step3.jpg" title="3. Arrive and park" desc="" />
-              <HowItWorksCard image="/images/how-it-works/step4.jpg" title="4. Check out" desc="" />
-            </div>
-            <div className="mt-2 text-center">
-              <button 
-                onClick={() => setReportOpen(true)}
-                className="text-xs text-[var(--pm-color-muted)] hover:text-[var(--pm-color-text)] underline decoration-transparent hover:decoration-[var(--pm-color-border-strong)] transition-all"
-              >
-                Report an issue
-              </button>
-            </div>
-          </div>
+
 
           {/* Nearby Parking Section */}
           <div className="mb-8">
@@ -196,6 +183,10 @@ export default function Home() {
       <ConfidenceLearnMoreModal
         isOpen={confidenceModalOpen}
         onClose={() => setConfidenceModalOpen(false)}
+      />
+      <HowItWorksModal
+        isOpen={howItWorksOpen}
+        onClose={() => setHowItWorksOpen(false)}
       />
     </AppLayout>
   );
@@ -269,17 +260,3 @@ function NearbyParkingCard({ lot, onClick }: { lot: ParkingLot, onClick: () => v
   );
 }
 
-function HowItWorksCard({ image, title, desc }: { image: string, title: string, desc?: string }) {
-  return (
-    <article className="w-[180px] md:w-auto md:flex-1 shrink-0 rounded-[1.5rem] bg-[var(--pm-color-surface)] p-2 pm-neumorphic">
-      <div className="h-28 md:h-32 w-full overflow-hidden rounded-[1rem] bg-[var(--pm-color-surface-raised)] relative group">
-        <img src={image} alt={title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-      </div>
-      <div className="p-3 pb-2 text-center">
-        <h3 className="text-sm font-extrabold text-[var(--pm-color-text)] tracking-tight">{title}</h3>
-        {desc && <p className="mt-1 text-xs text-[var(--pm-color-muted)] leading-snug">{desc}</p>}
-      </div>
-    </article>
-  );
-}

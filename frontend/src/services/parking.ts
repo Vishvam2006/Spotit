@@ -6,6 +6,7 @@ import type {
   ParkingLotsResponse,
   ParkingLotStatus,
 } from '../types/parking';
+import type { User } from '../types';
 
 function buildQueryParams(filters: ParkingFilters): Record<string, string | number | boolean> {
   const params: Record<string, string | number | boolean> = {};
@@ -56,11 +57,22 @@ export interface CreateParkingPayload {
 interface CreateParkingResponse {
   success: boolean;
   data: ParkingLot;
+  /** Present only when creating this lot promoted the caller USER -> OWNER. */
+  token?: string;
+  user?: User;
+}
+
+export interface CreateParkingResult {
+  parkingLot: ParkingLot;
+  session?: { token: string; user: User };
 }
 
 export async function createParkingLot(
   payload: CreateParkingPayload,
-): Promise<ParkingLot> {
+): Promise<CreateParkingResult> {
   const { data } = await api.post<CreateParkingResponse>('/parking-lots', payload);
-  return data.data;
+  return {
+    parkingLot: data.data,
+    session: data.token && data.user ? { token: data.token, user: data.user } : undefined,
+  };
 }

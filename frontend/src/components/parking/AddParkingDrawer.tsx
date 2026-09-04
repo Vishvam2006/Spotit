@@ -5,6 +5,7 @@ import Input from '../ui/Input';
 import Alert from '../ui/Alert';
 import { getErrorMessage } from '../../services/api';
 import { createParkingLot } from '../../services/parking';
+import { useAuth } from '../../context/auth-context';
 import type { ParkingLotStatus } from '../../types/parking';
 import PhotoUploader, { MIN_PARKING_PHOTOS } from './PhotoUploader';
 import type { SelectedLocation } from './AddParkingForm';
@@ -48,6 +49,7 @@ export default function AddParkingDrawer({ selectedLocation, onCreated, onCancel
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { applySession } = useAuth();
 
   const drawerRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
@@ -88,13 +90,14 @@ export default function AddParkingDrawer({ selectedLocation, onCreated, onCancel
     if (Object.keys(nextErrors).length > 0) return;
     setSubmitting(true);
     try {
-      await createParkingLot({
+      const { session } = await createParkingLot({
         name: form.name.trim(), description: form.description.trim() || undefined,
         address: form.address.trim(), city: form.city.trim(),
         latitude: selectedLocation.lat, longitude: selectedLocation.lng,
         pricePerHour: Number(form.pricePerHour), totalSpaces: Number(form.totalSpaces),
         availableSpaces: Number(form.availableSpaces), status: form.status, photos,
       });
+      if (session) applySession(session.token, session.user);
       onCreated();
     } catch (error) {
       setSubmitError(getErrorMessage(error));

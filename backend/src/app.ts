@@ -269,6 +269,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   }
 
   if (err instanceof Prisma.PrismaClientValidationError) {
+    console.error('[App] Prisma validation error:', err.message);
     res.status(400).json({
       success: false,
       message: 'The request does not match the expected format.',
