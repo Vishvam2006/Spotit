@@ -143,7 +143,7 @@ export default function ArrivalCard({
     booking.status === 'RESERVED'
       ? isInside || simulated
         ? 'You are at the parking lot — ready to check in.'
-        : 'Move within the geofence (or simulate arrival) to check in.'
+        : 'Move within the geofence to check in.'
       : geofenceCanCheckOut || simulated
         ? 'Confirmed outside the lot — ready to check out.'
         : 'Wait for outside-location readings (or simulate leaving) to check out.';
