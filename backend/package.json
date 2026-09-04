@@ -5,8 +5,9 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "postinstall": "prisma generate",
     "build": "prisma generate && tsc",
-    "start": "node dist/server.js",
+    "start": "prisma migrate deploy && node dist/server.js",
     "test": "vitest run",
     "reconcile": "tsx scripts/reconcile.ts",
     "prisma:seed": "tsx prisma/seed.ts"
